@@ -450,7 +450,7 @@ const LoginModal = ({ onLogin }: { onLogin: (user: storage.User) => void }) => {
           <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center mx-auto mb-4">
             <UserIcon size={32} className="text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">欢迎使用 WSJF 排期工具</h2>
+          <h2 className="text-2xl font-bold text-gray-900">欢迎使用小米国际WSJF-Lite排期系统</h2>
           <p className="text-sm text-gray-600 mt-2">请输入您的信息登录或注册</p>
         </div>
 
@@ -1239,43 +1239,69 @@ const UnscheduledArea = ({
   );
 };
 
-// 生成示例数据
+// 生成示例数据 - 基于RMS重建排期表
 const generateSampleData = (): Requirement[] => {
-  const names = [
-    '用户登录SSO集成', '订单列表性能优化', '新版首页改版', '支付接口升级', '数据报表功能',
-    'API文档完善', '移动端适配', '搜索功能优化', '安全漏洞修复', '用户反馈系统',
-    '数据库优化', '缓存层改造', '日志系统升级', '权限管理重构', '消息推送功能',
-    '文件上传优化', '第三方集成', '监控告警系统', '自动化测试', '代码重构',
-    '国际化支持', '主题切换功能', '响应式布局', 'SEO优化', '性能监控',
-    '用户画像分析', '推荐算法优化', 'AB测试平台', '灰度发布系统', 'CI/CD优化',
-    '微服务拆分', '容器化部署', '数据备份方案', '容灾切换', '安全加固',
-    '用户增长功能', '运营后台优化', '数据看板', '营销工具开发', '客服系统',
-    '订单系统重构', '库存管理优化', '物流对接', '支付流程优化', '退款系统',
-    '会员体系', '积分系统', '优惠券功能', '促销活动平台', '社交分享功能'
+  // 真实数据来自 RMS 重建排期表
+  const realData = [
+    { name: '零售通融合 App - 服务体验/性能', owner: '@Xinru Dong 董鑫儒', pm: '@Du Yue 杜玥', days: 30, importance: 8, status: 'doing', deadline: '2025-11-30' },
+    { name: '【P00】零售普查（门店 Mapping）', owner: '@Jon Sun 孙吉', pm: '@Charlie 郭九辰', days: 70, importance: 10, status: 'doing', deadline: '2025-10-24' },
+    { name: '展陈巡检P0', owner: '@Chi Dai', pm: '@Nicole 王晓雪', days: 40, importance: 8, status: 'doing', deadline: '2025-10-30' },
+    { name: '阵地变更巡检P0', owner: '@Jupiter Wen 温杰', pm: '@Nicole 王晓雪', days: 15, importance: 8, status: 'doing', deadline: '2025-10-22' },
+    { name: '店挂靠的商数据源切换为CRM侧商数据', owner: '@Chunguang Li', pm: '@Nick Su 苏梦醒', days: 10, importance: 7, status: 'doing', deadline: '2025-10-30' },
+    { name: '资产管理（家具，物料，高价值礼品）', owner: '@Jon Sun 孙吉', pm: '@Andy Wei魏有峰', days: 95, importance: 10, status: 'todo' },
+    { name: '消息中心/push', owner: '@kerwin-王宣琨', pm: '@Nick Su 苏梦醒', days: 15, importance: 6, status: 'todo', deadline: '2025-11-25' },
+    { name: '门店问题上报反馈/工单', owner: '@Chuqiang Zhou', pm: '@Nicole 王晓雪', days: 15, importance: 10, status: 'todo', deadline: '2025-11-28' },
+    { name: '建店 HIUI5.0 迁移', owner: '@Chunguang Li', pm: '@Nick Su 苏梦醒', days: 5, importance: 6, status: 'doing', deadline: '2025-10-30' },
+    { name: 'Store Sales/门店容量上报/CAPA 上报', owner: '-', pm: '@Nicole 王晓雪', days: 15, importance: 7, status: 'doing', deadline: '2025-11-28' },
+    { name: 'Market Research/竞品信息上报', owner: '-', pm: '@Nicole 王晓雪', days: 25, importance: 3, status: 'todo', deadline: '2025-11-28' },
+    { name: '【P0】目标追踪管理', owner: '@Ming Wang', pm: '@Sue唐于舒', days: 50, importance: 10, status: 'todo', deadline: '2025-12-30' },
+    { name: '【P00】网格管理', owner: '@Chuqiang Zhou', pm: '@Will Zhang 张宇', days: 55, importance: 10, status: 'todo', deadline: '2025-11-18' },
+    { name: '人员主数据（RMS+组织中台）', owner: '@Ming Wang', pm: '@Will Zhang 张宇', days: 50, importance: 8, status: 'doing', deadline: '2025-12-30' },
+    { name: '人店关系（人员管理 PC）', owner: '@Ming Wang', pm: '@Will Zhang 张宇', days: 40, importance: 10, status: 'todo', deadline: '2025-12-30' },
+    { name: '考勤：规则，打卡，排班，请假，加班', owner: '@Jupiter Wen 温杰', pm: '@Hao Wang', days: 90, importance: 9, status: 'doing', deadline: '2025-11-28' },
+    { name: '入转调离', owner: '@Ming Wang', pm: '@Hao Wang', days: 80, importance: 8, status: 'todo', deadline: '2025-12-04' },
+    { name: '新促转正', owner: '@Ming Wang', pm: '@Hao Wang', days: 20, importance: 6, status: 'todo', deadline: '2025-12-04' },
+    { name: '人员-成长体系（升降级）', owner: '@Chuqiang Zhou', pm: '@Hao Wang', days: 80, importance: 10, status: 'todo', deadline: '2025-12-30' },
+    { name: 'Store Visit / 巡店计划', owner: '@Chuqiang Zhou', pm: '@Hao Wang', days: 20, importance: 7, status: 'doing', deadline: '2025-10-27' },
+    { name: 'miid 账号登录（passport 登录）', owner: '@Ming Wang', pm: '@Will Zhang 张宇', days: 10, importance: 10, status: 'doing', deadline: '2025-09-29' },
+    { name: '菜单/角色 （PC）', owner: '@Chuqiang Zhou', pm: '@Hao Wang', days: 10, importance: 7, status: 'todo', deadline: '2025-11-28' },
+    { name: '下载中心/上传', owner: '@Jinjuan Liang', pm: '@Will Zhang 张宇', days: 10, importance: 5, status: 'doing', deadline: '2025-10-14' },
+    { name: '产品管理/商品主数据', owner: '@Xianan Bi', pm: '@Sue唐于舒', days: 15, importance: 8, status: 'todo', deadline: '2025-11-28' },
+    { name: '【P0】库存管理', owner: '@kerwin-王宣琨', pm: '@Sue唐于舒', days: 40, importance: 10, status: 'doing', deadline: '2025-10-30' },
+    { name: 'PSI 看板', owner: '-', pm: '@Yong Yang', days: 5, importance: 7, status: 'todo', deadline: '2025-10-30' },
   ];
-  
-  const owners = ['张三', '李四', '王五', '赵六', '钱七', '孙八', '周九', '吴十', '郑十一', '陈十二'];
-  const pms = ['产品A', '产品B', '产品C', '产品D'];
-  const productProgress = ['未评估', '已评估', '已出PRD'];
-  const techProgress = ['未评估', '已评估工作量', '已完成技术方案'];
-  const types = ['功能开发', '技术债', 'Bug修复'];
-  const bvOptions = ['局部', '明显', '撬动核心', '战略平台'];
+
+  const bvMapping: Record<number, string> = {
+    10: '战略平台',
+    9: '撬动核心',
+    8: '撬动核心',
+    7: '明显',
+    6: '明显',
+    5: '明显',
+    3: '局部'
+  };
+
   const tcOptions = ['随时', '三月窗口', '一月硬窗口'];
-  
-  return names.map((name, i) => ({
-    id: `REQ-${String(i + 1).padStart(3, '0')}`,
-    name,
-    businessOwner: owners[i % owners.length],
-    productManager: pms[i % pms.length],
-    productProgress: productProgress[i % 3],
-    effortDays: Math.floor(Math.random() * 35) + 3,
-    bv: bvOptions[Math.floor(Math.random() * bvOptions.length)],
-    tc: tcOptions[Math.floor(Math.random() * tcOptions.length)],
-    hardDeadline: Math.random() > 0.85,
-    deadlineDate: Math.random() > 0.85 ? `2025-${11 + Math.floor(i / 17)}-${10 + (i % 20)}` : undefined,
-    techProgress: techProgress[i % 3],
-    type: types[i % types.length]
-  }));
+
+  return realData.map((item, i) => {
+    const hasDeadline = !!item.deadline;
+    const isUrgent = hasDeadline && new Date(item.deadline) < new Date('2025-11-15');
+
+    return {
+      id: `RMS-${String(i + 1).padStart(3, '0')}`,
+      name: item.name,
+      businessOwner: item.owner.replace(/@/g, ''),
+      productManager: item.pm.replace(/@/g, ''),
+      productProgress: item.status === 'doing' ? '已出PRD' : '已评估',
+      effortDays: item.days,
+      bv: bvMapping[item.importance] || '明显',
+      tc: isUrgent ? '一月硬窗口' : (hasDeadline ? '三月窗口' : '随时'),
+      hardDeadline: isUrgent,
+      deadlineDate: item.deadline,
+      techProgress: item.status === 'doing' ? '已评估工作量' : '未评估',
+      type: item.days > 50 ? '功能开发' : (item.days < 15 ? '技术债' : '功能开发')
+    };
+  });
 };
 
 // 主应用
@@ -1609,7 +1635,7 @@ export default function WSJFPlanner() {
       <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 shadow-sm flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-semibold text-white">WSJF迭代排期</h1>
+            <h1 className="text-xl font-semibold text-white">小米国际WSJF-Lite迭代排期小工具 - by Evan（tianyuan8@xiaomi.com）</h1>
             
             {/* 图例 */}
             <div className="flex items-center gap-4 text-xs text-gray-300 border-l border-gray-700 pl-4">
