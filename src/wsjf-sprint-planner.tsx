@@ -445,7 +445,7 @@ const LoginModal = ({ onLogin }: { onLogin: (user: storage.User) => void }) => {
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-[450px] p-8">
+      <div className="bg-white rounded-xl shadow-2xl w-[580px] p-8">
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center mx-auto mb-4">
             <UserIcon size={32} className="text-white" />
