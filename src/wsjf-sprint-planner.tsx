@@ -1254,36 +1254,76 @@ const UnscheduledArea = ({
   );
 };
 
-// 生成示例数据 - 基于RMS重建排期表
+// 生成示例数据 - 基于专卖系统开发影响其他功能上线评估
 const generateSampleData = (): Requirement[] => {
-  // 真实数据来自 RMS 重建排期表
+  // 真实数据来自专卖系统开发影响其他功能上线评估.pdf
   const realData = [
-    { name: '零售通融合 App - 服务体验/性能', owner: '@Xinru Dong 董鑫儒', pm: '@Du Yue 杜玥', days: 30, importance: 8, status: 'doing', deadline: '2025-11-30' },
-    { name: '【P00】零售普查（门店 Mapping）', owner: '@Jon Sun 孙吉', pm: '@Charlie 郭九辰', days: 70, importance: 10, status: 'doing', deadline: '2025-10-24' },
-    { name: '展陈巡检P0', owner: '@Chi Dai', pm: '@Nicole 王晓雪', days: 40, importance: 8, status: 'doing', deadline: '2025-10-30' },
-    { name: '阵地变更巡检P0', owner: '@Jupiter Wen 温杰', pm: '@Nicole 王晓雪', days: 15, importance: 8, status: 'doing', deadline: '2025-10-22' },
-    { name: '店挂靠的商数据源切换为CRM侧商数据', owner: '@Chunguang Li', pm: '@Nick Su 苏梦醒', days: 10, importance: 7, status: 'doing', deadline: '2025-10-30' },
-    { name: '资产管理（家具，物料，高价值礼品）', owner: '@Jon Sun 孙吉', pm: '@Andy Wei魏有峰', days: 95, importance: 10, status: 'todo' },
-    { name: '消息中心/push', owner: '@kerwin-王宣琨', pm: '@Nick Su 苏梦醒', days: 15, importance: 6, status: 'todo', deadline: '2025-11-25' },
-    { name: '门店问题上报反馈/工单', owner: '@Chuqiang Zhou', pm: '@Nicole 王晓雪', days: 15, importance: 10, status: 'todo', deadline: '2025-11-28' },
-    { name: '建店 HIUI5.0 迁移', owner: '@Chunguang Li', pm: '@Nick Su 苏梦醒', days: 5, importance: 6, status: 'doing', deadline: '2025-10-30' },
-    { name: 'Store Sales/门店容量上报/CAPA 上报', owner: '-', pm: '@Nicole 王晓雪', days: 15, importance: 7, status: 'doing', deadline: '2025-11-28' },
-    { name: 'Market Research/竞品信息上报', owner: '-', pm: '@Nicole 王晓雪', days: 25, importance: 3, status: 'todo', deadline: '2025-11-28' },
-    { name: '【P0】目标追踪管理', owner: '@Ming Wang', pm: '@Sue唐于舒', days: 50, importance: 10, status: 'todo', deadline: '2025-12-30' },
-    { name: '【P00】网格管理', owner: '@Chuqiang Zhou', pm: '@Will Zhang 张宇', days: 55, importance: 10, status: 'todo', deadline: '2025-11-18' },
-    { name: '人员主数据（RMS+组织中台）', owner: '@Ming Wang', pm: '@Will Zhang 张宇', days: 50, importance: 8, status: 'doing', deadline: '2025-12-30' },
-    { name: '人店关系（人员管理 PC）', owner: '@Ming Wang', pm: '@Will Zhang 张宇', days: 40, importance: 10, status: 'todo', deadline: '2025-12-30' },
-    { name: '考勤：规则，打卡，排班，请假，加班', owner: '@Jupiter Wen 温杰', pm: '@Hao Wang', days: 90, importance: 9, status: 'doing', deadline: '2025-11-28' },
-    { name: '入转调离', owner: '@Ming Wang', pm: '@Hao Wang', days: 80, importance: 8, status: 'todo', deadline: '2025-12-04' },
-    { name: '新促转正', owner: '@Ming Wang', pm: '@Hao Wang', days: 20, importance: 6, status: 'todo', deadline: '2025-12-04' },
-    { name: '人员-成长体系（升降级）', owner: '@Chuqiang Zhou', pm: '@Hao Wang', days: 80, importance: 10, status: 'todo', deadline: '2025-12-30' },
-    { name: 'Store Visit / 巡店计划', owner: '@Chuqiang Zhou', pm: '@Hao Wang', days: 20, importance: 7, status: 'doing', deadline: '2025-10-27' },
-    { name: 'miid 账号登录（passport 登录）', owner: '@Ming Wang', pm: '@Will Zhang 张宇', days: 10, importance: 10, status: 'doing', deadline: '2025-09-29' },
-    { name: '菜单/角色 （PC）', owner: '@Chuqiang Zhou', pm: '@Hao Wang', days: 10, importance: 7, status: 'todo', deadline: '2025-11-28' },
-    { name: '下载中心/上传', owner: '@Jinjuan Liang', pm: '@Will Zhang 张宇', days: 10, importance: 5, status: 'doing', deadline: '2025-10-14' },
-    { name: '产品管理/商品主数据', owner: '@Xianan Bi', pm: '@Sue唐于舒', days: 15, importance: 8, status: 'todo', deadline: '2025-11-28' },
-    { name: '【P0】库存管理', owner: '@kerwin-王宣琨', pm: '@Sue唐于舒', days: 40, importance: 10, status: 'doing', deadline: '2025-10-30' },
-    { name: 'PSI 看板', owner: '-', pm: '@Yong Yang', days: 5, importance: 7, status: 'todo', deadline: '2025-10-30' },
+    // 评分10分：必须要做的功能
+    { name: '英国直营零售通适配', owner: 'Zhisheng1 Liu 刘智晟', pm: 'Andy Wei魏有峰', days: 45, importance: 10, status: 'todo', deadline: '2025-11-30', category: '国际部新增' },
+    { name: '韩国授权零售通适配', owner: 'Zhisheng1 Liu 刘智晟', pm: 'Andy Wei魏有峰', days: 50, importance: 10, status: 'todo', deadline: '2025-12-15', category: '国际部新增' },
+    { name: '展位规划', owner: 'Jaye 朴景雯', pm: 'Nick Su 苏梦醒', days: 40, importance: 10, status: 'todo', deadline: '2025-11-20', category: '国际部新增' },
+    { name: '智利销服一体11.15试营业', owner: 'Andy Wei魏有峰', pm: 'Zhisheng1 Liu 刘智晟', days: 35, importance: 10, status: 'doing', deadline: '2025-11-15', category: '国际部新增' },
+    { name: '浮窗&金刚位优化', owner: 'Nick Su 苏梦醒', pm: 'Jamie 吴静姗', days: 30, importance: 10, status: 'todo', deadline: '2025-12-01', category: '国际部新增' },
+    { name: '越南销服一体12月试营业', owner: 'Andy Wei魏有峰', pm: 'Zhisheng1 Liu 刘智晟', days: 40, importance: 10, status: 'todo', deadline: '2025-12-01', category: '国际部新增' },
+    { name: 'ERA需求Cashback', owner: 'Asher 徐泽一', pm: 'Andy Wei魏有峰', days: 35, importance: 10, status: 'todo', deadline: '2025-11-25', category: '国际部新增' },
+    { name: 'ERA需求盘点优化', owner: 'Asher 徐泽一', pm: 'Andy Wei魏有峰', days: 45, importance: 10, status: 'todo', deadline: '2025-12-10', category: '国际部新增' },
+    { name: '授权大家电退货', owner: '李申宇', pm: 'Asher 徐泽一', days: 40, importance: 10, status: 'todo', deadline: '2025-11-30', category: '国际部新增' },
+
+    // 评分9分：重点功能
+    { name: 'ERA需求APP端授权商采购单、汇总看板&批量审批', owner: 'Asher 徐泽一', pm: 'Andy Wei魏有峰', days: 55, importance: 9, status: 'todo', deadline: '2025-12-20', category: '国际部新增' },
+    { name: '进货单部分拒收', owner: '李申宇', pm: 'Asher 徐泽一', days: 35, importance: 9, status: 'todo', deadline: '2025-11-28', category: '国际部新增' },
+    { name: '授权坏品返仓', owner: '李申宇', pm: 'Asher 徐泽一', days: 40, importance: 9, status: 'todo', deadline: '2025-12-05', category: '国际部新增' },
+
+    // 评分8分：中等优先级
+    { name: '物料系统搭建', owner: 'Jaye 朴景雯', pm: 'Andy Wei魏有峰', days: 60, importance: 8, status: 'todo', category: '国际部新增' },
+    { name: 'CPS的买赠活动', owner: 'Jamie 吴静姗', pm: 'Nick Su 苏梦醒', days: 30, importance: 8, status: 'todo', deadline: '2025-11-30', category: '国际部新增' },
+    { name: 'CPS订单消费者感知', owner: 'Jamie 吴静姗', pm: 'Nick Su 苏梦醒', days: 25, importance: 8, status: 'todo', deadline: '2025-12-10', category: '国际部新增' },
+    { name: '小票各国统一优化', owner: 'Nick Su 苏梦醒', pm: 'Jamie 吴静姗', days: 20, importance: 8, status: 'todo', category: '国际部新增' },
+    { name: '授权店活动预算优化迭代', owner: 'Asher 徐泽一', pm: 'Andy Wei魏有峰', days: 30, importance: 8, status: 'todo', category: '国际部新增' },
+
+    // 评分7分：建议做的功能
+    { name: '政策日历(促销)', owner: 'Nick Su 苏梦醒', pm: 'Jamie 吴静姗', days: 20, importance: 7, status: 'todo', category: '中国区导入' },
+    { name: '目标复理二期迭代', owner: 'Zhisheng1 Liu 刘智晟', pm: 'Andy Wei魏有峰', days: 35, importance: 7, status: 'todo', category: '国际部新增' },
+    { name: '直营店非串码坏品返仓', owner: '李申宇', pm: 'Asher 徐泽一', days: 25, importance: 7, status: 'todo', category: '国际部新增' },
+    { name: 'PC端员工看板 2.0', owner: 'Zhisheng1 Liu 刘智晟', pm: 'Andy Wei魏有峰', days: 30, importance: 7, status: 'todo', category: '国际部新增' },
+    { name: '坏品、良品互转', owner: '李申宇', pm: 'Asher 徐泽一', days: 15, importance: 7, status: 'todo', category: '中国区导入' },
+    { name: '理赔返仓', owner: '李申宇', pm: 'Asher 徐泽一', days: 20, importance: 7, status: 'todo', category: '中国区导入' },
+    { name: '商品周转看板', owner: 'Jaye 朴景雯', pm: 'Andy Wei魏有峰', days: 25, importance: 7, status: 'todo', category: '中国区导入' },
+    { name: 'ROI看板1.1', owner: 'Zhisheng1 Liu 刘智晟', pm: 'Andy Wei魏有峰', days: 30, importance: 7, status: 'todo', category: '国际部新增' },
+    { name: '串码轨迹查询', owner: '李申宇', pm: 'Asher 徐泽一', days: 20, importance: 7, status: 'todo', category: '国际部新增' },
+
+    // 评分6分：如果有资源建议做
+    { name: '门店补差', owner: 'Jamie 吴静姗', pm: 'Nick Su 苏梦醒', days: 15, importance: 6, status: 'todo', category: '中国区导入' },
+    { name: '满减满赠', owner: 'Jamie 吴静姗', pm: 'Nick Su 苏梦醒', days: 20, importance: 6, status: 'todo', category: '中国区导入' },
+    { name: '固资盘点', owner: 'Jaye 朴景雯', pm: 'Andy Wei魏有峰', days: 25, importance: 6, status: 'todo', category: '中国区导入' },
+    { name: '员工激励与提成', owner: 'Zhisheng1 Liu 刘智晟', pm: 'Andy Wei魏有峰', days: 40, importance: 6, status: 'todo', category: '国际部新增' },
+
+    // 评分5分：次优先级
+    { name: 'MBR(月报、周报)', owner: 'Zhisheng1 Liu 刘智晟', pm: 'Andy Wei魏有峰', days: 18, importance: 5, status: 'todo', category: '中国区导入' },
+    { name: '异业券', owner: 'Jamie 吴静姗', pm: 'Nick Su 苏梦醒', days: 15, importance: 5, status: 'todo', category: '中国区导入' },
+    { name: '固资处理', owner: 'Jaye 朴景雯', pm: 'Andy Wei魏有峰', days: 20, importance: 5, status: 'todo', category: '中国区导入' },
+    { name: '组织中台3.0', owner: 'Zhisheng1 Liu 刘智晟', pm: 'Andy Wei魏有峰', days: 50, importance: 5, status: 'todo', category: '国际部新增' },
+    { name: '库存查询APP多角色看板&PC看板', owner: 'Asher 徐泽一', pm: 'Andy Wei魏有峰', days: 30, importance: 5, status: 'todo', category: '国际部新增' },
+
+    // 评分4分：NSS体验改善
+    { name: 'NSS体验改善——扫码场景提示优化', owner: 'Nick Su 苏梦醒', pm: 'Jamie 吴静姗', days: 8, importance: 4, status: 'todo', category: '国际部新增' },
+    { name: 'NSS体验改善——商品搜索能力优化', owner: 'Nick Su 苏梦醒', pm: 'Jamie 吴静姗', days: 10, importance: 4, status: 'todo', category: '国际部新增' },
+    { name: 'NSS体验改善——订单筛选能力优化', owner: 'Nick Su 苏梦醒', pm: 'Jamie 吴静姗', days: 8, importance: 4, status: 'todo', category: '国际部新增' },
+    { name: 'NSS体验改善——收货地址查询体验优化', owner: 'Nick Su 苏梦醒', pm: 'Jamie 吴静姗', days: 7, importance: 4, status: 'todo', category: '国际部新增' },
+    { name: 'NSS体验改善——退款效率与提示优化', owner: 'Nick Su 苏梦醒', pm: 'Jamie 吴静姗', days: 10, importance: 4, status: 'todo', category: '国际部新增' },
+
+    // 评分3分：可延期到26年初
+    { name: '新品专区', owner: 'Jamie 吴静姗', pm: 'Nick Su 苏梦醒', days: 12, importance: 3, status: 'todo', category: '中国区导入' },
+    { name: '商场礼品卡', owner: 'Jamie 吴静姗', pm: 'Nick Su 苏梦醒', days: 15, importance: 3, status: 'todo', category: '国际部新增' },
+    { name: '客流数据二期迭代', owner: 'Nick Su 苏梦醒', pm: 'Jamie 吴静姗', days: 20, importance: 3, status: 'todo', category: '国际部新增' },
+    { name: '专属LDU活动报价机取', owner: 'Asher 徐泽一', pm: 'Andy Wei魏有峰', days: 18, importance: 3, status: 'todo', category: '国际部新增' },
+
+    // 评分2分：低优先级
+    { name: '串批流加催办', owner: '李申宇', pm: 'Asher 徐泽一', days: 8, importance: 2, status: 'todo', category: '国际部新增' },
+    { name: '建店系统和ISP建立机构打通', owner: 'Zhisheng1 Liu 刘智晟', pm: 'Andy Wei魏有峰', days: 10, importance: 2, status: 'todo', category: '国际部新增' },
+
+    // 评分1分：最低优先级
+    { name: '2C部分退款', owner: 'Jamie 吴静姗', pm: 'Nick Su 苏梦醒', days: 5, importance: 1, status: 'todo', category: '国际部新增' },
   ];
 
   const bvMapping: Record<number, string> = {
@@ -1293,7 +1333,10 @@ const generateSampleData = (): Requirement[] => {
     7: '明显',
     6: '明显',
     5: '明显',
-    3: '局部'
+    4: '局部',
+    3: '局部',
+    2: '局部',
+    1: '局部'
   };
 
   return realData.map((item, i) => {
@@ -1301,18 +1344,18 @@ const generateSampleData = (): Requirement[] => {
     const isUrgent = hasDeadline && new Date(item.deadline) < new Date('2025-11-15');
 
     return {
-      id: `RMS-${String(i + 1).padStart(3, '0')}`,
+      id: `ZM-${String(i + 1).padStart(3, '0')}`,
       name: item.name,
-      businessOwner: item.owner.replace(/@/g, ''),
-      productManager: item.pm.replace(/@/g, ''),
+      businessOwner: item.owner,
+      productManager: item.pm,
       productProgress: item.status === 'doing' ? '已出PRD' : '已评估',
       effortDays: item.days,
       bv: bvMapping[item.importance] || '明显',
       tc: isUrgent ? '一月硬窗口' : (hasDeadline ? '三月窗口' : '随时'),
       hardDeadline: isUrgent,
       deadlineDate: item.deadline,
-      techProgress: item.status === 'doing' ? '已评估工作量' : '未评估',
-      type: item.days > 50 ? '功能开发' : (item.days < 15 ? '技术债' : '功能开发')
+      techProgress: '已评估工作量',
+      type: '功能开发'
     };
   });
 };
