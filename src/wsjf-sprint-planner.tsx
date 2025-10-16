@@ -2485,6 +2485,7 @@ export default function WSJFPlanner() {
     const fileFields = Object.keys(sampleRow);
 
     // 系统字段定义
+    // 注意：techProgress和productProgress不做自动映射，使用智能默认值
     const systemFields: Record<string, string[]> = {
       name: ['需求名称', '名称', 'name', 'title', '标题', '需求', 'requirement'],
       submitterName: ['提交人', '提交人姓名', 'submitter', 'author', '作者'],
@@ -2494,8 +2495,8 @@ export default function WSJFPlanner() {
       bv: ['业务价值', 'bv', 'business value', '价值'],
       tc: ['时间临界', 'tc', 'time critical', '临界性'],
       hardDeadline: ['强制截止', 'ddl', 'deadline', '截止'],
-      techProgress: ['技术进展', '进展', 'progress', '状态'],
-      productProgress: ['产品进展', '产品状态'],
+      // techProgress: 不自动映射，使用智能默认值（有工作量=已评估工作量，无工作量=未评估）
+      // productProgress: 不自动映射，使用默认值"未评估"
       type: ['类型', 'type', '需求类型'],
       submitDate: ['提交日期', '日期', 'date', '提交时间'],
       submitter: ['提交者', '提交方'],
