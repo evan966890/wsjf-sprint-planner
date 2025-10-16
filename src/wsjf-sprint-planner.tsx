@@ -32,6 +32,21 @@ import html2canvas from 'html2canvas';
 import * as storage from './storage';
 
 // ============================================================================
+// 系统配置 (System Configuration)
+// ============================================================================
+
+/**
+ * Gemini API配置
+ * 用于AI智能字段映射功能
+ *
+ * 配置说明：
+ * 1. 将您的Gemini API Key填入下方GEMINI_API_KEY常量
+ * 2. 获取方式：访问 https://makersuite.google.com/app/apikey 创建API Key
+ * 3. 配置后所有用户将共享使用此API Key进行AI映射
+ */
+const GEMINI_API_KEY = ''; // 请在此处填入您的Gemini API Key
+
+// ============================================================================
 // 类型定义 (Type Definitions)
 // ============================================================================
 
@@ -2239,6 +2254,7 @@ export default function WSJFPlanner() {
   const [importData, setImportData] = useState<any[]>([]);                 // 导入的原始数据
   const [importMapping, setImportMapping] = useState<Record<string, string>>({}); // 字段映射关系
   const [isAIMappingLoading, setIsAIMappingLoading] = useState(false);     // AI映射加载状态
+  const [clearBeforeImport, setClearBeforeImport] = useState(false);       // 导入时是否清空已有需求
 
   // 筛选和搜索状态
   const [searchTerm, setSearchTerm] = useState('');                        // 搜索关键词
@@ -2510,9 +2526,9 @@ export default function WSJFPlanner() {
    * 使用AI映射字段（Gemini API）
    */
   const handleAIMapping = async () => {
-    const apiKey = localStorage.getItem('wsjf_gemini_api_key');
+    const apiKey = GEMINI_API_KEY;
     if (!apiKey) {
-      alert('请先在系统设置中配置 Gemini API Key');
+      alert('AI映射功能未配置。请联系管理员在代码中配置 Gemini API Key。');
       return;
     }
 
@@ -2635,10 +2651,15 @@ ${JSON.stringify(sampleRow, null, 2)}
         };
       });
 
-      // 添加到系统
-      const allReqs = [...requirements, ...newRequirements];
+      // 添加到系统（根据clearBeforeImport决定是否清空已有需求）
+      const allReqs = clearBeforeImport ? newRequirements : [...requirements, ...newRequirements];
       const updated = calculateScores(allReqs);
       setRequirements(updated);
+
+      // 如果清空模式，同时清空所有迭代池
+      if (clearBeforeImport) {
+        setSprintPools(prev => prev.map(pool => ({ ...pool, requirements: [] })));
+      }
 
       // 添加到待排期区
       const newUnscheduled = newRequirements.map(req =>
@@ -2646,15 +2667,19 @@ ${JSON.stringify(sampleRow, null, 2)}
       ).filter(Boolean) as Requirement[];
 
       setUnscheduled(prev => {
-        const combined = [...prev, ...newUnscheduled];
+        const combined = clearBeforeImport ? newUnscheduled : [...prev, ...newUnscheduled];
         return combined.sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0));
       });
 
       setShowImportModal(false);
       setImportData([]);
       setImportMapping({});
+      setClearBeforeImport(false); // 重置清空选项
 
-      alert(`成功导入 ${newRequirements.length} 条需求！`);
+      const message = clearBeforeImport
+        ? `已清空原有需求，成功导入 ${newRequirements.length} 条新需求！`
+        : `成功导入 ${newRequirements.length} 条需求！`;
+      alert(message);
     } catch (error) {
       console.error('导入失败:', error);
       alert('导入失败：' + (error instanceof Error ? error.message : '未知错误'));
@@ -2997,21 +3022,38 @@ ${JSON.stringify(sampleRow, null, 2)}
           </div>
 
           {/* 操作按钮 */}
-          <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
-            <button
-              onClick={() => setShowImportModal(false)}
-              className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition font-medium"
-            >
-              取消
-            </button>
-            <button
-              onClick={handleConfirmImport}
-              disabled={!hasRequiredFields}
-              className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:text-gray-500 text-white rounded-lg transition font-medium flex items-center gap-2"
-            >
-              <Save size={18} />
-              确认导入 ({importData.length} 条)
-            </button>
+          <div className="border-t border-gray-200 px-6 py-4 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="clear-before-import"
+                checked={clearBeforeImport}
+                onChange={(e) => setClearBeforeImport(e.target.checked)}
+                className="w-4 h-4 text-red-600 rounded focus:ring-2 focus:ring-red-500"
+              />
+              <label htmlFor="clear-before-import" className="text-sm text-gray-700 cursor-pointer">
+                清空已有需求并导入全新数据
+                {clearBeforeImport && (
+                  <span className="ml-2 text-red-600 font-semibold">（警告：将删除所有现有需求！）</span>
+                )}
+              </label>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition font-medium"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmImport}
+                disabled={!hasRequiredFields}
+                className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:text-gray-500 text-white rounded-lg transition font-medium flex items-center gap-2"
+              >
+                <Save size={18} />
+                确认导入 ({importData.length} 条)
+              </button>
+            </div>
           </div>
         </div>
       </div>
