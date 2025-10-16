@@ -44,7 +44,7 @@ import * as storage from './storage';
  * 2. 获取方式：访问 https://makersuite.google.com/app/apikey 创建API Key
  * 3. 配置后所有用户将共享使用此API Key进行AI映射
  */
-const GEMINI_API_KEY = 'AIzaSyBwM-zD1d6ur0nw9DZq-tTzGX95RmmlqKo'; // 请在此处填入您的Gemini API Key
+const GEMINI_API_KEY = 'AIzaSyCGgDhKDPvguVszjJEYW0UFbC7r93XFJIw'; // 请在此处填入您的Gemini API Key
 
 // ============================================================================
 // 类型定义 (Type Definitions)
@@ -2573,7 +2573,7 @@ ${JSON.stringify(sampleRow, null, 2)}
 2. 确保name字段必须被映射（这是必填字段）
 3. 对于布尔值字段（hardDeadline、isRMS），尝试识别"是/否"、"有/无"、"true/false"等表示`;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
