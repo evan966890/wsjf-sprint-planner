@@ -25,7 +25,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { AlertCircle, X, Save, Edit2, Plus, Search, Filter, Star, Info, HelpCircle, Download, FileSpreadsheet, FileText, Image as ImageIcon, LogOut, User as UserIcon, ArrowUpDown } from 'lucide-react';
+import { AlertCircle, X, Save, Edit2, Plus, Search, Filter, Star, Info, HelpCircle, Download, Upload, FileSpreadsheet, FileText, Image as ImageIcon, LogOut, User as UserIcon, ArrowUpDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -2235,6 +2235,10 @@ export default function WSJFPlanner() {
   const [compact, setCompact] = useState(false);                           // 紧凑模式
   const [showHandbook, setShowHandbook] = useState(false);                 // 显示说明书
   const [showExportMenu, setShowExportMenu] = useState(false);             // 显示导出菜单
+  const [showImportModal, setShowImportModal] = useState(false);           // 显示导入预览Modal
+  const [importData, setImportData] = useState<any[]>([]);                 // 导入的原始数据
+  const [importMapping, setImportMapping] = useState<Record<string, string>>({}); // 字段映射关系
+  const [isAIMappingLoading, setIsAIMappingLoading] = useState(false);     // AI映射加载状态
 
   // 筛选和搜索状态
   const [searchTerm, setSearchTerm] = useState('');                        // 搜索关键词
@@ -2404,6 +2408,259 @@ export default function WSJFPlanner() {
     }
   };
 
+  /**
+   * 处理文件导入
+   * 支持CSV和Excel格式
+   */
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = await parseFile(file);
+      if (data && data.length > 0) {
+        setImportData(data);
+        // 自动进行模糊匹配
+        const mapping = autoMapFields(data[0]);
+        setImportMapping(mapping);
+        setShowImportModal(true);
+      } else {
+        alert('文件中没有数据');
+      }
+    } catch (error) {
+      console.error('文件解析失败:', error);
+      alert('文件解析失败，请检查文件格式');
+    }
+
+    // 重置input以允许重复上传同一文件
+    e.target.value = '';
+  };
+
+  /**
+   * 解析文件（CSV或Excel）
+   */
+  const parseFile = (file: File): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+          resolve(jsonData);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      reader.onerror = () => reject(new Error('文件读取失败'));
+      reader.readAsBinaryString(file);
+    });
+  };
+
+  /**
+   * 自动映射字段（模糊匹配）
+   * 匹配系统字段和导入文件的字段
+   */
+  const autoMapFields = (sampleRow: any): Record<string, string> => {
+    const mapping: Record<string, string> = {};
+    const fileFields = Object.keys(sampleRow);
+
+    // 系统字段定义
+    const systemFields: Record<string, string[]> = {
+      name: ['需求名称', '名称', 'name', 'title', '标题', '需求', 'requirement'],
+      submitterName: ['提交人', '提交人姓名', 'submitter', 'author', '作者'],
+      productManager: ['产品经理', '产品', 'pm', 'product manager', '负责人'],
+      developer: ['开发人员', '开发', 'developer', 'dev', '开发者'],
+      effortDays: ['工作量', '人天', '工作日', 'effort', 'days', '人日', '天数'],
+      bv: ['业务价值', 'bv', 'business value', '价值'],
+      tc: ['时间临界', 'tc', 'time critical', '临界性'],
+      hardDeadline: ['强制截止', 'ddl', 'deadline', '截止'],
+      techProgress: ['技术进展', '进展', 'progress', '状态'],
+      productProgress: ['产品进展', '产品状态'],
+      type: ['类型', 'type', '需求类型'],
+      submitDate: ['提交日期', '日期', 'date', '提交时间'],
+      submitter: ['提交者', '提交方'],
+      isRMS: ['是否RMS', 'rms', 'is rms'],
+    };
+
+    // 对每个文件字段进行匹配
+    fileFields.forEach(fileField => {
+      const normalizedFileField = fileField.toLowerCase().trim();
+
+      for (const [systemField, keywords] of Object.entries(systemFields)) {
+        const matched = keywords.some(keyword =>
+          normalizedFileField.includes(keyword.toLowerCase()) ||
+          keyword.toLowerCase().includes(normalizedFileField)
+        );
+
+        if (matched && !Object.values(mapping).includes(fileField)) {
+          mapping[systemField] = fileField;
+          break;
+        }
+      }
+    });
+
+    return mapping;
+  };
+
+  /**
+   * 使用AI映射字段（Gemini API）
+   */
+  const handleAIMapping = async () => {
+    const apiKey = localStorage.getItem('wsjf_gemini_api_key');
+    if (!apiKey) {
+      alert('请先在系统设置中配置 Gemini API Key');
+      return;
+    }
+
+    setIsAIMappingLoading(true);
+
+    try {
+      const sampleRow = importData[0];
+      const fileFields = Object.keys(sampleRow);
+      const systemFields = {
+        name: '需求名称（必填）',
+        submitterName: '提交人姓名',
+        productManager: '产品经理',
+        developer: '开发人员',
+        effortDays: '工作量（天数）',
+        bv: '业务价值（局部/明显/撬动核心/战略平台）',
+        tc: '时间临界（随时/三月窗口/一月硬窗口）',
+        hardDeadline: '是否有强制截止日期（true/false）',
+        techProgress: '技术进展（未评估/设计中/开发中/已完成）',
+        productProgress: '产品进展（未评估/设计中/开发中/已完成）',
+        type: '需求类型（功能开发/技术债/Bug修复）',
+        submitDate: '提交日期',
+        submitter: '提交方（产品/技术/运营/业务）',
+        isRMS: '是否RMS需求（true/false）'
+      };
+
+      const prompt = `你是一个数据映射专家。请将Excel文件的列名映射到系统字段。
+
+系统字段（目标）：
+${Object.entries(systemFields).map(([key, desc]) => `- ${key}: ${desc}`).join('\n')}
+
+Excel文件列名（来源）：
+${fileFields.map((field, index) => `${index + 1}. ${field}`).join('\n')}
+
+示例数据（第一行）：
+${JSON.stringify(sampleRow, null, 2)}
+
+请分析列名和示例数据，返回最合理的映射关系。只返回JSON格式，不要其他解释：
+{"systemField1": "excelColumn1", "systemField2": "excelColumn2", ...}
+
+注意：
+1. 如果某个Excel列无法映射到任何系统字段，不要包含在结果中
+2. 确保name字段必须被映射（这是必填字段）
+3. 对于布尔值字段（hardDeadline、isRMS），尝试识别"是/否"、"有/无"、"true/false"等表示`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('AI映射请求失败');
+      }
+
+      const result = await response.json();
+      const aiText = result.candidates[0]?.content?.parts[0]?.text || '';
+
+      // 从AI返回的文本中提取JSON
+      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const aiMapping = JSON.parse(jsonMatch[0]);
+        setImportMapping(aiMapping);
+        alert('AI映射完成！请检查映射结果');
+      } else {
+        throw new Error('无法解析AI返回的映射结果');
+      }
+    } catch (error) {
+      console.error('AI映射失败:', error);
+      alert('AI映射失败：' + (error instanceof Error ? error.message : '未知错误'));
+    } finally {
+      setIsAIMappingLoading(false);
+    }
+  };
+
+  /**
+   * 确认导入数据
+   */
+  const handleConfirmImport = () => {
+    try {
+      const newRequirements: Requirement[] = importData.map((row, index) => {
+        const mapped: any = { id: `REQ-${Date.now()}-${index}` };
+
+        // 根据映射关系转换数据
+        Object.entries(importMapping).forEach(([systemField, fileField]) => {
+          let value = row[fileField];
+
+          // 数据类型转换
+          if (systemField === 'effortDays') {
+            value = Number(value) || 0;
+          } else if (systemField === 'hardDeadline' || systemField === 'isRMS') {
+            value = value === true || value === 'true' || value === '是' || value === '有' || value === 1;
+          }
+
+          mapped[systemField] = value;
+        });
+
+        // 设置默认值
+        return {
+          id: mapped.id,
+          name: mapped.name || `导入需求-${index + 1}`,
+          submitterName: mapped.submitterName || '',
+          productManager: mapped.productManager || '',
+          developer: mapped.developer || '',
+          productProgress: mapped.productProgress || '未评估',
+          effortDays: mapped.effortDays || 0,
+          bv: mapped.bv || '明显',
+          tc: mapped.tc || '随时',
+          hardDeadline: mapped.hardDeadline || false,
+          techProgress: mapped.techProgress || '未评估',
+          type: mapped.type || '功能开发',
+          submitDate: mapped.submitDate || new Date().toISOString().split('T')[0],
+          submitter: mapped.submitter || '产品',
+          isRMS: mapped.isRMS || false,
+        };
+      });
+
+      // 添加到系统
+      const allReqs = [...requirements, ...newRequirements];
+      const updated = calculateScores(allReqs);
+      setRequirements(updated);
+
+      // 添加到待排期区
+      const newUnscheduled = newRequirements.map(req =>
+        updated.find(r => r.id === req.id)
+      ).filter(Boolean) as Requirement[];
+
+      setUnscheduled(prev => {
+        const combined = [...prev, ...newUnscheduled];
+        return combined.sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0));
+      });
+
+      setShowImportModal(false);
+      setImportData([]);
+      setImportMapping({});
+
+      alert(`成功导入 ${newRequirements.length} 条需求！`);
+    } catch (error) {
+      console.error('导入失败:', error);
+      alert('导入失败：' + (error instanceof Error ? error.message : '未知错误'));
+    }
+  };
+
   const handleExportExcel = () => {
     const exportData: any[] = [];
 
@@ -2563,6 +2820,204 @@ export default function WSJFPlanner() {
   const totalResourceAvailable = sprintPools.reduce((sum, p) => sum + p.totalDays * (1 - (p.bugReserve + p.refactorReserve + p.otherReserve) / 100), 0);
   const notEvaluatedCount = unscheduled.filter(r => r.techProgress === '未评估').length;
 
+  /**
+   * 导入预览Modal组件
+   * 显示导入数据预览和字段映射配置
+   * 支持手动调整映射和AI辅助映射
+   */
+  const ImportPreviewModal = () => {
+    if (!showImportModal || importData.length === 0) return null;
+
+    const sampleRow = importData[0];
+    const fileFields = Object.keys(sampleRow);
+
+    // 系统字段选项
+    const systemFieldOptions = [
+      { value: '', label: '-- 不映射 --' },
+      { value: 'name', label: '需求名称 *' },
+      { value: 'submitterName', label: '提交人姓名' },
+      { value: 'productManager', label: '产品经理' },
+      { value: 'developer', label: '开发人员' },
+      { value: 'effortDays', label: '工作量(天数)' },
+      { value: 'bv', label: '业务价值' },
+      { value: 'tc', label: '时间临界' },
+      { value: 'hardDeadline', label: '强制截止' },
+      { value: 'techProgress', label: '技术进展' },
+      { value: 'productProgress', label: '产品进展' },
+      { value: 'type', label: '需求类型' },
+      { value: 'submitDate', label: '提交日期' },
+      { value: 'submitter', label: '提交方' },
+      { value: 'isRMS', label: '是否RMS' },
+    ];
+
+    // 检查是否所有必填字段都已映射
+    const hasRequiredFields = Object.values(importMapping).length > 0 && importMapping.name;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          {/* 标题栏 */}
+          <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileSpreadsheet className="text-white" size={24} />
+              <h2 className="text-xl font-bold text-white">导入预览与字段映射</h2>
+            </div>
+            <button
+              onClick={() => setShowImportModal(false)}
+              className="text-white/80 hover:text-white transition"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* 内容区域 */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {/* 统计信息 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-800">
+                <span className="font-semibold">检测到 {importData.length} 条记录</span>，
+                共 {fileFields.length} 个字段。请配置字段映射关系后确认导入。
+              </p>
+            </div>
+
+            {/* AI映射按钮 */}
+            <div className="mb-6 flex items-center gap-3">
+              <button
+                onClick={handleAIMapping}
+                disabled={isAIMappingLoading}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg transition flex items-center gap-2"
+              >
+                <Star size={16} />
+                {isAIMappingLoading ? 'AI映射中...' : '使用AI智能映射'}
+              </button>
+              <span className="text-xs text-gray-500">AI会分析字段名称和示例数据，自动匹配最合适的系统字段</span>
+            </div>
+
+            {/* 字段映射配置 */}
+            <div className="mb-6">
+              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <ArrowUpDown size={18} />
+                字段映射配置
+              </h3>
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-700 w-1/3">Excel列名</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-700 w-1/4">示例数据</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-700 w-1/3">映射到系统字段</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fileFields.map((field, index) => {
+                      // 找到当前文件字段映射到的系统字段
+                      const mappedSystemField = Object.keys(importMapping).find(
+                        key => importMapping[key] === field
+                      ) || '';
+
+                      return (
+                        <tr key={index} className="border-t border-gray-200 hover:bg-gray-50">
+                          <td className="px-4 py-3 font-medium text-gray-800">{field}</td>
+                          <td className="px-4 py-3 text-gray-600 truncate max-w-xs">
+                            {String(sampleRow[field])}
+                          </td>
+                          <td className="px-4 py-3">
+                            <select
+                              value={mappedSystemField}
+                              onChange={(e) => {
+                                const newMapping = { ...importMapping };
+                                // 移除旧映射
+                                Object.keys(newMapping).forEach(key => {
+                                  if (newMapping[key] === field) {
+                                    delete newMapping[key];
+                                  }
+                                });
+                                // 添加新映射
+                                if (e.target.value) {
+                                  newMapping[e.target.value] = field;
+                                }
+                                setImportMapping(newMapping);
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                            >
+                              {systemFieldOptions.map(option => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 数据预览 */}
+            <div>
+              <h3 className="font-semibold text-gray-800 mb-3">数据预览（前5条）</h3>
+              <div className="border border-gray-200 rounded-lg overflow-auto max-h-60">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      {fileFields.map(field => (
+                        <th key={field} className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                          {field}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importData.slice(0, 5).map((row: any, index: number) => (
+                      <tr key={index} className="border-t border-gray-200">
+                        {fileFields.map(field => (
+                          <td key={field} className="px-3 py-2 text-gray-600 whitespace-nowrap">
+                            {String(row[field])}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 警告提示 */}
+            {!hasRequiredFields && (
+              <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800 flex items-center gap-2">
+                  <AlertCircle size={16} />
+                  <span className="font-semibold">注意：</span>
+                  必须映射"需求名称"字段才能导入
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* 操作按钮 */}
+          <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+            <button
+              onClick={() => setShowImportModal(false)}
+              className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition font-medium"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleConfirmImport}
+              disabled={!hasRequiredFields}
+              className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:text-gray-500 text-white rounded-lg transition font-medium flex items-center gap-2"
+            >
+              <Save size={18} />
+              确认导入 ({importData.length} 条)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       <div className="bg-gray-900 border-b border-gray-800 px-6 py-3 shadow-sm flex-shrink-0">
@@ -2622,6 +3077,22 @@ export default function WSJFPlanner() {
             >
               {compact ? '宽松视图' : '紧凑视图'}
             </button>
+
+            {/* 导入按钮 */}
+            <button
+              onClick={() => document.getElementById('file-import-input')?.click()}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
+            >
+              <Upload size={16} />
+              导入
+            </button>
+            <input
+              id="file-import-input"
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              onChange={handleFileImport}
+              className="hidden"
+            />
 
             <div className="relative">
               <button
@@ -2844,6 +3315,9 @@ export default function WSJFPlanner() {
       {showHandbook && (
         <HandbookModal onClose={() => setShowHandbook(false)} />
       )}
+
+      {/* 导入预览Modal */}
+      <ImportPreviewModal />
     </div>
   );
 }
