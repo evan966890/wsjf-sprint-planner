@@ -1296,8 +1296,6 @@ const generateSampleData = (): Requirement[] => {
     3: '局部'
   };
 
-  const tcOptions = ['随时', '三月窗口', '一月硬窗口'];
-
   return realData.map((item, i) => {
     const hasDeadline = !!item.deadline;
     const isUrgent = hasDeadline && new Date(item.deadline) < new Date('2025-11-15');
