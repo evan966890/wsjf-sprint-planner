@@ -44,7 +44,7 @@ import * as storage from './storage';
  * 2. 获取方式：访问 https://makersuite.google.com/app/apikey 创建API Key
  * 3. 配置后所有用户将共享使用此API Key进行AI映射
  */
-const GEMINI_API_KEY = ''; // 请在此处填入您的Gemini API Key
+const GEMINI_API_KEY = 'AIzaSyBwM-zD1d6ur0nw9DZq-tTzGX95RmmlqKo'; // 请在此处填入您的Gemini API Key
 
 // ============================================================================
 // 类型定义 (Type Definitions)
@@ -2586,11 +2586,23 @@ ${JSON.stringify(sampleRow, null, 2)}
       });
 
       if (!response.ok) {
-        throw new Error('AI映射请求失败');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error?.message || response.statusText;
+        throw new Error(`API请求失败 (${response.status}): ${errorMsg}\n\n可能原因：\n1. API Key无效或已过期\n2. API Key权限不足\n3. 超出API配额限制\n\n请检查API Key配置`);
       }
 
       const result = await response.json();
+
+      // 检查API返回的结果
+      if (!result.candidates || result.candidates.length === 0) {
+        throw new Error('API返回数据格式异常：没有候选结果');
+      }
+
       const aiText = result.candidates[0]?.content?.parts[0]?.text || '';
+
+      if (!aiText) {
+        throw new Error('API返回数据为空');
+      }
 
       // 从AI返回的文本中提取JSON
       const jsonMatch = aiText.match(/\{[\s\S]*\}/);
@@ -2599,11 +2611,21 @@ ${JSON.stringify(sampleRow, null, 2)}
         setImportMapping(aiMapping);
         alert('AI映射完成！请检查映射结果');
       } else {
-        throw new Error('无法解析AI返回的映射结果');
+        throw new Error(`无法解析AI返回的映射结果。AI返回内容：\n${aiText.substring(0, 200)}...`);
       }
     } catch (error) {
       console.error('AI映射失败:', error);
-      alert('AI映射失败：' + (error instanceof Error ? error.message : '未知错误'));
+      let errorMessage = 'AI映射失败：';
+
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage += '网络连接失败，请检查网络连接或防火墙设置';
+      } else if (error instanceof Error) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += '未知错误';
+      }
+
+      alert(errorMessage);
     } finally {
       setIsAIMappingLoading(false);
     }
