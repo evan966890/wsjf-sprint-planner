@@ -44,7 +44,7 @@ import * as storage from './storage';
  * 2. 获取方式：访问 https://platform.openai.com/api-keys 创建API Key
  * 3. 配置后所有用户将共享使用此API Key进行AI映射
  */
-const OPENAI_API_KEY = ''; // 请在此处填入您的OpenAI API Key
+const OPENAI_API_KEY = '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'; // 请在此处填入您的OpenAI API Key
 
 // ============================================================================
 // 类型定义 (Type Definitions)
@@ -2648,10 +2648,15 @@ ${JSON.stringify(sampleRow, null, 2)}
   const handleConfirmImport = () => {
     try {
       const newRequirements: Requirement[] = importData.map((row, index) => {
-        const mapped: any = { id: `REQ-${Date.now()}-${index}` };
+        // 生成唯一ID（使用时间戳+随机数+索引确保唯一性）
+        const uniqueId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${index}`;
+        const mapped: any = {};
 
-        // 根据映射关系转换数据
+        // 根据映射关系转换数据（不包括id字段，防止被覆盖）
         Object.entries(importMapping).forEach(([systemField, fileField]) => {
+          // 跳过id字段，确保ID不会被Excel数据覆盖
+          if (systemField === 'id') return;
+
           let value = row[fileField];
 
           // 数据类型转换
@@ -2664,9 +2669,9 @@ ${JSON.stringify(sampleRow, null, 2)}
           mapped[systemField] = value;
         });
 
-        // 设置默认值
+        // 设置默认值，使用生成的uniqueId
         return {
-          id: mapped.id,
+          id: uniqueId,
           name: mapped.name || `导入需求-${index + 1}`,
           submitterName: mapped.submitterName || '',
           productManager: mapped.productManager || '',
@@ -2684,8 +2689,11 @@ ${JSON.stringify(sampleRow, null, 2)}
         };
       });
 
+      // 计算新需求的WSJF分数
+      const newRequirementsWithScores = calculateScores(newRequirements);
+
       // 添加到系统（根据clearBeforeImport决定是否清空已有需求）
-      const allReqs = clearBeforeImport ? newRequirements : [...requirements, ...newRequirements];
+      const allReqs = clearBeforeImport ? newRequirementsWithScores : [...requirements, ...newRequirementsWithScores];
       const updated = calculateScores(allReqs);
       setRequirements(updated);
 
@@ -2694,10 +2702,10 @@ ${JSON.stringify(sampleRow, null, 2)}
         setSprintPools(prev => prev.map(pool => ({ ...pool, requirements: [] })));
       }
 
-      // 添加到待排期区
-      const newUnscheduled = newRequirements.map(req =>
-        updated.find(r => r.id === req.id)
-      ).filter(Boolean) as Requirement[];
+      // 添加到待排期区（使用已计算分数的新需求）
+      const newUnscheduled = clearBeforeImport
+        ? newRequirementsWithScores
+        : [...newRequirementsWithScores];
 
       setUnscheduled(prev => {
         const combined = clearBeforeImport ? newUnscheduled : [...prev, ...newUnscheduled];
