@@ -2546,7 +2546,7 @@ export default function WSJFPlanner() {
         bv: '业务价值（局部/明显/撬动核心/战略平台）',
         tc: '时间临界（随时/三月窗口/一月硬窗口）',
         hardDeadline: '是否有强制截止日期（true/false）',
-        techProgress: '技术进展（未评估/设计中/开发中/已完成）',
+        techProgress: '技术进展（未评估/已评估工作量/已完成技术方案）',
         productProgress: '产品进展（未评估/设计中/开发中/已完成）',
         type: '需求类型（功能开发/技术债/Bug修复）',
         submitDate: '提交日期',
@@ -2670,6 +2670,10 @@ ${JSON.stringify(sampleRow, null, 2)}
         });
 
         // 设置默认值，使用生成的uniqueId
+        // 智能设置技术进展：如果有工作量数据，说明已评估过工作量
+        const effortDays = mapped.effortDays || 0;
+        const defaultTechProgress = effortDays > 0 ? '已评估工作量' : '未评估';
+
         return {
           id: uniqueId,
           name: mapped.name || `导入需求-${index + 1}`,
@@ -2677,11 +2681,11 @@ ${JSON.stringify(sampleRow, null, 2)}
           productManager: mapped.productManager || '',
           developer: mapped.developer || '',
           productProgress: mapped.productProgress || '未评估',
-          effortDays: mapped.effortDays || 0,
+          effortDays: effortDays,
           bv: mapped.bv || '明显',
           tc: mapped.tc || '随时',
           hardDeadline: mapped.hardDeadline || false,
-          techProgress: mapped.techProgress || '未评估',
+          techProgress: mapped.techProgress || defaultTechProgress,
           type: mapped.type || '功能开发',
           submitDate: mapped.submitDate || new Date().toISOString().split('T')[0],
           submitter: mapped.submitter || '产品',
