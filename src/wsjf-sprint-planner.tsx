@@ -2694,26 +2694,26 @@ ${JSON.stringify(sampleRow, null, 2)}
         };
       });
 
-      // 计算新需求的WSJF分数
-      const newRequirementsWithScores = calculateScores(newRequirements);
-
       // 添加到系统（根据clearBeforeImport决定是否清空已有需求）
-      const allReqs = clearBeforeImport ? newRequirementsWithScores : [...requirements, ...newRequirementsWithScores];
+      // 重要：先合并所有需求，然后统一计算分数，确保分数归一化基于全局范围
+      const allReqs = clearBeforeImport ? newRequirements : [...requirements, ...newRequirements];
       const updated = calculateScores(allReqs);
       setRequirements(updated);
 
-      // 如果清空模式，同时清空所有迭代池
+      // 如果清空模式，同时清空所有迭代池和待排期区
       if (clearBeforeImport) {
         setSprintPools(prev => prev.map(pool => ({ ...pool, requirements: [] })));
       }
 
-      // 添加到待排期区（使用已计算分数的新需求）
-      const newUnscheduled = clearBeforeImport
-        ? newRequirementsWithScores
-        : [...newRequirementsWithScores];
+      // 从updated中提取新导入的需求（通过ID匹配）
+      // 这样确保使用的是经过统一分数计算的对象，而不是旧的对象引用
+      const newReqIds = new Set(newRequirements.map(r => r.id));
+      const newUnscheduledFromUpdated = updated.filter(r => newReqIds.has(r.id));
 
       setUnscheduled(prev => {
-        const combined = clearBeforeImport ? newUnscheduled : [...prev, ...newUnscheduled];
+        const combined = clearBeforeImport
+          ? newUnscheduledFromUpdated
+          : [...prev, ...newUnscheduledFromUpdated];
         return combined.sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0));
       });
 
