@@ -1,175 +1,432 @@
+/**
+ * WSJF Sprint Planner - WSJF加权优先级排期可视化工具
+ *
+ * 项目概述：
+ * 基于 WSJF (Weighted Shortest Job First) 方法的迭代需求排期决策工具
+ * 帮助团队通过业务价值、时间临界性、工作量等维度评估需求优先级
+ *
+ * 技术栈：
+ * - React 18 + TypeScript
+ * - Tailwind CSS (样式)
+ * - Lucide React (图标)
+ * - xlsx (Excel导出)
+ * - jsPDF + html2canvas (PDF导出)
+ *
+ * 核心功能：
+ * 1. WSJF评分算法：自动计算需求热度分(1-100)和星级(2-5星)
+ * 2. 拖拽排期：支持需求在迭代池间拖拽移动
+ * 3. 数据持久化：LocalStorage存储用户数据
+ * 4. 多维筛选：按业务价值、时间临界性、截止日期等筛选
+ * 5. 数据导入导出：支持Excel、JSON格式导入导出，支持PDF导出
+ * 6. 智能映射：AI辅助字段映射(集成Gemini API)
+ *
+ * @author WSJF Team
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { AlertCircle, X, Save, Edit2, Plus, Search, Filter, Star, Info, HelpCircle, Download, FileSpreadsheet, FileText, Image as ImageIcon, LogOut, User as UserIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, X, Save, Edit2, Plus, Search, Filter, Star, Info, HelpCircle, Download, FileSpreadsheet, FileText, Image as ImageIcon, LogOut, User as UserIcon, ArrowUpDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as storage from './storage';
 
-// 类型定义
+// ============================================================================
+// 类型定义 (Type Definitions)
+// ============================================================================
+
+/**
+ * 需求条目接口
+ * 描述单个需求的完整信息，包括基本信息、评分维度和计算结果
+ */
 interface Requirement {
-  id: string;
-  name: string;
-  businessOwner: string;
-  productManager: string;
-  productProgress: string;
-  effortDays: number;
-  bv: string;
-  tc: string;
-  hardDeadline: boolean;
-  deadlineDate?: string;
-  techProgress: string;
-  dependencies?: string[];
-  type: string;
-  rawScore?: number;
-  displayScore?: number;
-  stars?: number;
+  id: string;                    // 需求唯一标识符
+  name: string;                  // 需求名称
+  submitterName: string;         // 需求提交人姓名
+  productManager: string;        // 产品经理
+  developer: string;             // 研发负责人
+  productProgress: string;       // 产品进度状态
+  effortDays: number;            // 预估工作量（人天）
+  bv: string;                    // Business Value 业务价值：局部/明显/撬动核心/战略平台
+  tc: string;                    // Time Criticality 时间临界性：随时/三月窗口/一月硬窗口
+  hardDeadline: boolean;         // 是否存在强制截止日期
+  deadlineDate?: string;         // 截止日期（可选，hardDeadline为true时应填写）
+  techProgress: string;          // 技术进度状态
+  dependencies?: string[];       // 依赖的其他需求ID列表（可选）
+  type: string;                  // 需求类型
+  submitDate: string;            // 需求提交日期
+  submitter: string;             // 需求提交方：产品/研发/业务
+  isRMS: boolean;                // 是否为RMS重构项目
+  rawScore?: number;             // 原始分数（3-26范围，由WSJF算法计算）
+  displayScore?: number;         // 展示分数（1-100范围，归一化后的热度分）
+  stars?: number;                // 星级评定（2-5星，基于displayScore分档）
 }
 
+/**
+ * 迭代池接口
+ * 描述一个迭代周期的时间范围、资源预留和已排期需求
+ */
 interface SprintPool {
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  totalDays: number;
-  bugReserve: number;
-  refactorReserve: number;
-  otherReserve: number;
-  requirements: Requirement[];
+  id: string;                    // 迭代池唯一标识符
+  name: string;                  // 迭代池名称（如"迭代1"）
+  startDate: string;             // 开始日期（YYYY-MM-DD格式）
+  endDate: string;               // 结束日期（YYYY-MM-DD格式）
+  totalDays: number;             // 迭代总可用人天数
+  bugReserve: number;            // Bug修复预留人天（百分比，0-100）
+  refactorReserve: number;       // 重构预留人天（百分比，0-100）
+  otherReserve: number;          // 其他预留人天（百分比，0-100）
+  requirements: Requirement[];   // 已排期的需求列表
 }
 
+/**
+ * 用户接口
+ * 描述登录用户的基本信息
+ */
 interface User {
-  name: string;
-  email: string;
+  name: string;                  // 用户姓名
+  email: string;                 // 用户邮箱
 }
 
-// 计算WSJF分数
+// ============================================================================
+// WSJF评分算法 (WSJF Scoring Algorithm)
+// ============================================================================
+
+/**
+ * 计算WSJF分数
+ *
+ * 算法说明：
+ * 1. 计算原始分(rawScore): BV + TC + DDL + WorkloadScore，范围3-26
+ * 2. 归一化为展示分(displayScore): 线性映射到1-100范围
+ * 3. 分档为星级(stars): 根据展示分划分为2-5星
+ *
+ * 评分维度：
+ * - BV(业务价值): 局部3 | 明显6 | 撬动核心8 | 战略平台10
+ * - TC(时间临界): 随时0 | 三月窗口3 | 一月硬窗口5
+ * - DDL(强制截止): 无0 | 有5
+ * - WorkloadScore(工作量奖励): ≤5天+6 | 6-15天+4 | 16-30天+2 | >30天+0
+ *
+ * @param requirements - 需求列表
+ * @returns 带有计算分数的需求列表
+ */
 const calculateScores = (requirements: Requirement[]) => {
-  const BV_MAP: Record<string, number> = { '局部': 3, '明显': 6, '撬动核心': 8, '战略平台': 10 };
-  const TC_MAP: Record<string, number> = { '随时': 0, '三月窗口': 3, '一月硬窗口': 5 };
-  
-  const getWorkloadScore = (days: number) => {
-    if (days <= 5) return 6;
-    if (days <= 15) return 4;
-    if (days <= 30) return 2;
+  // 空数组检查：如果没有需求，直接返回空数组
+  if (!requirements || requirements.length === 0) {
+    return [];
+  }
+
+  // 业务价值映射表（默认值为最低档"局部"的3分）
+  const BV_MAP: Record<string, number> = {
+    '局部': 3,
+    '明显': 6,
+    '撬动核心': 8,
+    '战略平台': 10
+  };
+
+  // 时间临界性映射表（默认值为"随时"的0分）
+  const TC_MAP: Record<string, number> = {
+    '随时': 0,
+    '三月窗口': 3,
+    '一月硬窗口': 5
+  };
+
+  /**
+   * 根据工作量计算加分
+   * 鼓励需求拆分，小需求获得更高加分
+   * @param days - 工作量天数
+   * @returns 工作量加分（0-6分）
+   */
+  const getWorkloadScore = (days: number): number => {
+    // 健壮性检查：确保days是有效数字
+    const validDays = Math.max(0, Number(days) || 0);
+
+    if (validDays <= 5) return 6;
+    if (validDays <= 15) return 4;
+    if (validDays <= 30) return 2;
     return 0;
   };
 
+  // 第一步：计算原始分数（rawScore）
   const withRawScores = requirements.map(req => {
-    const bvScore = BV_MAP[req.bv] || 3;
-    const tcScore = TC_MAP[req.tc] || 0;
-    const ddlScore = req.hardDeadline ? 5 : 0;
-    const wlScore = getWorkloadScore(req.effortDays);
+    // 使用默认值确保计算安全性
+    const bvScore = BV_MAP[req.bv] || 3;           // 业务价值分
+    const tcScore = TC_MAP[req.tc] || 0;           // 时间临界分
+    const ddlScore = req.hardDeadline ? 5 : 0;     // 强制截止加分
+    const wlScore = getWorkloadScore(req.effortDays); // 工作量加分
+
+    // 原始分 = 各维度分数之和（范围: 3-26）
     const rawScore = bvScore + tcScore + ddlScore + wlScore;
+
     return { ...req, rawScore };
   });
 
+  // 第二步：归一化为展示分数（displayScore, 1-100）
   const rawScores = withRawScores.map(r => r.rawScore!);
+
+  // 处理空数组情况
+  if (rawScores.length === 0) {
+    return withRawScores;
+  }
+
+  // 获取当前批次的最小值和最大值
   const minRaw = Math.min(...rawScores);
   const maxRaw = Math.max(...rawScores);
-  
+
   return withRawScores.map(req => {
-    let displayScore = 60;
+    let displayScore = 60; // 默认展示分（所有需求分数相同时使用）
+
+    // 当最大值和最小值不同时，进行线性归一化
+    // 公式: DisplayScore = 10 + 90 * (RawScore - MinRaw) / (MaxRaw - MinRaw)
     if (maxRaw !== minRaw) {
       displayScore = Math.round(10 + 90 * (req.rawScore! - minRaw) / (maxRaw - minRaw));
     }
-    
-    let stars = 2;
-    if (displayScore >= 85) stars = 5;
-    else if (displayScore >= 70) stars = 4;
-    else if (displayScore >= 55) stars = 3;
-    
+
+    // 第三步：根据展示分确定星级（2-5星）
+    let stars = 2; // 默认2星
+    if (displayScore >= 85) stars = 5;      // ★★★★★ 强窗口/立即投入
+    else if (displayScore >= 70) stars = 4; // ★★★★ 优先执行
+    else if (displayScore >= 55) stars = 3; // ★★★ 普通计划项
+    // ≤54: ★★ 择机安排
+
     return { ...req, displayScore, stars };
   });
 };
 
-// 卡片组件
-const RequirementCard = ({ 
-  requirement, 
+// ============================================================================
+// UI组件 - 需求卡片 (Requirement Card Component)
+// ============================================================================
+
+/**
+ * 需求卡片组件
+ *
+ * 功能说明：
+ * - 显示需求的核心信息（名称、工作量、分数、星级）
+ * - 卡片尺寸随工作量动态变化，直观体现需求大小
+ * - 根据业务价值和截止日期显示不同颜色渐变
+ * - 支持拖拽功能（HTML5 Drag & Drop API）
+ * - 悬停时显示详细信息的Tooltip
+ *
+ * 视觉设计：
+ * - 强制DDL：红色渐变背景 + 红色边框 + 感叹号标记
+ * - 业务价值：蓝色系渐变（局部→明显→撬动核心→战略平台，颜色逐渐加深）
+ * - RMS重构：紫色标签
+ *
+ * @param requirement - 需求对象
+ * @param onDragStart - 拖拽开始事件（可选）
+ * @param onClick - 点击事件（可选）
+ * @param compact - 紧凑模式（默认false）
+ * @param showTooltip - 是否显示悬停提示（默认true）
+ */
+const RequirementCard = ({
+  requirement,
   onDragStart,
   onClick,
   compact = false,
   showTooltip = true
-}: { 
+}: {
   requirement: Requirement;
   onDragStart?: (e: React.DragEvent) => void;
   onClick?: () => void;
   compact?: boolean;
   showTooltip?: boolean;
 }) => {
-  const [showHover, setShowHover] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState<'top' | 'bottom'>('top');
-  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
-  const cardRef = React.useRef<HTMLDivElement>(null);
+  // 状态管理
+  const [showHover, setShowHover] = useState(false);                            // 是否显示悬停提示
+  const [tooltipPosition, setTooltipPosition] = useState<'top' | 'bottom'>('top'); // 提示位置
+  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});   // 提示样式
+  const cardRef = React.useRef<HTMLDivElement>(null);                          // 卡片DOM引用
+
+  // 使用默认值确保安全性
   const displayScore = requirement.displayScore || 60;
   const stars = requirement.stars || 2;
 
-  // 大幅增大尺寸差异，让工作量非常直观
-  const width = compact ?
-    (requirement.effortDays <= 5 ? 90 : requirement.effortDays <= 15 ? 140 : requirement.effortDays <= 30 ? 190 : 240) :
-    (requirement.effortDays <= 5 ? 110 : requirement.effortDays <= 15 ? 170 : requirement.effortDays <= 30 ? 230 : 290);
+  /**
+   * 计算卡片尺寸配置
+   *
+   * 设计理念：卡片尺寸与工作量成正比，让用户一眼看出需求大小
+   * - 紧凑模式：适用于迭代池，尺寸较小，线性增长
+   * - 正常模式：适用于待排期区，尺寸较大，渐进式增长
+   * - 30天以上的需求增速放缓，避免卡片过大
+   * - 字体大小随卡片尺寸自适应
+   *
+   * @returns 包含宽度、高度和字体尺寸的配置对象
+   */
+  const getSizeConfig = () => {
+    // 健壮性检查：确保days是有效数字
+    const days = Math.max(0, Number(requirement?.effortDays) || 0);
 
-  const height = compact ?
-    (requirement.effortDays <= 5 ? 75 : requirement.effortDays <= 15 ? 95 : requirement.effortDays <= 30 ? 115 : 135) :
-    (requirement.effortDays <= 5 ? 95 : requirement.effortDays <= 15 ? 120 : requirement.effortDays <= 30 ? 145 : 170);
-  
-  const getColor = (bv: string, hardDeadline: boolean) => {
+    if (compact) {
+      // 紧凑模式：线性增长
+      const width = Math.min(160, 70 + days * 1.8);
+      const height = Math.min(105, 60 + days * 0.9);
+
+      if (days <= 5) {
+        return { width, height, nameSize: 'text-[9px]', daySize: 'text-[8px]', scoreSize: 'text-sm', starSize: 6 };
+      } else if (days <= 15) {
+        return { width, height, nameSize: 'text-[10px]', daySize: 'text-[9px]', scoreSize: 'text-base', starSize: 7 };
+      } else if (days <= 30) {
+        return { width, height, nameSize: 'text-[11px]', daySize: 'text-[10px]', scoreSize: 'text-lg', starSize: 8 };
+      } else {
+        return { width, height, nameSize: 'text-xs', daySize: 'text-[10px]', scoreSize: 'text-xl', starSize: 9 };
+      }
+    } else {
+      // 正常模式：更明显的连续增长
+      // 基础尺寸 + 渐进增长，30天以上继续增长但速度放缓
+      let width, height;
+
+      if (days <= 30) {
+        width = 90 + days * 2.7;  // 90 -> 171
+        height = 80 + days * 1.7; // 80 -> 131
+      } else {
+        // 30天以上继续增长，但增速降低
+        width = 90 + 30 * 2.7 + (days - 30) * 1.5;  // 继续增长
+        height = 80 + 30 * 1.7 + (days - 30) * 1.0; // 继续增长
+      }
+
+      // 设置最大限制，避免卡片过大
+      width = Math.min(280, width);
+      height = Math.min(190, height);
+
+      // 根据天数分配字体大小
+      if (days <= 5) {
+        return { width, height, nameSize: 'text-[10px]', daySize: 'text-[9px]', scoreSize: 'text-base', starSize: 7 };
+      } else if (days <= 15) {
+        return { width, height, nameSize: 'text-xs', daySize: 'text-[10px]', scoreSize: 'text-lg', starSize: 8 };
+      } else if (days <= 30) {
+        return { width, height, nameSize: 'text-sm', daySize: 'text-xs', scoreSize: 'text-xl', starSize: 10 };
+      } else if (days <= 60) {
+        return { width, height, nameSize: 'text-base', daySize: 'text-sm', scoreSize: 'text-2xl', starSize: 12 };
+      } else {
+        return { width, height, nameSize: 'text-lg', daySize: 'text-base', scoreSize: 'text-3xl', starSize: 14 };
+      }
+    }
+  };
+
+  // 获取尺寸配置
+  const sizeConfig = getSizeConfig();
+  const { width, height, nameSize, daySize, scoreSize, starSize } = sizeConfig;
+
+  /**
+   * 获取卡片背景颜色渐变
+   *
+   * 颜色策略：
+   * - 强制DDL：红色渐变（最高优先级，视觉警示）
+   * - 业务价值：蓝色系渐变，价值越高颜色越深
+   *   - 局部：浅蓝色（#DBEAFE → #BFDBFE）
+   *   - 明显：中蓝色（#60A5FA → #3B82F6）
+   *   - 撬动核心：深蓝色（#2563EB → #1D4ED8）
+   *   - 战略平台：极深蓝色（#1E40AF → #1E3A8A）
+   *
+   * @param bv - 业务价值
+   * @param hardDeadline - 是否有强制截止日期
+   * @returns CSS渐变字符串
+   */
+  const getColor = (bv: string, hardDeadline: boolean): string => {
+    // 强制DDL优先级最高，使用红色渐变
     if (hardDeadline) {
       return 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)';
     }
+
+    // 根据业务价值返回不同深度的蓝色渐变
     const gradients: Record<string, string> = {
       '局部': 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',
       '明显': 'linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%)',
       '撬动核心': 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
       '战略平台': 'linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%)'
     };
-    return gradients[bv] || gradients['明显'];
+    return gradients[bv] || gradients['明显']; // 未知值默认为"明显"
   };
 
+  // 计算视觉样式
   const bgGradient = getColor(requirement.bv, requirement.hardDeadline);
-  const isLight = requirement.bv === '局部' && !requirement.hardDeadline;
+  const isLight = requirement.bv === '局部' && !requirement.hardDeadline; // 浅色背景需要深色文字
   const textColor = isLight ? 'text-gray-800' : 'text-white';
-  
-  const getBVLabel = (bv: string) => {
+
+  /**
+   * 获取业务价值的完整标签
+   * @param bv - 业务价值简称
+   * @returns 完整标签文本
+   */
+  const getBVLabel = (bv: string): string => {
     const labels: Record<string, string> = {
       '局部': '局部体验优化',
       '明显': '明显改善',
       '撬动核心': '撬动核心指标',
       '战略平台': '战略/平台级'
     };
-    return labels[bv] || bv;
+    return labels[bv] || bv; // 未知值返回原值
   };
 
-  const getTCLabel = (tc: string) => {
+  /**
+   * 获取时间临界性的完整标签
+   * @param tc - 时间临界性简称
+   * @returns 完整标签文本
+   */
+  const getTCLabel = (tc: string): string => {
     const labels: Record<string, string> = {
       '随时': '随时可做',
       '三月窗口': '三个月内',
       '一月硬窗口': '一个月内'
     };
-    return labels[tc] || tc;
+    return labels[tc] || tc; // 未知值返回原值
   };
 
+  /**
+   * 处理鼠标悬停事件
+   *
+   * 功能：智能计算Tooltip位置，确保始终在视口内可见
+   * - 自动检测卡片位置，决定Tooltip显示在上方还是下方
+   * - 防止Tooltip超出屏幕左右边界
+   * - 使用fixed定位确保在滚动容器中正确显示
+   */
   const handleMouseEnter = () => {
     setShowHover(true);
+
     // 检测卡片位置，决定 tooltip 显示在上方还是下方
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
       const spaceAbove = rect.top;
 
       // 使用fixed定位，计算tooltip的绝对位置
+      // 如果上方空间不足250px，则显示在下方
       const position = spaceAbove < 250 ? 'bottom' : 'top';
       setTooltipPosition(position);
 
-      const tooltipWidth = 200; // 最小宽度
+      const tooltipWidth = 200; // Tooltip最小宽度
+      const padding = 8;         // 屏幕边缘留白
+
+      // 计算理想的中心位置（卡片中心）
+      let centerX = rect.left + rect.width / 2;
+      let leftPosition = centerX;
+      let transform = 'translateX(-50%)'; // 默认水平居中
+
+      // 边界检查：防止Tooltip超出左边界
+      const tooltipLeft = centerX - tooltipWidth / 2;
+      if (tooltipLeft < padding) {
+        // 超出左边界，调整到左边界内，左对齐
+        leftPosition = padding;
+        transform = 'translateX(0)';
+      }
+
+      // 边界检查：防止Tooltip超出右边界
+      const tooltipRight = centerX + tooltipWidth / 2;
+      if (tooltipRight > window.innerWidth - padding) {
+        // 超出右边界，调整到右边界内，右对齐
+        leftPosition = window.innerWidth - padding;
+        transform = 'translateX(-100%)';
+      }
+
+      // 构建Tooltip样式对象
       const style: React.CSSProperties = {
-        left: rect.left + rect.width / 2,
-        transform: 'translateX(-50%)',
+        left: leftPosition,
+        transform: transform,
         minWidth: `${tooltipWidth}px`
       };
 
+      // 根据位置设置垂直偏移
       if (position === 'top') {
-        style.bottom = window.innerHeight - rect.top + 8;
+        style.bottom = window.innerHeight - rect.top + 8; // 显示在卡片上方
       } else {
-        style.top = rect.bottom + 8;
+        style.top = rect.bottom + 8; // 显示在卡片下方
       }
 
       setTooltipStyle(style);
@@ -201,35 +458,43 @@ const RequirementCard = ({
           position: 'relative',
         }}
       >
-        <div className={`p-2 pointer-events-none flex-1 flex flex-col justify-between ${compact ? 'text-xs' : 'text-sm'}`}>
+        <div className={`p-1.5 pointer-events-none flex-1 flex flex-col justify-between`}>
           <div>
-            <div className={`font-semibold ${textColor} leading-tight line-clamp-2`}>
+            <div className={`font-semibold ${textColor} leading-tight line-clamp-2 ${nameSize}`}>
               {requirement.name}
             </div>
-            <div className={`${textColor} opacity-75 mt-1 ${compact ? 'text-[10px]' : 'text-xs'}`}>
+            <div className={`${textColor} opacity-75 mt-0.5 ${daySize}`}>
               {requirement.effortDays}天
             </div>
           </div>
         </div>
 
-        <div className={`${isLight ? 'bg-white/40' : 'bg-black/20'} backdrop-blur-sm p-2 rounded-b-lg`}>
+        <div className={`${isLight ? 'bg-white/40' : 'bg-black/20'} backdrop-blur-sm p-1.5 rounded-b-lg`}>
           <div className="flex items-center justify-between pointer-events-none">
-            <div className={`font-bold ${textColor} ${compact ? 'text-xl' : 'text-2xl'}`}>
+            <div className={`font-bold ${textColor} ${scoreSize}`}>
               {displayScore}
             </div>
             <div className="flex gap-0.5">
               {[...Array(stars)].map((_, i) => (
-                <Star key={i} size={compact ? 8 : 10} className={`fill-current ${textColor}`} />
+                <Star key={i} size={starSize} className={`fill-current ${textColor}`} />
               ))}
             </div>
           </div>
         </div>
         
         {requirement.hardDeadline && (
-          <div 
+          <div
             className={`absolute bg-red-600 text-white rounded-full flex items-center justify-center font-bold ${compact ? 'text-xs w-5 h-5 -top-1 -right-1' : 'text-sm w-6 h-6 -top-2 -right-2'}`}
           >
             !
+          </div>
+        )}
+
+        {requirement.isRMS && (
+          <div
+            className={`absolute bg-purple-600 text-white rounded px-1.5 py-0.5 font-semibold ${compact ? 'text-[8px] -top-1 -left-1' : 'text-[9px] -top-1.5 -left-1.5'}`}
+          >
+            RMS
           </div>
         )}
       </div>
@@ -241,9 +506,13 @@ const RequirementCard = ({
         >
           <div className="space-y-1">
             <div className="font-semibold border-b border-white/20 pb-1 mb-1">{requirement.name}</div>
+            <div>提交方: <span className="font-semibold">{requirement.submitter}</span></div>
             <div>业务价值: <span className="font-semibold">{getBVLabel(requirement.bv)}</span></div>
-            <div>时间临界: <span className="font-semibold">{getTCLabel(requirement.tc)}</span></div>
+            <div>迫切程度: <span className="font-semibold">{getTCLabel(requirement.tc)}</span></div>
             <div>工作量: <span className="font-semibold">{requirement.effortDays}天</span></div>
+            {requirement.isRMS && (
+              <div className="text-purple-400 font-semibold">🔧 RMS重构项目</div>
+            )}
             {requirement.hardDeadline && (
               <div className="text-red-400 font-semibold">⚠️ 强制DDL: {requirement.deadlineDate}</div>
             )}
@@ -263,11 +532,31 @@ const RequirementCard = ({
   );
 };
 
-// 说明书弹窗 - 使用完整内容
+// ============================================================================
+// UI组件 - WSJF评分说明书弹窗 (Handbook Modal Component)
+// ============================================================================
+
+/**
+ * WSJF-Lite排期评分说明书弹窗组件
+ *
+ * 功能说明：
+ * - 展示完整的WSJF评分方法论说明文档
+ * - 包含业务版和产品/研发版两部分内容
+ * - 详细解释评分维度、计算公式、分数区间设计
+ * - 提供示例帮助用户理解评分逻辑
+ *
+ * 内容结构：
+ * - 第一部分：业务版（面向业务人员）
+ * - 第二部分：产品/研发版（面向PM和研发）
+ * - 第三部分：3-26分数区间设计说明
+ * - 附注：术语解释
+ *
+ * @param onClose - 关闭弹窗回调函数
+ */
 const HandbookModal = ({ onClose }: { onClose: () => void }) => {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex-shrink-0 p-5 border-b border-gray-200 bg-gray-900 text-white rounded-t-xl flex items-center justify-between">
           <h3 className="text-xl font-semibold">WSJF-Lite 排期评分说明书</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-2 transition">
@@ -293,7 +582,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
           </ul>
           <p className="text-sm text-gray-600 mt-2">说明：原 WSJF 中的 RR/OE（Risk Reduction / Opportunity Enablement，风险降低/机会开启）已并入 BV 的判断口径，不再单独打分。</p>
 
-          <h4 className="font-semibold mt-3 mb-2">时间临界度（TC, Time Criticality）—三选一</h4>
+          <h4 className="font-semibold mt-3 mb-2">迫切程度度（TC, Time Criticality）—三选一</h4>
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>随时可做</strong>：任何时间完成的效果基本等同。</li>
             <li><strong>需要在未来三个月内完成</strong>：存在明确业务窗口，越晚效果越差。</li>
@@ -399,7 +688,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>WSJF</strong>（Weighted Shortest Job First）：带权重的最短任务优先排序方法。</li>
             <li><strong>BV</strong>（Business Value）：业务价值。</li>
-            <li><strong>TC</strong>（Time Criticality）：时间临界度。</li>
+            <li><strong>TC</strong>（Time Criticality）：迫切程度度。</li>
             <li><strong>DDL</strong>（Hard Deadline）：强截止日期。</li>
             <li><strong>RR/OE</strong>（Risk Reduction / Opportunity Enablement）：风险降低/机会开启（在本方案中已并入 BV）。</li>
             <li><strong>DoR</strong>（Definition of Ready）：就绪定义。</li>
@@ -421,36 +710,63 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-// 登录/注册弹窗
-const LoginModal = ({ onLogin }: { onLogin: (user: storage.User) => void }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
+// ============================================================================
+// UI组件 - 登录/注册弹窗 (Login Modal Component)
+// ============================================================================
 
+/**
+ * 登录/注册弹窗组件
+ *
+ * 功能说明：
+ * - 用户首次访问时显示，要求输入姓名和邮箱
+ * - 验证邮箱格式
+ * - 将用户信息保存到LocalStorage
+ * - 支持自动登录（如果已有用户信息）
+ *
+ * 数据持久化：
+ * - 使用storage模块保存用户信息
+ * - 登录后可在系统中标识需求提交人
+ *
+ * @param onLogin - 登录成功回调函数
+ */
+const LoginModal = ({ onLogin }: { onLogin: (user: storage.User) => void }) => {
+  const [name, setName] = useState('');      // 用户姓名
+  const [email, setEmail] = useState('');    // 用户邮箱
+  const [error, setError] = useState('');    // 错误提示信息
+
+  /**
+   * 处理登录提交
+   * - 验证输入不为空
+   * - 验证邮箱格式
+   * - 保存用户信息并回调
+   */
   const handleSubmit = () => {
+    // 验证：确保姓名和邮箱不为空
     if (!name.trim() || !email.trim()) {
       setError('请填写姓名和邮箱');
       return;
     }
 
+    // 验证：邮箱格式检查
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('请输入有效的邮箱地址');
       return;
     }
 
+    // 保存用户信息到LocalStorage并触发登录回调
     const user = storage.loginUser(name.trim(), email.trim());
     onLogin(user);
   };
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-[580px] p-8">
+      <div className="bg-white rounded-xl shadow-2xl w-[420px] p-8">
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center mx-auto mb-4">
             <UserIcon size={32} className="text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">欢迎使用小米国际WSJF-Lite排期系统</h2>
+          <h2 className="text-2xl font-bold text-gray-900">小米国际WSJF-Lite系统beta</h2>
           <p className="text-sm text-gray-600 mt-2">请输入您的信息登录或注册</p>
         </div>
 
@@ -496,15 +812,45 @@ const LoginModal = ({ onLogin }: { onLogin: (user: storage.User) => void }) => {
         <p className="text-xs text-gray-500 text-center mt-6">
           无需密码，下次使用相同邮箱即可访问您的数据
         </p>
+
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p className="text-xs text-gray-700 text-center leading-relaxed">
+              <span className="font-semibold text-yellow-800">注意事项：</span>本系统为纯前端搭建，数据保存在您的浏览器缓存，更新数据后请及时导出保存在本地。
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-// 编辑需求弹窗
-const EditRequirementModal = ({ 
-  requirement, 
-  onSave, 
+// ============================================================================
+// UI组件 - 编辑需求弹窗 (Edit Requirement Modal Component)
+// ============================================================================
+
+/**
+ * 编辑需求弹窗组件
+ *
+ * 功能说明：
+ * - 创建新需求或编辑现有需求
+ * - 实时预览WSJF评分结果
+ * - 支持所有需求字段的编辑
+ * - 表单验证（必填项检查）
+ *
+ * 核心功能：
+ * - 实时分数预览：修改评分维度时，右侧卡片实时更新分数和星级
+ * - 智能默认值：新建需求时提供合理的默认值
+ * - 截止日期联动：勾选"强制截止"时显示日期选择器
+ *
+ * @param requirement - 要编辑的需求对象（null表示新建）
+ * @param onSave - 保存回调函数
+ * @param onClose - 关闭回调函数
+ * @param isNew - 是否为新建模式（默认false）
+ */
+const EditRequirementModal = ({
+  requirement,
+  onSave,
   onClose,
   isNew = false
 }: {
@@ -513,27 +859,46 @@ const EditRequirementModal = ({
   onClose: () => void;
   isNew?: boolean;
 }) => {
+  // 初始化表单状态，提供默认值确保健壮性
   const [form, setForm] = useState<Requirement>(requirement || {
-    id: `REQ-${Date.now()}`,
-    name: '',
-    businessOwner: '',
-    productManager: '',
-    productProgress: '未评估',
-    effortDays: 5,
-    bv: '明显',
-    tc: '随时',
-    hardDeadline: false,
-    techProgress: '未评估',
-    type: '功能开发'
+    id: `REQ-${Date.now()}`,                              // 唯一ID，使用时间戳
+    name: '',                                             // 需求名称
+    submitterName: '',                                    // 需求提交人姓名
+    productManager: '',                                   // 产品经理
+    developer: '',                                        // 研发负责人
+    productProgress: '未评估',                            // 产品进度
+    effortDays: 0,                                        // 工作量（未评估时默认0天）
+    bv: '明显',                                           // 业务价值默认"明显"
+    tc: '随时',                                           // 时间临界性默认"随时"
+    hardDeadline: false,                                  // 默认无强制截止
+    techProgress: '未评估',                               // 技术进度
+    type: '功能开发',                                     // 需求类型
+    submitDate: new Date().toISOString().split('T')[0],  // 提交日期默认今天
+    submitter: '产品',                                    // 提交方默认产品
+    isRMS: false                                          // 默认非RMS重构
   });
 
+  /**
+   * 实时计算预览分数
+   * 使用useMemo优化性能，只有form变化时才重新计算
+   * 返回原始分和展示分，用于右侧预览卡片
+   */
   const previewScore = useMemo(() => {
     const BV_MAP: Record<string, number> = { '局部': 3, '明显': 6, '撬动核心': 8, '战略平台': 10 };
     const TC_MAP: Record<string, number> = { '随时': 0, '三月窗口': 3, '一月硬窗口': 5 };
-    const getWL = (d: number) => d <= 5 ? 6 : d <= 15 ? 4 : d <= 30 ? 2 : 0;
-    
+
+    // 工作量加分计算（与calculateScores保持一致）
+    const getWL = (d: number) => {
+      const validDays = Math.max(0, Number(d) || 0); // 健壮性检查
+      return validDays <= 5 ? 6 : validDays <= 15 ? 4 : validDays <= 30 ? 2 : 0;
+    };
+
+    // 计算原始分（3-26范围）
     const raw = (BV_MAP[form.bv] || 3) + (TC_MAP[form.tc] || 0) + (form.hardDeadline ? 5 : 0) + getWL(form.effortDays);
+
+    // 归一化到展示分（10-100范围）
     const display = Math.round(10 + 90 * (raw - 3) / (26 - 3));
+
     return { raw, display };
   }, [form]);
 
@@ -546,8 +911,8 @@ const EditRequirementModal = ({
   const canEditEffort = form.techProgress === '已评估工作量' || form.techProgress === '已完成技术方案';
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-[750px] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl w-[750px] max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 p-5 border-b border-gray-200 bg-gray-900 text-white rounded-t-xl flex items-center justify-between z-10">
           <h3 className="text-xl font-semibold">{isNew ? '新增需求' : '编辑需求'}</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-2 transition">
@@ -559,24 +924,51 @@ const EditRequirementModal = ({
           <div className="grid grid-cols-3 gap-6">
             <div className="col-span-2 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">需求名称</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  需求名称 <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({...form, name: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
-                  placeholder="输入需求名称"
+                  placeholder="输入需求名称（必填）"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">业务负责人</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">需求提交日期</label>
+                  <input
+                    type="date"
+                    value={form.submitDate}
+                    onChange={(e) => setForm({...form, submitDate: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">需求提交方</label>
+                  <select
+                    value={form.submitter}
+                    onChange={(e) => setForm({...form, submitter: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                  >
+                    <option value="产品">产品</option>
+                    <option value="研发">研发</option>
+                    <option value="业务">业务</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">需求提交人</label>
                   <input
                     type="text"
-                    value={form.businessOwner}
-                    onChange={(e) => setForm({...form, businessOwner: e.target.value})}
+                    value={form.submitterName}
+                    onChange={(e) => setForm({...form, submitterName: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                    placeholder="提交人姓名"
                   />
                 </div>
                 <div>
@@ -586,8 +978,31 @@ const EditRequirementModal = ({
                     value={form.productManager}
                     onChange={(e) => setForm({...form, productManager: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                    placeholder="产品经理姓名"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">研发同学</label>
+                  <input
+                    type="text"
+                    value={form.developer}
+                    onChange={(e) => setForm({...form, developer: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                    placeholder="研发同学姓名"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.isRMS}
+                    onChange={(e) => setForm({...form, isRMS: e.target.checked})}
+                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">RMS重构项目</span>
+                </label>
               </div>
 
               <div className="border-t pt-4">
@@ -595,7 +1010,7 @@ const EditRequirementModal = ({
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">业务价值</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">业务价值（BV）</label>
                     <select
                       value={form.bv}
                       onChange={(e) => setForm({...form, bv: e.target.value})}
@@ -609,7 +1024,7 @@ const EditRequirementModal = ({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">时间临界度</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">迫切程度（TC）</label>
                     <select
                       value={form.tc}
                       onChange={(e) => setForm({...form, tc: e.target.value})}
@@ -714,13 +1129,13 @@ const EditRequirementModal = ({
             <div className="col-span-1">
               <div className="sticky top-6 space-y-4">
                 <div className="text-sm font-semibold text-gray-700 mb-3">实时预览</div>
-                
-                <div className="flex justify-center py-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+
+                <div className="flex justify-center items-center py-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 overflow-auto max-h-[300px]">
                   <RequirementCard requirement={previewReq} showTooltip={false} />
                 </div>
 
                 <div className="bg-gradient-to-br from-teal-50 to-emerald-50 border-2 border-teal-300 rounded-lg p-4">
-                  <div className="text-sm font-medium text-teal-900 mb-2">热度分</div>
+                  <div className="text-sm font-medium text-teal-900 mb-2">权重分</div>
                   <div className="text-4xl font-bold text-teal-700">
                     {previewScore.display}
                   </div>
@@ -741,18 +1156,27 @@ const EditRequirementModal = ({
         </div>
 
         <div className="sticky bottom-0 p-5 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-end gap-3 z-10">
-          <button 
+          <button
             onClick={onClose}
             className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
           >
             取消
           </button>
-          <button 
+          <button
             onClick={() => {
+              if (!form.name.trim()) {
+                alert('需求名称不能为空');
+                return;
+              }
               onSave(form);
               onClose();
             }}
-            className="px-5 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-medium flex items-center gap-2"
+            disabled={!form.name.trim()}
+            className={`px-5 py-2.5 rounded-lg transition font-medium flex items-center gap-2 ${
+              form.name.trim()
+                ? 'bg-gray-900 text-white hover:bg-gray-800'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             <Save size={18} />
             保存
@@ -763,24 +1187,56 @@ const EditRequirementModal = ({
   );
 };
 
-// 编辑迭代弹窗
-const EditSprintModal = ({ 
-  sprint, 
-  onSave, 
-  onClose 
+// ============================================================================
+// UI组件 - 编辑迭代池弹窗 (Edit Sprint Modal Component)
+// ============================================================================
+
+/**
+ * 编辑迭代池弹窗组件
+ *
+ * 功能说明：
+ * - 编辑迭代池的基本信息（名称、时间范围、总人天）
+ * - 设置资源预留百分比（Bug修复、重构、其他）
+ * - 实时计算净可用人天
+ *
+ * 资源计算逻辑：
+ * - 总预留 = Bug预留% + 重构预留% + 其他预留%
+ * - 预留人天 = 总人天 × 总预留% / 100
+ * - 净可用 = 总人天 - 预留人天
+ *
+ * @param sprint - 要编辑的迭代池对象
+ * @param onSave - 保存回调函数
+ * @param onClose - 关闭回调函数
+ */
+const EditSprintModal = ({
+  sprint,
+  onSave,
+  onClose
 }: {
   sprint: SprintPool;
   onSave: (sprint: SprintPool) => void;
   onClose: () => void;
 }) => {
   const [form, setForm] = useState(sprint);
-  const totalReserve = form.bugReserve + form.refactorReserve + form.otherReserve;
-  const reservedDays = Math.round(form.totalDays * totalReserve / 100);
-  const netAvailable = form.totalDays - reservedDays;
+
+  // 健壮性检查：确保所有预留百分比是有效数字
+  const bugReserve = Math.max(0, Math.min(100, Number(form.bugReserve) || 0));
+  const refactorReserve = Math.max(0, Math.min(100, Number(form.refactorReserve) || 0));
+  const otherReserve = Math.max(0, Math.min(100, Number(form.otherReserve) || 0));
+
+  // 计算总预留百分比
+  const totalReserve = bugReserve + refactorReserve + otherReserve;
+
+  // 计算预留人天（健壮性：避免除以0或负数）
+  const totalDays = Math.max(0, Number(form.totalDays) || 0);
+  const reservedDays = Math.round(totalDays * totalReserve / 100);
+
+  // 计算净可用人天
+  const netAvailable = totalDays - reservedDays;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-[500px]" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl w-[500px]">
         <div className="p-5 border-b border-gray-200 bg-gray-900 text-white rounded-t-xl flex items-center justify-between">
           <h3 className="text-xl font-semibold">编辑迭代池</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-2 transition">
@@ -893,7 +1349,37 @@ const EditSprintModal = ({
   );
 };
 
-// 资源池组件
+// ============================================================================
+// UI组件 - 迭代池 (Sprint Pool Component)
+// ============================================================================
+
+/**
+ * 迭代池组件
+ *
+ * 功能说明：
+ * - 展示单个迭代池的完整信息
+ * - 支持拖拽放置需求（HTML5 Drag & Drop API）
+ * - 实时计算资源使用情况和超载警告
+ * - 显示已排期需求列表
+ *
+ * 资源计算：
+ * - 净可用 = 总人天 - 预留人天
+ * - 已用 = 所有需求工作量之和
+ * - 使用率 = 已用 / 净可用 × 100%
+ *
+ * 视觉反馈：
+ * - 使用率 ≥100%: 红色边框（超载）
+ * - 使用率 ≥90%: 黄色边框（接近满载）
+ * - 拖拽悬停: 青色高亮
+ *
+ * @param pool - 迭代池对象
+ * @param onRequirementClick - 需求点击回调
+ * @param onDrop - 拖拽放置回调
+ * @param isDragOver - 是否正在拖拽悬停
+ * @param onEdit - 编辑迭代池回调
+ * @param onDelete - 删除迭代池回调
+ * @param compact - 紧凑模式
+ */
 const SprintPoolComponent = ({
   pool,
   onRequirementClick,
@@ -911,12 +1397,26 @@ const SprintPoolComponent = ({
   onDelete: () => void;
   compact: boolean;
 }) => {
-  const totalReserve = pool.bugReserve + pool.refactorReserve + pool.otherReserve;
-  const reservedDays = Math.round(pool.totalDays * totalReserve / 100);
-  const netAvailable = pool.totalDays - reservedDays;
-  const usedDays = pool.requirements.reduce((sum, req) => sum + req.effortDays, 0);
-  const percentage = Math.round((usedDays / netAvailable) * 100);
-  const totalValue = pool.requirements.reduce((sum, req) => sum + (req.displayScore || 0), 0);
+  // 健壮性检查：确保所有百分比和数值有效
+  const bugReserve = Math.max(0, Number(pool.bugReserve) || 0);
+  const refactorReserve = Math.max(0, Number(pool.refactorReserve) || 0);
+  const otherReserve = Math.max(0, Number(pool.otherReserve) || 0);
+  const totalDays = Math.max(0, Number(pool.totalDays) || 0);
+
+  // 计算资源分配
+  const totalReserve = bugReserve + refactorReserve + otherReserve;
+  const reservedDays = Math.round(totalDays * totalReserve / 100);
+  const netAvailable = totalDays - reservedDays;
+
+  // 计算已用人天（健壮性：确保requirements是数组）
+  const requirements = Array.isArray(pool.requirements) ? pool.requirements : [];
+  const usedDays = requirements.reduce((sum, req) => sum + (Number(req?.effortDays) || 0), 0);
+
+  // 计算使用率百分比（健壮性：避免除以0）
+  const percentage = netAvailable > 0 ? Math.round((usedDays / netAvailable) * 100) : 0;
+
+  // 计算总价值（所有需求的展示分之和）
+  const totalValue = requirements.reduce((sum, req) => sum + (Number(req?.displayScore) || 0), 0);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -931,14 +1431,16 @@ const SprintPoolComponent = ({
     <div
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      className={`flex-shrink-0 w-96 h-full bg-white rounded-xl border transition-all flex flex-col ${
+      className={`w-full h-full bg-white rounded-xl border transition-all flex flex-col ${
         isDragOver ? 'border-teal-500 bg-teal-50/50 shadow-xl' : 'border-gray-200 shadow-sm'
       } ${percentage >= 100 ? 'ring-2 ring-red-500' : percentage >= 90 ? 'ring-2 ring-amber-400' : ''}`}
     >
       <div className="flex-shrink-0 p-3 border-b border-gray-200 bg-gray-900 text-white rounded-t-xl">
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
-            <h3 className="font-semibold text-lg">{pool.name}</h3>
+            <h3 className="font-semibold text-lg">
+              {pool.name} <span className="text-sm font-normal text-gray-300">总人日{pool.totalDays}（可用{netAvailable}+不可用{reservedDays}）</span>
+            </h3>
             <p className="text-sm text-gray-300 mt-0.5">{pool.startDate} ~ {pool.endDate}</p>
           </div>
           <div className="flex gap-1">
@@ -960,17 +1462,17 @@ const SprintPoolComponent = ({
         </div>
         
         <div>
-          <div className="flex justify-between text-sm mb-1.5">
-            <span className="text-gray-300">{usedDays}/{netAvailable}人日</span>
-            <span className={`font-semibold ${percentage >= 100 ? 'text-red-400' : percentage >= 90 ? 'text-amber-400' : 'text-teal-400'}`}>
+          <div className="flex justify-between items-baseline mb-1.5">
+            <span className="text-lg font-bold text-white">{usedDays}/{netAvailable}人日</span>
+            <span className={`text-base font-bold ${percentage >= 100 ? 'text-red-400' : percentage >= 90 ? 'text-amber-400' : 'text-teal-400'}`}>
               {percentage}%
             </span>
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-gray-700 rounded-full h-2.5 overflow-hidden">
             <div
-              className={`h-2 rounded-full transition-all duration-500 ${
-                percentage >= 100 ? 'bg-red-500' : 
-                percentage >= 90 ? 'bg-amber-500' : 
+              className={`h-2.5 rounded-full transition-all duration-500 ${
+                percentage >= 100 ? 'bg-red-500' :
+                percentage >= 90 ? 'bg-amber-500' :
                 'bg-teal-500'
               }`}
               style={{ width: `${Math.min(percentage, 100)}%` }}
@@ -978,11 +1480,8 @@ const SprintPoolComponent = ({
           </div>
         </div>
 
-        <div className="mt-2 text-xs text-gray-300 bg-white/5 rounded-lg p-2">
-          <div className="space-y-0.5">
-            <div className="text-red-300">不可用: {reservedDays}人日 (Bug {pool.bugReserve}% · 重构 {pool.refactorReserve}% · 其他 {pool.otherReserve}%)</div>
-            <div className="font-semibold text-white border-t border-white/20 pt-0.5">净可用: {netAvailable}人日</div>
-          </div>
+        <div className="mt-1.5 text-xs text-gray-400 bg-white/5 rounded-lg px-2 py-1">
+          不可用: {reservedDays}人日 (Bug {pool.bugReserve}% · 重构 {pool.refactorReserve}% · 其他 {pool.otherReserve}%)
         </div>
       </div>
 
@@ -1017,14 +1516,61 @@ const SprintPoolComponent = ({
       <div className="flex-shrink-0 p-3 border-t border-gray-200 bg-gray-50 rounded-b-xl">
         <div className="flex justify-between items-center text-sm">
           <span className="text-gray-600">已排期 <span className="font-semibold text-gray-900">{pool.requirements.length}</span></span>
-          <span className="text-gray-600">总热度 <span className="font-semibold text-gray-900">{Math.round(totalValue)}</span></span>
+          <span className="text-gray-600">总权重分 <span className="font-semibold text-gray-900">{Math.round(totalValue)}</span></span>
         </div>
       </div>
     </div>
   );
 };
 
-// 待排期区组件
+// ============================================================================
+// UI组件 - 待排期区 (Unscheduled Area Component)
+// ============================================================================
+
+/**
+ * 待排期区组件
+ *
+ * 功能说明：
+ * - 展示所有未排期的需求列表
+ * - 支持多维度筛选和搜索
+ * - 支持自定义排序
+ * - 支持拖拽需求到迭代池
+ * - 支持气泡和列表两种视图模式
+ *
+ * 筛选维度：
+ * - 搜索：需求名称、提交人、产品经理、研发负责人
+ * - 需求类型：功能开发、Bug修复、技术债务等
+ * - 热度分：高(≥70)、中(40-69)、低(<40)
+ * - 工作量：微小(≤3)、小(4-10)、中(11-30)、大(31-60)、超大(61-100)、巨大(>100)
+ * - 业务价值：局部、明显、撬动核心、战略平台
+ * - RMS重构：是/否
+ *
+ * 排序方式：
+ * - 热度分（默认降序）
+ * - 业务价值
+ * - 提交日期
+ * - 工作量
+ *
+ * @param unscheduled - 未排期需求列表
+ * @param onRequirementClick - 需求点击回调
+ * @param onDrop - 拖拽放置回调
+ * @param isDragOver - 是否正在拖拽悬停
+ * @param onAddNew - 添加新需求回调
+ * @param compact - 紧凑模式
+ * @param searchTerm - 搜索关键词
+ * @param onSearchChange - 搜索变化回调
+ * @param filterType - 类型筛选
+ * @param onFilterChange - 类型筛选变化回调
+ * @param scoreFilter - 热度分筛选
+ * @param onScoreFilterChange - 热度分筛选变化回调
+ * @param effortFilter - 工作量筛选
+ * @param onEffortFilterChange - 工作量筛选变化回调
+ * @param bvFilter - 业务价值筛选
+ * @param onBVFilterChange - 业务价值筛选变化回调
+ * @param rmsFilter - RMS筛选
+ * @param onRMSFilterChange - RMS筛选变化回调
+ * @param leftPanelWidth - 左侧面板宽度
+ */
 const UnscheduledArea = ({
   unscheduled,
   onRequirementClick,
@@ -1041,7 +1587,10 @@ const UnscheduledArea = ({
   effortFilter,
   onEffortFilterChange,
   bvFilter,
-  onBVFilterChange
+  onBVFilterChange,
+  rmsFilter,
+  onRMSFilterChange,
+  leftPanelWidth
 }: {
   unscheduled: Requirement[];
   onRequirementClick: (req: Requirement) => void;
@@ -1059,49 +1608,122 @@ const UnscheduledArea = ({
   onEffortFilterChange: (filter: string) => void;
   bvFilter: string;
   onBVFilterChange: (filter: string) => void;
+  rmsFilter: boolean;
+  onRMSFilterChange: (filter: boolean) => void;
+  leftPanelWidth: number;
 }) => {
-  const [showFilters, setShowFilters] = useState(false);
+  // 组件状态
+  const [showFilters, setShowFilters] = useState(false);                              // 是否展开筛选器
+  const [sortBy, setSortBy] = useState<'score' | 'bv' | 'submitDate' | 'effort'>('score'); // 排序字段
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');                // 排序方向（默认降序）
+  const [viewMode, setViewMode] = useState<'bubble' | 'list'>('bubble');             // 视图模式：气泡或列表
 
+  /**
+   * 处理拖拽悬停事件
+   */
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
 
+  /**
+   * 处理拖拽放置事件
+   */
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     onDrop();
   };
 
-  const filteredReqs = unscheduled.filter(req => {
-    const matchesSearch = req.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         req.businessOwner.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || req.type === filterType;
-    
+  /**
+   * 多维度筛选逻辑
+   * 健壮性：使用可选链和默认值确保不会因为空值报错
+   */
+  const filteredReqs = (Array.isArray(unscheduled) ? unscheduled : []).filter(req => {
+    // 搜索匹配：需求名称、提交人、产品经理、研发负责人
+    const matchesSearch = (req?.name || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+                         (req?.submitterName || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+                         (req?.productManager || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+                         (req?.developer || '').toLowerCase().includes((searchTerm || '').toLowerCase());
+
+    // 类型匹配
+    const matchesType = filterType === 'all' || req?.type === filterType;
+
+    // 热度分匹配
     let matchesScore = true;
-    if (scoreFilter === 'high') matchesScore = (req.displayScore || 0) >= 70;
-    else if (scoreFilter === 'medium') matchesScore = (req.displayScore || 0) >= 40 && (req.displayScore || 0) < 70;
-    else if (scoreFilter === 'low') matchesScore = (req.displayScore || 0) < 40;
-    
+    const displayScore = Number(req?.displayScore) || 0;
+    if (scoreFilter === 'high') matchesScore = displayScore >= 70;
+    else if (scoreFilter === 'medium') matchesScore = displayScore >= 40 && displayScore < 70;
+    else if (scoreFilter === 'low') matchesScore = displayScore < 40;
+
+    // 工作量匹配
     let matchesEffort = true;
-    if (effortFilter === 'tiny') matchesEffort = req.effortDays <= 3;
-    else if (effortFilter === 'small') matchesEffort = req.effortDays >= 4 && req.effortDays <= 10;
-    else if (effortFilter === 'medium') matchesEffort = req.effortDays >= 11 && req.effortDays <= 30;
-    else if (effortFilter === 'large') matchesEffort = req.effortDays >= 31 && req.effortDays <= 60;
-    else if (effortFilter === 'xlarge') matchesEffort = req.effortDays >= 61 && req.effortDays <= 100;
-    else if (effortFilter === 'huge') matchesEffort = req.effortDays > 100;
-    
-    const matchesBV = bvFilter === 'all' || req.bv === bvFilter;
-    
-    return matchesSearch && matchesType && matchesScore && matchesEffort && matchesBV;
+    const effortDays = Number(req?.effortDays) || 0;
+    if (effortFilter === 'tiny') matchesEffort = effortDays <= 3;
+    else if (effortFilter === 'small') matchesEffort = effortDays >= 4 && effortDays <= 10;
+    else if (effortFilter === 'medium') matchesEffort = effortDays >= 11 && effortDays <= 30;
+    else if (effortFilter === 'large') matchesEffort = effortDays >= 31 && effortDays <= 60;
+    else if (effortFilter === 'xlarge') matchesEffort = effortDays >= 61 && effortDays <= 100;
+    else if (effortFilter === 'huge') matchesEffort = effortDays > 100;
+
+    // 业务价值匹配
+    const matchesBV = bvFilter === 'all' || req?.bv === bvFilter;
+
+    // RMS筛选匹配（如果rmsFilter为true，只显示RMS项目）
+    const matchesRMS = !rmsFilter || req?.isRMS;
+
+    return matchesSearch && matchesType && matchesScore && matchesEffort && matchesBV && matchesRMS;
   });
 
-  const readyReqs = filteredReqs.filter(r => r.techProgress === '已评估工作量' || r.techProgress === '已完成技术方案');
-  const notReadyReqs = filteredReqs.filter(r => r.techProgress === '未评估');
+  // 应用排序
+  const sortedReqs = [...filteredReqs].sort((a, b) => {
+    let comparison = 0;
+
+    if (sortBy === 'score') {
+      comparison = (b.displayScore || 0) - (a.displayScore || 0);
+    } else if (sortBy === 'bv') {
+      const bvOrder: Record<string, number> = { '战略平台': 4, '撬动核心': 3, '明显': 2, '局部': 1 };
+      comparison = (bvOrder[b.bv] || 0) - (bvOrder[a.bv] || 0);
+    } else if (sortBy === 'submitDate') {
+      comparison = new Date(b.submitDate).getTime() - new Date(a.submitDate).getTime();
+    } else if (sortBy === 'effort') {
+      comparison = b.effortDays - a.effortDays;
+    }
+
+    // 根据 sortOrder 决定是否反转结果
+    return sortOrder === 'desc' ? comparison : -comparison;
+  });
+
+  const readyReqs = sortedReqs.filter(r => r.techProgress === '已评估工作量' || r.techProgress === '已完成技术方案');
+  const notReadyReqs = sortedReqs.filter(r => r.techProgress === '未评估');
 
   return (
-    <div className="w-[480px] bg-white border-r border-gray-200 flex flex-col h-full">
+    <div style={{ width: `${leftPanelWidth}px` }} className="bg-white border-r border-gray-200 flex flex-col h-full">
       <div className="flex-shrink-0 p-3 border-b border-gray-200 bg-gray-900 text-white">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-base font-semibold">待排期区</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold">待排期区</h2>
+            <div className="flex items-center bg-white/10 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setViewMode('bubble')}
+                className={`px-2 py-1 text-xs transition ${
+                  viewMode === 'bubble'
+                    ? 'bg-white/20 text-white font-medium'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                气泡
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-2 py-1 text-xs transition ${
+                  viewMode === 'list'
+                    ? 'bg-white/20 text-white font-medium'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                列表
+              </button>
+            </div>
+          </div>
           <button
             onClick={onAddNew}
             className="text-white hover:bg-white/10 rounded-lg p-1.5 transition"
@@ -1109,29 +1731,55 @@ const UnscheduledArea = ({
             <Plus size={16} />
           </button>
         </div>
-        <p className="text-xs text-gray-300 mb-2">按热度分排序</p>
 
-        <div className="relative mb-2">
-          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
-          <input
-            type="text"
-            placeholder="搜索需求..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:bg-white/20 focus:border-white/40 transition text-xs"
-          />
+        <div className="flex items-center gap-2 mb-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+            <input
+              type="text"
+              placeholder="搜索需求..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:bg-white/20 focus:border-white/40 transition text-xs"
+            />
+          </div>
+          <label className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={rmsFilter}
+              onChange={(e) => onRMSFilterChange(e.target.checked)}
+              className="w-3.5 h-3.5 rounded cursor-pointer"
+            />
+            <span className="text-xs text-white">RMS</span>
+          </label>
         </div>
 
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="w-full flex items-center justify-between px-2 py-1.5 mb-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white text-xs transition"
-        >
-          <div className="flex items-center gap-1.5">
-            <Filter size={12} />
-            <span>筛选条件</span>
-          </div>
-          {showFilters ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </button>
+        <div className="flex items-center gap-1.5 mb-2">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="flex-1 px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
+          >
+            <option value="score" className="bg-gray-800 text-white">按权重分</option>
+            <option value="bv" className="bg-gray-800 text-white">按业务价值</option>
+            <option value="submitDate" className="bg-gray-800 text-white">按提交时间</option>
+            <option value="effort" className="bg-gray-800 text-white">按工作量</option>
+          </select>
+          <button
+            onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+            className="flex-shrink-0 px-2 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white transition"
+            title={sortOrder === 'desc' ? '降序' : '升序'}
+          >
+            <ArrowUpDown size={14} />
+          </button>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex-shrink-0 px-2 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white transition"
+            title="筛选条件"
+          >
+            <Filter size={14} />
+          </button>
+        </div>
 
         {showFilters && (
           <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
@@ -1154,10 +1802,10 @@ const UnscheduledArea = ({
             onChange={(e) => onScoreFilterChange(e.target.value)}
             className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
           >
-            <option value="all" className="bg-gray-800 text-white">全部热度</option>
-            <option value="high" className="bg-gray-800 text-white">高热度 (≥70)</option>
-            <option value="medium" className="bg-gray-800 text-white">中热度 (40-69)</option>
-            <option value="low" className="bg-gray-800 text-white">低热度 (&lt;40)</option>
+            <option value="all" className="bg-gray-800 text-white">全部权重</option>
+            <option value="high" className="bg-gray-800 text-white">高权重 (≥70)</option>
+            <option value="medium" className="bg-gray-800 text-white">中权重 (40-69)</option>
+            <option value="low" className="bg-gray-800 text-white">低权重 (&lt;40)</option>
           </select>
 
           <select
@@ -1188,7 +1836,7 @@ const UnscheduledArea = ({
           </div>
         )}
 
-        <div className="mt-2 bg-white/10 rounded-lg px-2.5 py-1.5 text-xs space-y-0.5">
+        <div className="mt-2 bg-white/10 rounded-lg px-2.5 py-1.5 text-xs flex items-center justify-between">
           <div>
             <span className="text-gray-300">筛选结果: </span>
             <span className="font-semibold text-white">{filteredReqs.length}</span>
@@ -1203,50 +1851,168 @@ const UnscheduledArea = ({
       <div
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        className={`flex-1 overflow-y-auto transition-all ${
+        className={`flex-1 ${viewMode === 'bubble' ? 'overflow-y-auto' : 'overflow-hidden'} transition-all ${
           isDragOver ? 'bg-teal-50' : ''
         }`}
       >
-        {/* 可排期区 */}
-        <div className="p-3 pb-2">
-          <div className="flex flex-wrap gap-2 justify-start">
-            {readyReqs.map(req => (
-              <RequirementCard
-                key={req.id}
-                requirement={req}
-                compact={compact}
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('requirementId', req.id);
-                  e.dataTransfer.setData('sourcePoolId', 'unscheduled');
-                }}
-                onClick={() => onRequirementClick(req)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* 分割线 + 未评估区 */}
-        {notReadyReqs.length > 0 && (
+        {viewMode === 'bubble' ? (
           <>
-            <div className="px-3 py-2">
-              <div className="border-t border-gray-300 relative">
-                <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 py-0.5 text-xs text-gray-500 rounded-full border border-gray-300 whitespace-nowrap">
-                  未完成技术评估（不可排期）
-                </div>
-              </div>
-            </div>
-            <div className="px-3 pb-3 bg-gray-100">
-              <div className="flex flex-wrap gap-2 justify-start opacity-60 pt-1.5">
-                {notReadyReqs.map(req => (
+            {/* 气泡视图 - 可排期区 */}
+            <div className="p-3 pb-2">
+              <div className="flex flex-wrap gap-2 justify-start">
+                {readyReqs.map(req => (
                   <RequirementCard
                     key={req.id}
                     requirement={req}
                     compact={compact}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('requirementId', req.id);
+                      e.dataTransfer.setData('sourcePoolId', 'unscheduled');
+                    }}
                     onClick={() => onRequirementClick(req)}
                   />
                 ))}
               </div>
             </div>
+
+            {/* 分割线 + 未评估区 */}
+            {notReadyReqs.length > 0 && (
+              <>
+                <div className="px-3 py-2">
+                  <div className="border-t border-gray-300 relative">
+                    <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 py-0.5 text-xs text-gray-500 rounded-full border border-gray-300 whitespace-nowrap">
+                      未完成技术评估（不可排期）
+                    </div>
+                  </div>
+                </div>
+                <div className="px-3 pb-3 bg-gray-100">
+                  <div className="flex flex-wrap gap-2 justify-start opacity-60 pt-1.5">
+                    {notReadyReqs.map(req => (
+                      <RequirementCard
+                        key={req.id}
+                        requirement={req}
+                        compact={compact}
+                        onClick={() => onRequirementClick(req)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            {/* 列表视图 - 可排期区 */}
+            <div className="p-3 h-full flex flex-col">
+              <div className="overflow-auto border border-gray-200 rounded-lg flex-1">
+                <table className="text-xs border-collapse w-full">
+                  <thead className="bg-gray-100 sticky top-0">
+                    <tr>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">需求名称</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">权重分</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">星级</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">业务价值</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">迫切程度</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">强制截止</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">工作量</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">提交人</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">RMS</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">技术评估</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {readyReqs.map(req => (
+                      <tr
+                        key={req.id}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('requirementId', req.id);
+                          e.dataTransfer.setData('sourcePoolId', 'unscheduled');
+                        }}
+                        onClick={() => onRequirementClick(req)}
+                        className="hover:bg-gray-50 cursor-pointer transition"
+                      >
+                        <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.name}</td>
+                        <td className="border border-gray-300 px-2 py-1.5 text-center">
+                          <span className="font-semibold text-teal-700">{Math.round(req.displayScore || 0)}</span>
+                        </td>
+                        <td className="border border-gray-300 px-2 py-1.5 text-center">
+                          <span className="text-yellow-500">{req.stars}</span>
+                        </td>
+                        <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.bv}</td>
+                        <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.tc}</td>
+                        <td className="border border-gray-300 px-2 py-1.5 text-center">{req.hardDeadline ? '有' : '无'}</td>
+                        <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">{req.effortDays}天</td>
+                        <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.submitter || '-'}</td>
+                        <td className="border border-gray-300 px-2 py-1.5 text-center">
+                          {req.isRMS ? <span className="text-purple-600 font-semibold">✓</span> : '-'}
+                        </td>
+                        <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.techProgress}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 未评估区 - 列表视图 */}
+            {notReadyReqs.length > 0 && (
+              <>
+                <div className="px-3 py-2">
+                  <div className="border-t border-gray-300 relative">
+                    <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 py-0.5 text-xs text-gray-500 rounded-full border border-gray-300 whitespace-nowrap">
+                      未完成技术评估（不可排期）
+                    </div>
+                  </div>
+                </div>
+                <div className="px-3 pb-3 bg-gray-100">
+                  <div className="overflow-auto border border-gray-200 rounded-lg opacity-60" style={{ maxHeight: '300px' }}>
+                    <table className="text-xs border-collapse w-full">
+                      <thead className="bg-gray-200">
+                        <tr>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">需求名称</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">权重分</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">星级</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">业务价值</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">迫切程度</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">强制截止</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">工作量</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">提交人</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">RMS</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">技术评估</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {notReadyReqs.map(req => (
+                          <tr
+                            key={req.id}
+                            onClick={() => onRequirementClick(req)}
+                            className="hover:bg-gray-50 cursor-pointer transition"
+                          >
+                            <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.name}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">
+                              <span className="font-semibold text-teal-700">{Math.round(req.displayScore || 0)}</span>
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">
+                              <span className="text-yellow-500">{req.stars}</span>
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.bv}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.tc}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">{req.hardDeadline ? '有' : '无'}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">{req.effortDays}天</td>
+                            <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.submitter || '-'}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">
+                              {req.isRMS ? <span className="text-purple-600 font-semibold">✓</span> : '-'}
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.techProgress}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -1254,7 +2020,23 @@ const UnscheduledArea = ({
   );
 };
 
-// 生成示例数据 - 基于专卖系统开发影响其他功能上线评估
+// ============================================================================
+// 示例数据生成 (Sample Data Generator)
+// ============================================================================
+
+/**
+ * 生成示例需求数据
+ *
+ * 数据来源：专卖系统开发影响其他功能上线评估.pdf
+ * 用途：为新用户提供预置的示例数据，帮助快速了解系统功能
+ *
+ * 包含需求类型：
+ * - 必须要做的功能（评分10分）
+ * - 建议马上/近期做（评分8分）
+ * - 有余力再做（评分5分）
+ *
+ * @returns 需求对象数组
+ */
 const generateSampleData = (): Requirement[] => {
   // 真实数据来自专卖系统开发影响其他功能上线评估.pdf
   const realData = [
@@ -1343,11 +2125,49 @@ const generateSampleData = (): Requirement[] => {
     const hasDeadline = !!item.deadline;
     const isUrgent = hasDeadline && new Date(item.deadline) < new Date('2025-11-15');
 
+    // 生成提交日期：高优先级的需求提交时间较早
+    // importance 10-9: 10月初, 8-7: 10月中, 6-5: 10月底, 4-3: 11月, 1-2: 11月底
+    const baseDate = new Date('2025-10-01');
+    let daysOffset = 0;
+    if (item.importance >= 9) {
+      daysOffset = i % 10; // 10月1-10日
+    } else if (item.importance >= 7) {
+      daysOffset = 10 + (i % 10); // 10月11-20日
+    } else if (item.importance >= 5) {
+      daysOffset = 20 + (i % 10); // 10月21-30日
+    } else if (item.importance >= 3) {
+      daysOffset = 30 + (i % 10); // 11月
+    } else {
+      daysOffset = 40 + (i % 10); // 11月中旬以后
+    }
+
+    const submitDate = new Date(baseDate);
+    submitDate.setDate(submitDate.getDate() + daysOffset);
+
+    // 根据类别分配需求提交方
+    let submitter: '产品' | '研发' | '业务' = '产品';
+    if (item.category === '中国区导入') {
+      submitter = '业务';
+    } else if (item.name.includes('优化') || item.name.includes('体验改善') || item.name.includes('看板')) {
+      submitter = i % 2 === 0 ? '产品' : '研发';
+    } else {
+      submitter = '产品';
+    }
+
+    // 判断是否为RMS重构项目：一些系统性、平台性、架构性的需求
+    const isRMS = item.name.includes('系统') || item.name.includes('中台') ||
+                  item.name.includes('平台') || item.name.includes('架构') ||
+                  (item.days > 40 && item.importance >= 8); // 大工作量+高优先级
+
+    // 生成研发同学名字（从owner中提取或者使用pm的名字）
+    const developer = item.owner;
+
     return {
       id: `ZM-${String(i + 1).padStart(3, '0')}`,
       name: item.name,
-      businessOwner: item.owner,
+      submitterName: item.pm, // 需求提交人使用产品经理名字
       productManager: item.pm,
+      developer: developer, // 研发同学使用原owner字段
       productProgress: item.status === 'doing' ? '已出PRD' : '已评估',
       effortDays: item.days,
       bv: bvMapping[item.importance] || '明显',
@@ -1355,30 +2175,85 @@ const generateSampleData = (): Requirement[] => {
       hardDeadline: isUrgent,
       deadlineDate: item.deadline,
       techProgress: '已评估工作量',
-      type: '功能开发'
+      type: '功能开发',
+      submitDate: submitDate.toISOString().split('T')[0], // 格式化为 YYYY-MM-DD
+      submitter, // 需求提交方
+      isRMS // 是否RMS重构
     };
   });
 };
 
-// 主应用
+// ============================================================================
+// 主应用组件 (Main Application Component)
+// ============================================================================
+
+/**
+ * WSJF Planner 主应用组件
+ *
+ * 架构说明：
+ * - 单文件组件架构，所有组件和逻辑在同一文件中
+ * - 使用React Hooks管理状态
+ * - 使用LocalStorage持久化数据
+ *
+ * 核心状态管理：
+ * - currentUser: 当前登录用户
+ * - requirements: 所有需求列表（包含已排期和未排期）
+ * - sprintPools: 迭代池列表
+ * - unscheduled: 未排期需求列表（由requirements动态计算）
+ *
+ * 主要功能：
+ * - 需求管理：创建、编辑、删除、导入、导出
+ * - 迭代池管理：创建、编辑、删除、调整宽度
+ * - 拖拽排期：在待排期区和迭代池之间拖拽需求
+ * - 数据持久化：自动保存到LocalStorage
+ * - 多维度筛选和排序
+ * - 数据导出：Excel、JSON、PDF
+ *
+ * @returns JSX元素
+ */
 export default function WSJFPlanner() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [showLogin, setShowLogin] = useState(false);
-  const [requirements, setRequirements] = useState<Requirement[]>([]);
-  const [sprintPools, setSprintPools] = useState<SprintPool[]>([]);
-  const [unscheduled, setUnscheduled] = useState<Requirement[]>([]);
-  const [dragOverPool, setDragOverPool] = useState<string | null>(null);
-  const [editingReq, setEditingReq] = useState<Requirement | null>(null);
-  const [editingSprint, setEditingSprint] = useState<SprintPool | null>(null);
-  const [isNewReq, setIsNewReq] = useState(false);
-  const [compact, setCompact] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [scoreFilter, setScoreFilter] = useState('all');
-  const [effortFilter, setEffortFilter] = useState('all');
-  const [bvFilter, setBVFilter] = useState('all');
-  const [showHandbook, setShowHandbook] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
+  // ========== 状态管理 ==========
+
+  // 用户相关状态
+  const [currentUser, setCurrentUser] = useState<User | null>(null);       // 当前登录用户
+  const [showLogin, setShowLogin] = useState(false);                       // 是否显示登录弹窗
+
+  // 核心数据状态
+  const [requirements, setRequirements] = useState<Requirement[]>([]);     // 所有需求列表
+  const [sprintPools, setSprintPools] = useState<SprintPool[]>([]);        // 迭代池列表
+  const [unscheduled, setUnscheduled] = useState<Requirement[]>([]);       // 未排期需求列表
+
+  // 拖拽相关状态
+  const [dragOverPool, setDragOverPool] = useState<string | null>(null);   // 拖拽悬停的池ID
+
+  // 编辑相关状态
+  const [editingReq, setEditingReq] = useState<Requirement | null>(null);  // 正在编辑的需求
+  const [editingSprint, setEditingSprint] = useState<SprintPool | null>(null); // 正在编辑的迭代池
+  const [isNewReq, setIsNewReq] = useState(false);                         // 是否为新建需求
+
+  // UI控制状态
+  const [compact, setCompact] = useState(false);                           // 紧凑模式
+  const [showHandbook, setShowHandbook] = useState(false);                 // 显示说明书
+  const [showExportMenu, setShowExportMenu] = useState(false);             // 显示导出菜单
+
+  // 筛选和搜索状态
+  const [searchTerm, setSearchTerm] = useState('');                        // 搜索关键词
+  const [filterType, setFilterType] = useState('all');                     // 类型筛选
+  const [scoreFilter, setScoreFilter] = useState('all');                   // 热度分筛选
+  const [effortFilter, setEffortFilter] = useState('all');                 // 工作量筛选
+  const [bvFilter, setBVFilter] = useState('all');                         // 业务价值筛选
+  const [rmsFilter, setRMSFilter] = useState(false);                       // RMS筛选
+
+  // 布局相关状态
+  const [leftPanelWidth, setLeftPanelWidth] = useState(400);               // 待排期区宽度（像素）
+  const [poolWidths, setPoolWidths] = useState<Record<string, number>>({}); // 各迭代池宽度（像素）
+
+  // ========== 数据初始化和持久化 ==========
+
+  /**
+   * 加载示例数据
+   * 包含预置的需求和迭代池，帮助新用户快速了解系统
+   */
 
   const loadSampleData = () => {
     const sampleReqs = generateSampleData();
@@ -1444,7 +2319,17 @@ export default function WSJFPlanner() {
   const handleSaveRequirement = (req: Requirement) => {
     if (isNewReq) {
       const newReqs = [...requirements, req];
-      recalculateScores(newReqs);
+      const updated = calculateScores(newReqs);
+      setRequirements(updated);
+
+      // 将新需求添加到待排期区
+      const newReq = updated.find(r => r.id === req.id);
+      if (newReq) {
+        setUnscheduled(prev => {
+          const newList = [...prev, newReq];
+          return newList.sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0));
+        });
+      }
     } else {
       const newReqs = requirements.map(r => r.id === req.id ? req : r);
       recalculateScores(newReqs);
@@ -1527,14 +2412,15 @@ export default function WSJFPlanner() {
         exportData.push({
           '迭代池': pool.name,
           '需求名称': req.name,
-          '负责人': req.businessOwner,
+          '需求提交人': req.submitterName,
           '产品经理': req.productManager,
+          '研发同学': req.developer,
           '类型': req.type,
           '工作量(天)': req.effortDays,
           '业务价值': req.bv,
-          '时间临界': req.tc,
+          '迫切程度': req.tc,
           '强制DDL': req.hardDeadline ? '是' : '否',
-          '热度分': req.displayScore || 0,
+          '权重分': req.displayScore || 0,
           '星级': '★'.repeat(req.stars || 0),
           '技术评估': req.techProgress
         });
@@ -1545,12 +2431,13 @@ export default function WSJFPlanner() {
       exportData.push({
         '迭代池': '未排期',
         '需求名称': req.name,
-        '负责人': req.businessOwner,
+        '需求提交人': req.submitterName,
         '产品经理': req.productManager,
+        '研发同学': req.developer,
         '类型': req.type,
         '工作量(天)': req.effortDays,
         '业务价值': req.bv,
-        '时间临界': req.tc,
+        '迫切程度': req.tc,
         '强制DDL': req.hardDeadline ? '是' : '否',
         '热度分': req.displayScore || 0,
         '星级': '★'.repeat(req.stars || 0),
@@ -1637,17 +2524,7 @@ export default function WSJFPlanner() {
     }
 
     if (targetPoolId !== 'unscheduled') {
-      const targetPool = sprintPools.find(p => p.id === targetPoolId);
-      if (!targetPool) return;
-
-      const totalReserve = targetPool.bugReserve + targetPool.refactorReserve + targetPool.otherReserve;
-      const netAvailable = targetPool.totalDays * (1 - totalReserve / 100);
-      const usedDays = targetPool.requirements.reduce((sum, req) => sum + req.effortDays, 0);
-      
-      if (usedDays + requirement.effortDays > netAvailable) {
-        alert(`资源不足！超出 ${Math.round(usedDays + requirement.effortDays - netAvailable)} 人日`);
-        return;
-      }
+      // 允许拖入超出容量的需求，SprintPoolComponent会显示警告状态
 
       if (sourcePoolId === 'unscheduled') {
         setUnscheduled(prev => prev.filter(r => r.id !== reqId));
@@ -1688,16 +2565,20 @@ export default function WSJFPlanner() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 shadow-sm flex-shrink-0">
+      <div className="bg-gray-900 border-b border-gray-800 px-6 py-3 shadow-sm flex-shrink-0">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold text-white">小米国际WSJF-Lite迭代排期小工具 - by Evan（tianyuan8@xiaomi.com）</h1>
-            
-            {/* 图例 */}
-            <div className="flex items-center gap-4 text-xs text-gray-300 border-l border-gray-700 pl-4">
+          <div className="flex items-center gap-6">
+            {/* 标题区域 - 两行显示 */}
+            <div>
+              <h1 className="text-lg font-bold text-white leading-tight">小米国际 WSJF-Lite Tools</h1>
+              <p className="text-xs text-gray-400 mt-0.5">by Evan (tianyuan8@xiaomi.com)</p>
+            </div>
+
+            {/* 图例 - 左对齐 */}
+            <div className="flex items-center gap-3 text-xs text-gray-300">
               {/* BV颜色图例 */}
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
+              <div className="flex items-center gap-1.5">
+                <div className="flex gap-0.5">
                   <div className="w-3 h-3 rounded-sm bg-gradient-to-br from-blue-100 to-blue-200" title="局部"></div>
                   <div className="w-3 h-3 rounded-sm bg-gradient-to-br from-blue-400 to-blue-500" title="明显"></div>
                   <div className="w-3 h-3 rounded-sm bg-gradient-to-br from-blue-600 to-blue-700" title="撬动核心"></div>
@@ -1705,15 +2586,15 @@ export default function WSJFPlanner() {
                 </div>
                 <span>业务价值</span>
               </div>
-              
+
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-gradient-to-br from-red-600 to-red-900 rounded-sm"></div>
                 <span>强DDL</span>
               </div>
-              
+
               <div className="flex items-center gap-1">
                 <Star size={12} className="fill-yellow-400 text-yellow-400" />
-                <span>热度星级</span>
+                <span>权重</span>
               </div>
             </div>
 
@@ -1722,7 +2603,7 @@ export default function WSJFPlanner() {
               className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition"
             >
               <HelpCircle size={14} />
-              <span>查看说明书</span>
+              <span>说明书</span>
             </button>
           </div>
 
@@ -1802,10 +2683,10 @@ export default function WSJFPlanner() {
         </div>
       )}
 
-      <div className="flex-1 flex overflow-hidden justify-center">
-        <div onDragEnter={() => handleDragEnter('unscheduled')} onDragLeave={handleDragLeave} className="h-full flex-shrink-0">
-          <UnscheduledArea 
-            unscheduled={unscheduled} 
+      <div className="flex-1 flex overflow-hidden">
+        <div onDragEnter={() => handleDragEnter('unscheduled')} onDragLeave={handleDragLeave} className="flex-shrink-0">
+          <UnscheduledArea
+            unscheduled={unscheduled}
             onRequirementClick={(req) => {
               setEditingReq(req);
               setIsNewReq(false);
@@ -1827,31 +2708,84 @@ export default function WSJFPlanner() {
             onEffortFilterChange={setEffortFilter}
             bvFilter={bvFilter}
             onBVFilterChange={setBVFilter}
+            rmsFilter={rmsFilter}
+            onRMSFilterChange={setRMSFilter}
+            leftPanelWidth={leftPanelWidth}
           />
         </div>
 
+        {/* 拖动条 */}
+        <div
+          className="w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0 h-full"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startWidth = leftPanelWidth;
+
+            const handleMouseMove = (e: MouseEvent) => {
+              const diff = e.clientX - startX;
+              const newWidth = Math.max(300, Math.min(1400, startWidth + diff));
+              setLeftPanelWidth(newWidth);
+            };
+
+            const handleMouseUp = () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
+        />
+
         <div className="flex-1 p-6 overflow-x-auto overflow-y-hidden bg-gray-100">
-          <div className="flex gap-4 items-stretch min-w-min h-full">
-            {sprintPools.map(pool => (
-              <div
-                key={pool.id}
-                onDragEnter={() => handleDragEnter(pool.id)}
-                onDragLeave={handleDragLeave}
-                className="h-full"
-              >
-                <SprintPoolComponent
-                  pool={pool}
-                  onRequirementClick={(req) => {
-                    setEditingReq(req);
-                    setIsNewReq(false);
+          <div className="flex items-stretch min-w-min h-full">
+            {sprintPools.map((pool) => (
+              <React.Fragment key={pool.id}>
+                <div
+                  onDragEnter={() => handleDragEnter(pool.id)}
+                  onDragLeave={handleDragLeave}
+                  className="h-full flex-shrink-0"
+                  style={{ width: `${poolWidths[pool.id] || 384}px` }}
+                >
+                  <SprintPoolComponent
+                    pool={pool}
+                    onRequirementClick={(req) => {
+                      setEditingReq(req);
+                      setIsNewReq(false);
+                    }}
+                    onDrop={(poolId) => handleDrop(poolId)}
+                    isDragOver={dragOverPool === pool.id}
+                    onEdit={() => setEditingSprint(pool)}
+                    onDelete={() => handleDeleteSprint(pool.id)}
+                    compact={compact}
+                  />
+                </div>
+
+                {/* 拖动条 - 每个池右侧都有 */}
+                <div
+                  className="w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0 h-full"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    const startX = e.clientX;
+                    const startWidth = poolWidths[pool.id] || 384;
+
+                    const handleMouseMove = (e: MouseEvent) => {
+                      const diff = e.clientX - startX;
+                      const newWidth = Math.max(300, Math.min(800, startWidth + diff));
+                      setPoolWidths(prev => ({ ...prev, [pool.id]: newWidth }));
+                    };
+
+                    const handleMouseUp = () => {
+                      document.removeEventListener('mousemove', handleMouseMove);
+                      document.removeEventListener('mouseup', handleMouseUp);
+                    };
+
+                    document.addEventListener('mousemove', handleMouseMove);
+                    document.addEventListener('mouseup', handleMouseUp);
                   }}
-                  onDrop={(poolId) => handleDrop(poolId)}
-                  isDragOver={dragOverPool === pool.id}
-                  onEdit={() => setEditingSprint(pool)}
-                  onDelete={() => handleDeleteSprint(pool.id)}
-                  compact={compact}
                 />
-              </div>
+              </React.Fragment>
             ))}
 
             {/* 新增迭代池按钮 */}

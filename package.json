@@ -1,6 +1,7 @@
 {
   "name": "wsjf-sprint-planner",
   "version": "1.0.0",
+  "description": "WSJF Sprint Planner - 基于WSJF方法的加权优先级排期可视化工具 (纯前端完整版)",
   "type": "module",
   "scripts": {
     "dev": "vite",
