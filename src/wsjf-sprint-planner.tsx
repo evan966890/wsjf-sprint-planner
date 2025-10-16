@@ -2738,7 +2738,7 @@ export default function WSJFPlanner() {
           }}
         />
 
-        <div className="flex-1 p-6 overflow-x-auto overflow-y-hidden bg-gray-100">
+        <div className="flex-1 p-3 overflow-x-auto overflow-y-hidden bg-gray-100">
           <div className="flex items-stretch min-w-min h-full">
             {sprintPools.map((pool) => (
               <React.Fragment key={pool.id}>
@@ -2764,7 +2764,7 @@ export default function WSJFPlanner() {
 
                 {/* 拖动条 - 每个池右侧都有 */}
                 <div
-                  className="w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0 h-full"
+                  className="w-1 mx-3 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0 h-full"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     const startX = e.clientX;
