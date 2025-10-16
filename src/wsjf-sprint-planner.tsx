@@ -25,7 +25,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { AlertCircle, X, Save, Edit2, Plus, Search, Filter, Star, Info, HelpCircle, Download, Upload, FileSpreadsheet, FileText, Image as ImageIcon, LogOut, User as UserIcon, ArrowUpDown } from 'lucide-react';
+import { AlertCircle, X, Save, Edit2, Plus, Search, Filter, Star, Info, HelpCircle, Download, Upload, FileSpreadsheet, FileText, Image as ImageIcon, LogOut, User as UserIcon, ArrowUpDown, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -204,6 +204,17 @@ const calculateScores = (requirements: Requirement[]) => {
 
     return { ...req, displayScore, stars };
   });
+};
+
+/**
+ * 四舍五入工具函数
+ * 用于修复JavaScript浮点数精度问题
+ * @param num - 需要四舍五入的数字
+ * @param decimals - 保留的小数位数，默认1位
+ * @returns 四舍五入后的数字
+ */
+const roundNumber = (num: number, decimals: number = 1): number => {
+  return Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
 };
 
 // ============================================================================
@@ -479,7 +490,7 @@ const RequirementCard = ({
               {requirement.name}
             </div>
             <div className={`${textColor} opacity-75 mt-0.5 ${daySize}`}>
-              {requirement.effortDays}天
+              {roundNumber(requirement.effortDays, 1)}天
             </div>
           </div>
         </div>
@@ -524,7 +535,7 @@ const RequirementCard = ({
             <div>提交方: <span className="font-semibold">{requirement.submitter}</span></div>
             <div>业务价值: <span className="font-semibold">{getBVLabel(requirement.bv)}</span></div>
             <div>迫切程度: <span className="font-semibold">{getTCLabel(requirement.tc)}</span></div>
-            <div>工作量: <span className="font-semibold">{requirement.effortDays}天</span></div>
+            <div>工作量: <span className="font-semibold">{roundNumber(requirement.effortDays, 1)}天</span></div>
             {requirement.isRMS && (
               <div className="text-purple-400 font-semibold">🔧 RMS重构项目</div>
             )}
@@ -1454,7 +1465,7 @@ const SprintPoolComponent = ({
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
             <h3 className="font-semibold text-lg">
-              {pool.name} <span className="text-sm font-normal text-gray-300">总人日{pool.totalDays}（可用{netAvailable}+不可用{reservedDays}）</span>
+              {pool.name} <span className="text-sm font-normal text-gray-300">总人日{roundNumber(pool.totalDays, 1)}（可用{roundNumber(netAvailable, 1)}+不可用{roundNumber(reservedDays, 1)}）</span>
             </h3>
             <p className="text-sm text-gray-300 mt-0.5">{pool.startDate} ~ {pool.endDate}</p>
           </div>
@@ -1478,7 +1489,7 @@ const SprintPoolComponent = ({
         
         <div>
           <div className="flex justify-between items-baseline mb-1.5">
-            <span className="text-lg font-bold text-white">{usedDays}/{netAvailable}人日</span>
+            <span className="text-lg font-bold text-white">{roundNumber(usedDays, 1)}/{roundNumber(netAvailable, 1)}人日</span>
             <span className={`text-base font-bold ${percentage >= 100 ? 'text-red-400' : percentage >= 90 ? 'text-amber-400' : 'text-teal-400'}`}>
               {percentage}%
             </span>
@@ -1496,7 +1507,7 @@ const SprintPoolComponent = ({
         </div>
 
         <div className="mt-1.5 text-xs text-gray-400 bg-white/5 rounded-lg px-2 py-1">
-          不可用: {reservedDays}人日 (Bug {pool.bugReserve}% · 重构 {pool.refactorReserve}% · 其他 {pool.otherReserve}%)
+          不可用: {roundNumber(reservedDays, 1)}人日 (Bug {pool.bugReserve}% · 重构 {pool.refactorReserve}% · 其他 {pool.otherReserve}%)
         </div>
       </div>
 
@@ -1605,7 +1616,8 @@ const UnscheduledArea = ({
   onBVFilterChange,
   rmsFilter,
   onRMSFilterChange,
-  leftPanelWidth
+  leftPanelWidth,
+  onClearAll
 }: {
   unscheduled: Requirement[];
   onRequirementClick: (req: Requirement) => void;
@@ -1626,6 +1638,7 @@ const UnscheduledArea = ({
   rmsFilter: boolean;
   onRMSFilterChange: (filter: boolean) => void;
   leftPanelWidth: number;
+  onClearAll: () => void;
 }) => {
   // 组件状态
   const [showFilters, setShowFilters] = useState(false);                              // 是否展开筛选器
@@ -1957,7 +1970,7 @@ const UnscheduledArea = ({
                         <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.bv}</td>
                         <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.tc}</td>
                         <td className="border border-gray-300 px-2 py-1.5 text-center">{req.hardDeadline ? '有' : '无'}</td>
-                        <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">{req.effortDays}天</td>
+                        <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">{roundNumber(req.effortDays, 1)}天</td>
                         <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.submitter || '-'}</td>
                         <td className="border border-gray-300 px-2 py-1.5 text-center">
                           {req.isRMS ? <span className="text-purple-600 font-semibold">✓</span> : '-'}
@@ -2014,7 +2027,7 @@ const UnscheduledArea = ({
                             <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.bv}</td>
                             <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.tc}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center">{req.hardDeadline ? '有' : '无'}</td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">{req.effortDays}天</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">{roundNumber(req.effortDays, 1)}天</td>
                             <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.submitter || '-'}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center">
                               {req.isRMS ? <span className="text-purple-600 font-semibold">✓</span> : '-'}
@@ -2030,6 +2043,21 @@ const UnscheduledArea = ({
             )}
           </>
         )}
+      </div>
+
+      {/* 底部清空按钮 */}
+      <div className="flex-shrink-0 border-t border-gray-200 p-3 bg-gray-50">
+        <button
+          onClick={() => {
+            if (confirm('确定要清空所有需求吗？此操作不可撤销！')) {
+              onClearAll();
+            }
+          }}
+          className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition text-sm font-medium flex items-center justify-center gap-2"
+        >
+          <Trash2 size={16} />
+          清空需求池
+        </button>
       </div>
     </div>
   );
@@ -2487,19 +2515,19 @@ export default function WSJFPlanner() {
     // 系统字段定义
     // 注意：techProgress和productProgress不做自动映射，使用智能默认值
     const systemFields: Record<string, string[]> = {
-      name: ['需求名称', '名称', 'name', 'title', '标题', '需求', 'requirement'],
+      name: ['需求名称', '名称', 'name', 'title', '标题', '需求', 'requirement', '功能'],
       submitterName: ['提交人', '提交人姓名', 'submitter', 'author', '作者'],
-      productManager: ['产品经理', '产品', 'pm', 'product manager', '负责人'],
-      developer: ['开发人员', '开发', 'developer', 'dev', '开发者'],
-      effortDays: ['工作量', '人天', '工作日', 'effort', 'days', '人日', '天数'],
-      bv: ['业务价值', 'bv', 'business value', '价值'],
-      tc: ['时间临界', 'tc', 'time critical', '临界性'],
-      hardDeadline: ['强制截止', 'ddl', 'deadline', '截止'],
+      productManager: ['产品经理', '产品', 'pm', 'product manager', '负责人', '产品主r'],
+      developer: ['开发人员', '开发', 'developer', 'dev', '开发者', '研发主r', '研发负责人'],
+      effortDays: ['工作量', '人天', '工作日', 'effort', 'days', '人日', '天数', '工时', '预估工时', 'workday'],
+      bv: ['业务价值', 'bv', 'business value', '价值', '重要性', '业务重要性', '优先级'],
+      tc: ['时间临界', 'tc', 'time critical', '临界性', '紧急', '迫切'],
+      hardDeadline: ['强制截止', 'ddl', 'deadline', '截止', '上线时间', '交付时间'],
       // techProgress: 不自动映射，使用智能默认值（有工作量=已评估工作量，无工作量=未评估）
       // productProgress: 不自动映射，使用默认值"未评估"
       type: ['类型', 'type', '需求类型'],
-      submitDate: ['提交日期', '日期', 'date', '提交时间'],
-      submitter: ['提交者', '提交方'],
+      submitDate: ['提交日期', '日期', 'date', '提交时间', '开始时间'],
+      submitter: ['提交者', '提交方', '来源'],
       isRMS: ['是否RMS', 'rms', 'is rms'],
     };
 
@@ -2671,9 +2699,77 @@ ${JSON.stringify(sampleRow, null, 2)}
         });
 
         // 设置默认值，使用生成的uniqueId
-        // 智能设置技术进展：如果有工作量数据，说明已评估过工作量
-        const effortDays = mapped.effortDays || 0;
-        const defaultTechProgress = effortDays > 0 ? '已评估工作量' : '未评估';
+        // 智能合并工作量：扫描所有可能包含工作量的列，取最大值
+        // 这样即使映射不完美，也能尽可能获取到工作量数据
+        let effortDays = Number(mapped.effortDays) || 0;
+
+        // 扫描原始行数据中所有可能的工作量列
+        const effortKeywords = ['工作量', '人天', '工时', 'workday', 'effort', 'days', 'java', '预估'];
+        const allColumns = Object.keys(row);
+
+        allColumns.forEach(colName => {
+          // 检查列名是否包含工作量相关关键词
+          const lowerColName = colName.toLowerCase();
+          const hasKeyword = effortKeywords.some(keyword =>
+            lowerColName.includes(keyword.toLowerCase()) || colName.includes(keyword)
+          );
+
+          if (hasKeyword) {
+            const val = row[colName];
+            // 严格验证：值必须存在、不是空字符串、是有效数字、且大于0
+            if (val !== null && val !== undefined && val !== '') {
+              const num = Number(val);
+              if (!isNaN(num) && num > 0 && num > effortDays) {
+                effortDays = num;
+              }
+            }
+          }
+        });
+
+        // 枚举值验证：确保所有枚举字段都是有效值
+        // 如果映射的值不在有效枚举中，使用智能默认值或标准默认值
+
+        // 验证并智能设置技术进展
+        const validTechProgress = ['未评估', '已评估工作量', '已完成技术方案'];
+        let finalTechProgress = validTechProgress.includes(mapped.techProgress)
+          ? mapped.techProgress
+          : (effortDays > 0 ? '已评估工作量' : '未评估');
+
+        // 如果映射的是有效的"未评估"但有工作量数据，自动升级
+        if (effortDays > 0 && finalTechProgress === '未评估') {
+          finalTechProgress = '已评估工作量';
+        }
+
+        // 验证业务价值
+        const validBV = ['局部', '明显', '撬动核心', '战略平台'];
+        let finalBV = validBV.includes(mapped.bv) ? mapped.bv : '明显';
+
+        // 智能转换：如果是数字，尝试映射到业务价值等级
+        if (typeof mapped.bv === 'number' || !isNaN(Number(mapped.bv))) {
+          const bvNum = Number(mapped.bv);
+          if (bvNum >= 9) finalBV = '战略平台';
+          else if (bvNum >= 7) finalBV = '撬动核心';
+          else if (bvNum >= 5) finalBV = '明显';
+          else finalBV = '局部';
+        }
+
+        // 验证时间临界
+        const validTC = ['随时', '三月窗口', '一月硬窗口'];
+        const finalTC = validTC.includes(mapped.tc) ? mapped.tc : '随时';
+
+        // 验证产品进展
+        const validProductProgress = ['未评估', '设计中', '开发中', '已完成'];
+        const finalProductProgress = validProductProgress.includes(mapped.productProgress)
+          ? mapped.productProgress
+          : '未评估';
+
+        // 验证需求类型
+        const validType = ['功能开发', '技术债', 'Bug修复'];
+        const finalType = validType.includes(mapped.type) ? mapped.type : '功能开发';
+
+        // 验证提交方
+        const validSubmitter = ['产品', '技术', '运营', '业务'];
+        const finalSubmitter = validSubmitter.includes(mapped.submitter) ? mapped.submitter : '产品';
 
         return {
           id: uniqueId,
@@ -2681,15 +2777,15 @@ ${JSON.stringify(sampleRow, null, 2)}
           submitterName: mapped.submitterName || '',
           productManager: mapped.productManager || '',
           developer: mapped.developer || '',
-          productProgress: mapped.productProgress || '未评估',
+          productProgress: finalProductProgress,
           effortDays: effortDays,
-          bv: mapped.bv || '明显',
-          tc: mapped.tc || '随时',
+          bv: finalBV,
+          tc: finalTC,
           hardDeadline: mapped.hardDeadline || false,
-          techProgress: mapped.techProgress || defaultTechProgress,
-          type: mapped.type || '功能开发',
+          techProgress: finalTechProgress,
+          type: finalType,
           submitDate: mapped.submitDate || new Date().toISOString().split('T')[0],
-          submitter: mapped.submitter || '产品',
+          submitter: finalSubmitter,
           isRMS: mapped.isRMS || false,
         };
       });
@@ -3270,6 +3366,11 @@ ${JSON.stringify(sampleRow, null, 2)}
             rmsFilter={rmsFilter}
             onRMSFilterChange={setRMSFilter}
             leftPanelWidth={leftPanelWidth}
+            onClearAll={() => {
+              setRequirements([]);
+              setUnscheduled([]);
+              setSprintPools(prev => prev.map(pool => ({ ...pool, requirements: [] })));
+            }}
           />
         </div>
 
