@@ -36,15 +36,15 @@ import * as storage from './storage';
 // ============================================================================
 
 /**
- * Gemini API配置
+ * OpenAI API配置
  * 用于AI智能字段映射功能
  *
  * 配置说明：
- * 1. 将您的Gemini API Key填入下方GEMINI_API_KEY常量
- * 2. 获取方式：访问 https://makersuite.google.com/app/apikey 创建API Key
+ * 1. 将您的OpenAI API Key填入下方OPENAI_API_KEY常量
+ * 2. 获取方式：访问 https://platform.openai.com/api-keys 创建API Key
  * 3. 配置后所有用户将共享使用此API Key进行AI映射
  */
-const GEMINI_API_KEY = 'AIzaSyCGgDhKDPvguVszjJEYW0UFbC7r93XFJIw'; // 请在此处填入您的Gemini API Key
+const OPENAI_API_KEY = ''; // 请在此处填入您的OpenAI API Key
 
 // ============================================================================
 // 类型定义 (Type Definitions)
@@ -2523,12 +2523,12 @@ export default function WSJFPlanner() {
   };
 
   /**
-   * 使用AI映射字段（Gemini API）
+   * 使用AI映射字段（OpenAI API）
    */
   const handleAIMapping = async () => {
-    const apiKey = GEMINI_API_KEY;
+    const apiKey = OPENAI_API_KEY;
     if (!apiKey) {
-      alert('AI映射功能未配置。请联系管理员在代码中配置 Gemini API Key。');
+      alert('AI映射功能未配置。请联系管理员在代码中配置 OpenAI API Key。');
       return;
     }
 
@@ -2573,32 +2573,43 @@ ${JSON.stringify(sampleRow, null, 2)}
 2. 确保name字段必须被映射（这是必填字段）
 3. 对于布尔值字段（hardDeadline、isRMS），尝试识别"是/否"、"有/无"、"true/false"等表示`;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }]
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: '你是一个专业的数据映射专家，擅长分析Excel列名和系统字段的对应关系。'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 1000
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMsg = errorData.error?.message || response.statusText;
-        throw new Error(`API请求失败 (${response.status}): ${errorMsg}\n\n可能原因：\n1. API Key无效或已过期\n2. API Key权限不足\n3. 超出API配额限制\n\n请检查API Key配置`);
+        throw new Error(`API请求失败 (${response.status}): ${errorMsg}\n\n可能原因：\n1. API Key无效或已过期\n2. API Key权限不足\n3. 超出API配额限制\n4. 网络连接问题\n\n请检查API Key配置`);
       }
 
       const result = await response.json();
 
-      // 检查API返回的结果
-      if (!result.candidates || result.candidates.length === 0) {
-        throw new Error('API返回数据格式异常：没有候选结果');
+      // 检查OpenAI API返回的结果
+      if (!result.choices || result.choices.length === 0) {
+        throw new Error('API返回数据格式异常：没有返回结果');
       }
 
-      const aiText = result.candidates[0]?.content?.parts[0]?.text || '';
+      const aiText = result.choices[0]?.message?.content || '';
 
       if (!aiText) {
         throw new Error('API返回数据为空');
