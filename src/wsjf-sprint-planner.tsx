@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AlertCircle, X, Save, Edit2, Plus, Search, Filter, Star, Info, HelpCircle, Download, FileSpreadsheet, FileText, Image as ImageIcon, LogOut, User as UserIcon } from 'lucide-react';
+import { AlertCircle, X, Save, Edit2, Plus, Search, Filter, Star, Info, HelpCircle, Download, FileSpreadsheet, FileText, Image as ImageIcon, LogOut, User as UserIcon, ChevronDown, ChevronUp } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -935,8 +935,8 @@ const SprintPoolComponent = ({
         isDragOver ? 'border-teal-500 bg-teal-50/50 shadow-xl' : 'border-gray-200 shadow-sm'
       } ${percentage >= 100 ? 'ring-2 ring-red-500' : percentage >= 90 ? 'ring-2 ring-amber-400' : ''}`}
     >
-      <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-gray-900 text-white rounded-t-xl">
-        <div className="flex items-start justify-between mb-3">
+      <div className="flex-shrink-0 p-3 border-b border-gray-200 bg-gray-900 text-white rounded-t-xl">
+        <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
             <h3 className="font-semibold text-lg">{pool.name}</h3>
             <p className="text-sm text-gray-300 mt-0.5">{pool.startDate} ~ {pool.endDate}</p>
@@ -978,25 +978,25 @@ const SprintPoolComponent = ({
           </div>
         </div>
 
-        <div className="mt-3 text-xs text-gray-300 bg-white/5 rounded-lg p-2.5">
-          <div className="space-y-1">
+        <div className="mt-2 text-xs text-gray-300 bg-white/5 rounded-lg p-2">
+          <div className="space-y-0.5">
             <div className="text-red-300">不可用: {reservedDays}人日 (Bug {pool.bugReserve}% · 重构 {pool.refactorReserve}% · 其他 {pool.otherReserve}%)</div>
-            <div className="font-semibold text-white border-t border-white/20 pt-1">净可用: {netAvailable}人日</div>
+            <div className="font-semibold text-white border-t border-white/20 pt-0.5">净可用: {netAvailable}人日</div>
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className={`p-4 h-full border-2 border-dashed rounded-lg m-3 transition-all ${
+        <div className={`p-3 h-full border-2 border-dashed rounded-lg m-2 transition-all ${
           isDragOver ? 'border-teal-400 bg-teal-50' : pool.requirements.length === 0 ? 'border-gray-200 bg-gray-50' : 'border-transparent'
         }`}>
           {pool.requirements.length === 0 ? (
-            <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 py-12">
-              <div className="text-4xl mb-2">📥</div>
+            <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 py-8">
+              <div className="text-3xl mb-2">📥</div>
               <div className="text-sm font-medium">拖拽需求到这里</div>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-3 content-start justify-center">
+            <div className="flex flex-wrap gap-2 content-start justify-center">
               {pool.requirements.map((req) => (
                 <RequirementCard
                   key={req.id}
@@ -1025,8 +1025,8 @@ const SprintPoolComponent = ({
 };
 
 // 待排期区组件
-const UnscheduledArea = ({ 
-  unscheduled, 
+const UnscheduledArea = ({
+  unscheduled,
   onRequirementClick,
   onDrop,
   isDragOver,
@@ -1060,6 +1060,8 @@ const UnscheduledArea = ({
   bvFilter: string;
   onBVFilterChange: (filter: string) => void;
 }) => {
+  const [showFilters, setShowFilters] = useState(false);
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
@@ -1096,31 +1098,43 @@ const UnscheduledArea = ({
   const notReadyReqs = filteredReqs.filter(r => r.techProgress === '未评估');
 
   return (
-    <div className="w-[680px] bg-white border-r border-gray-200 flex flex-col h-full">
-      <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-gray-900 text-white">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">待排期区</h2>
-          <button 
+    <div className="w-[480px] bg-white border-r border-gray-200 flex flex-col h-full">
+      <div className="flex-shrink-0 p-3 border-b border-gray-200 bg-gray-900 text-white">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-base font-semibold">待排期区</h2>
+          <button
             onClick={onAddNew}
-            className="text-white hover:bg-white/10 rounded-lg p-2 transition"
+            className="text-white hover:bg-white/10 rounded-lg p-1.5 transition"
           >
-            <Plus size={18} />
+            <Plus size={16} />
           </button>
         </div>
-        <p className="text-sm text-gray-300 mb-3">按热度分排序</p>
-        
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+        <p className="text-xs text-gray-300 mb-2">按热度分排序</p>
+
+        <div className="relative mb-2">
+          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
           <input
             type="text"
             placeholder="搜索需求..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:bg-white/20 focus:border-white/40 transition text-sm"
+            className="w-full pl-8 pr-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:bg-white/20 focus:border-white/40 transition text-xs"
           />
         </div>
 
-        <div className="space-y-2">
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="w-full flex items-center justify-between px-2 py-1.5 mb-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white text-xs transition"
+        >
+          <div className="flex items-center gap-1.5">
+            <Filter size={12} />
+            <span>筛选条件</span>
+          </div>
+          {showFilters ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+
+        {showFilters && (
+          <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-gray-300 flex-shrink-0" />
             <select
@@ -1171,9 +1185,10 @@ const UnscheduledArea = ({
             <option value="撬动核心" className="bg-gray-800 text-white">撬动核心</option>
             <option value="战略平台" className="bg-gray-800 text-white">战略平台</option>
           </select>
-        </div>
+          </div>
+        )}
 
-        <div className="mt-3 bg-white/10 rounded-lg px-3 py-2 text-xs space-y-1">
+        <div className="mt-2 bg-white/10 rounded-lg px-2.5 py-1.5 text-xs space-y-0.5">
           <div>
             <span className="text-gray-300">筛选结果: </span>
             <span className="font-semibold text-white">{filteredReqs.length}</span>
@@ -1185,7 +1200,7 @@ const UnscheduledArea = ({
         </div>
       </div>
 
-      <div 
+      <div
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         className={`flex-1 overflow-y-auto transition-all ${
@@ -1193,8 +1208,8 @@ const UnscheduledArea = ({
         }`}
       >
         {/* 可排期区 */}
-        <div className="p-4 pb-2">
-          <div className="flex flex-wrap gap-3 justify-start">
+        <div className="p-3 pb-2">
+          <div className="flex flex-wrap gap-2 justify-start">
             {readyReqs.map(req => (
               <RequirementCard
                 key={req.id}
@@ -1213,15 +1228,15 @@ const UnscheduledArea = ({
         {/* 分割线 + 未评估区 */}
         {notReadyReqs.length > 0 && (
           <>
-            <div className="px-4 py-3">
+            <div className="px-3 py-2">
               <div className="border-t border-gray-300 relative">
-                <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-3 py-1 text-xs text-gray-500 rounded-full border border-gray-300 whitespace-nowrap">
+                <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 py-0.5 text-xs text-gray-500 rounded-full border border-gray-300 whitespace-nowrap">
                   未完成技术评估（不可排期）
                 </div>
               </div>
             </div>
-            <div className="px-4 pb-4 bg-gray-100">
-              <div className="flex flex-wrap gap-3 justify-start opacity-60 pt-2">
+            <div className="px-3 pb-3 bg-gray-100">
+              <div className="flex flex-wrap gap-2 justify-start opacity-60 pt-1.5">
                 {notReadyReqs.map(req => (
                   <RequirementCard
                     key={req.id}
