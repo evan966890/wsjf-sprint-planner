@@ -972,7 +972,7 @@ const EditRequirementModal = ({
                   <select
                     value={form.businessDomain}
                     onChange={(e) => setForm({...form, businessDomain: e.target.value, customBusinessDomain: e.target.value === '自定义' ? form.customBusinessDomain : ''})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                    className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
                   >
                     <option value="新零售">新零售</option>
                     <option value="渠道零售">渠道零售</option>
@@ -1684,6 +1684,19 @@ const UnscheduledArea = ({
   const [viewMode, setViewMode] = useState<'bubble' | 'list'>('bubble');             // 视图模式：气泡或列表
 
   /**
+   * 提取所有自定义业务域（用于动态显示筛选选项）
+   */
+  const customBusinessDomains = useMemo(() => {
+    const domains = new Set<string>();
+    unscheduled.forEach(req => {
+      if (req.businessDomain === '自定义' && req.customBusinessDomain) {
+        domains.add(req.customBusinessDomain);
+      }
+    });
+    return Array.from(domains).sort();
+  }, [unscheduled]);
+
+  /**
    * 处理拖拽悬停事件
    */
   const handleDragOver = (e: React.DragEvent) => {
@@ -1740,9 +1753,12 @@ const UnscheduledArea = ({
         matchesBusinessDomain = req?.businessDomain === '新零售' ||
                                 req?.businessDomain === '渠道零售' ||
                                 req?.businessDomain === '国际零售通用';
-      } else {
-        // 选择其他业务域时，精确匹配
+      } else if (['新零售', '渠道零售'].includes(businessDomainFilter)) {
+        // 选择预设业务域时，精确匹配businessDomain字段
         matchesBusinessDomain = req?.businessDomain === businessDomainFilter;
+      } else {
+        // 选择自定义业务域时，匹配customBusinessDomain字段
+        matchesBusinessDomain = req?.businessDomain === '自定义' && req?.customBusinessDomain === businessDomainFilter;
       }
     }
 
@@ -1831,6 +1847,9 @@ const UnscheduledArea = ({
             <option value="新零售" className="text-gray-900">新零售</option>
             <option value="渠道零售" className="text-gray-900">渠道零售</option>
             <option value="国际零售通用" className="text-gray-900">国际零售通用</option>
+            {customBusinessDomains.map(domain => (
+              <option key={domain} value={domain} className="text-gray-900">{domain}</option>
+            ))}
           </select>
           <label className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
             <input
