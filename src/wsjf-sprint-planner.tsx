@@ -72,6 +72,8 @@ interface Requirement {
   submitDate: string;            // 需求提交日期
   submitter: string;             // 需求提交方：产品/研发/业务
   isRMS: boolean;                // 是否为RMS重构项目
+  businessDomain: string;        // 业务域：新零售/渠道零售/国际零售通用/自定义
+  customBusinessDomain?: string; // 自定义业务域名称（当businessDomain为"自定义"时填写）
   rawScore?: number;             // 原始分数（3-26范围，由WSJF算法计算）
   displayScore?: number;         // 展示分数（1-100范围，归一化后的热度分）
   stars?: number;                // 星级评定（2-5星，基于displayScore分档）
@@ -901,7 +903,8 @@ const EditRequirementModal = ({
     type: '功能开发',                                     // 需求类型
     submitDate: new Date().toISOString().split('T')[0],  // 提交日期默认今天
     submitter: '产品',                                    // 提交方默认产品
-    isRMS: false                                          // 默认非RMS重构
+    isRMS: false,                                         // 默认非RMS重构
+    businessDomain: '新零售'                              // 业务域默认"新零售"
   });
 
   /**
@@ -1150,6 +1153,33 @@ const EditRequirementModal = ({
                   <option value="Bug修复">Bug修复</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">业务域</label>
+                <select
+                  value={form.businessDomain}
+                  onChange={(e) => setForm({...form, businessDomain: e.target.value, customBusinessDomain: e.target.value === '自定义' ? form.customBusinessDomain : ''})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                >
+                  <option value="新零售">新零售</option>
+                  <option value="渠道零售">渠道零售</option>
+                  <option value="国际零售通用">国际零售通用</option>
+                  <option value="自定义">自定义</option>
+                </select>
+              </div>
+
+              {form.businessDomain === '自定义' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">自定义业务域名称</label>
+                  <input
+                    type="text"
+                    value={form.customBusinessDomain || ''}
+                    onChange={(e) => setForm({...form, customBusinessDomain: e.target.value})}
+                    placeholder="请输入自定义业务域名称"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="col-span-1">
@@ -1614,6 +1644,8 @@ const UnscheduledArea = ({
   onEffortFilterChange,
   bvFilter,
   onBVFilterChange,
+  businessDomainFilter,
+  onBusinessDomainFilterChange,
   rmsFilter,
   onRMSFilterChange,
   leftPanelWidth,
@@ -1635,6 +1667,8 @@ const UnscheduledArea = ({
   onEffortFilterChange: (filter: string) => void;
   bvFilter: string;
   onBVFilterChange: (filter: string) => void;
+  businessDomainFilter: string;
+  onBusinessDomainFilterChange: (filter: string) => void;
   rmsFilter: boolean;
   onRMSFilterChange: (filter: boolean) => void;
   leftPanelWidth: number;
@@ -1695,10 +1729,24 @@ const UnscheduledArea = ({
     // 业务价值匹配
     const matchesBV = bvFilter === 'all' || req?.bv === bvFilter;
 
+    // 业务域匹配（国际零售通用 = 新零售 + 渠道零售）
+    let matchesBusinessDomain = true;
+    if (businessDomainFilter !== 'all') {
+      if (businessDomainFilter === '国际零售通用') {
+        // 选择"国际零售通用"时，匹配"新零售"、"渠道零售"或"国际零售通用"
+        matchesBusinessDomain = req?.businessDomain === '新零售' ||
+                                req?.businessDomain === '渠道零售' ||
+                                req?.businessDomain === '国际零售通用';
+      } else {
+        // 选择其他业务域时，精确匹配
+        matchesBusinessDomain = req?.businessDomain === businessDomainFilter;
+      }
+    }
+
     // RMS筛选匹配（如果rmsFilter为true，只显示RMS项目）
     const matchesRMS = !rmsFilter || req?.isRMS;
 
-    return matchesSearch && matchesType && matchesScore && matchesEffort && matchesBV && matchesRMS;
+    return matchesSearch && matchesType && matchesScore && matchesEffort && matchesBV && matchesBusinessDomain && matchesRMS;
   });
 
   // 应用排序
@@ -1771,6 +1819,16 @@ const UnscheduledArea = ({
               className="w-full pl-8 pr-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:bg-white/20 focus:border-white/40 transition text-xs"
             />
           </div>
+          <select
+            value={businessDomainFilter}
+            onChange={(e) => onBusinessDomainFilterChange(e.target.value)}
+            className="px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition whitespace-nowrap"
+          >
+            <option value="all">全部业务域</option>
+            <option value="新零售">新零售</option>
+            <option value="渠道零售">渠道零售</option>
+            <option value="国际零售通用">国际零售通用</option>
+          </select>
           <label className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
             <input
               type="checkbox"
@@ -2221,7 +2279,8 @@ const generateSampleData = (): Requirement[] => {
       type: '功能开发',
       submitDate: submitDate.toISOString().split('T')[0], // 格式化为 YYYY-MM-DD
       submitter, // 需求提交方
-      isRMS // 是否RMS重构
+      isRMS, // 是否RMS重构
+      businessDomain: item.category === '中国区导入' ? '渠道零售' : '国际零售通用' // 根据类别设置业务域
     };
   });
 };
@@ -2290,6 +2349,7 @@ export default function WSJFPlanner() {
   const [scoreFilter, setScoreFilter] = useState('all');                   // 热度分筛选
   const [effortFilter, setEffortFilter] = useState('all');                 // 工作量筛选
   const [bvFilter, setBVFilter] = useState('all');                         // 业务价值筛选
+  const [businessDomainFilter, setBusinessDomainFilter] = useState('all'); // 业务域筛选
   const [rmsFilter, setRMSFilter] = useState(false);                       // RMS筛选
 
   // 布局相关状态
@@ -2787,6 +2847,7 @@ ${JSON.stringify(sampleRow, null, 2)}
           submitDate: mapped.submitDate || new Date().toISOString().split('T')[0],
           submitter: finalSubmitter,
           isRMS: mapped.isRMS || false,
+          businessDomain: '新零售', // 导入的需求默认为"新零售"业务域
         };
       });
 
@@ -3363,6 +3424,8 @@ ${JSON.stringify(sampleRow, null, 2)}
             onEffortFilterChange={setEffortFilter}
             bvFilter={bvFilter}
             onBVFilterChange={setBVFilter}
+            businessDomainFilter={businessDomainFilter}
+            onBusinessDomainFilterChange={setBusinessDomainFilter}
             rmsFilter={rmsFilter}
             onRMSFilterChange={setRMSFilter}
             leftPanelWidth={leftPanelWidth}
