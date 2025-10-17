@@ -983,7 +983,7 @@ const EditRequirementModal = ({
                   <select
                     value={form.businessDomain}
                     onChange={(e) => setForm({...form, businessDomain: e.target.value, customBusinessDomain: e.target.value === '自定义' ? form.customBusinessDomain : ''})}
-                    className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                    className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
                   >
                     <option value="新零售">新零售</option>
                     <option value="渠道零售">渠道零售</option>
