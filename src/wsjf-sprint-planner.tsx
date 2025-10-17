@@ -74,7 +74,7 @@ interface Requirement {
   isRMS: boolean;                // 是否为RMS重构项目
   businessDomain: string;        // 业务域：新零售/渠道零售/国际零售通用/自定义
   customBusinessDomain?: string; // 自定义业务域名称（当businessDomain为"自定义"时填写）
-  rawScore?: number;             // 原始分数（3-26范围，由WSJF算法计算）
+  rawScore?: number;             // 原始分数（3-28范围，由WSJF算法计算）
   displayScore?: number;         // 展示分数（1-100范围，归一化后的热度分）
   stars?: number;                // 星级评定（2-5星，基于displayScore分档）
 }
@@ -112,7 +112,7 @@ interface User {
  * 计算WSJF分数
  *
  * 算法说明：
- * 1. 计算原始分(rawScore): BV + TC + DDL + WorkloadScore，范围3-26
+ * 1. 计算原始分(rawScore): BV + TC + DDL + WorkloadScore，范围3-28
  * 2. 归一化为展示分(displayScore): 线性映射到1-100范围
  * 3. 分档为星级(stars): 根据展示分划分为2-5星
  *
@@ -120,7 +120,7 @@ interface User {
  * - BV(业务价值): 局部3 | 明显6 | 撬动核心8 | 战略平台10
  * - TC(时间临界): 随时0 | 三月窗口3 | 一月硬窗口5
  * - DDL(强制截止): 无0 | 有5
- * - WorkloadScore(工作量奖励): ≤5天+6 | 6-15天+4 | 16-30天+2 | >30天+0
+ * - WorkloadScore(工作量奖励): ≤2天+8 | 3-5天+7 | 6-14天+5 | 15-30天+3 | 31-50天+2 | 51-100天+1 | 101-150天+0 | >150天+0
  *
  * @param requirements - 需求列表
  * @returns 带有计算分数的需求列表
@@ -150,16 +150,20 @@ const calculateScores = (requirements: Requirement[]) => {
    * 根据工作量计算加分
    * 鼓励需求拆分，小需求获得更高加分
    * @param days - 工作量天数
-   * @returns 工作量加分（0-6分）
+   * @returns 工作量加分（0-8分）
    */
   const getWorkloadScore = (days: number): number => {
     // 健壮性检查：确保days是有效数字
     const validDays = Math.max(0, Number(days) || 0);
 
-    if (validDays <= 5) return 6;
-    if (validDays <= 15) return 4;
-    if (validDays <= 30) return 2;
-    return 0;
+    if (validDays <= 2) return 8;
+    if (validDays <= 5) return 7;
+    if (validDays <= 14) return 5;
+    if (validDays <= 30) return 3;
+    if (validDays <= 50) return 2;
+    if (validDays <= 100) return 1;
+    if (validDays <= 150) return 0;
+    return 0; // >150天
   };
 
   // 第一步：计算原始分数（rawScore）
@@ -170,7 +174,7 @@ const calculateScores = (requirements: Requirement[]) => {
     const ddlScore = req.hardDeadline ? 5 : 0;     // 强制截止加分
     const wlScore = getWorkloadScore(req.effortDays); // 工作量加分
 
-    // 原始分 = 各维度分数之和（范围: 3-26）
+    // 原始分 = 各维度分数之和（范围: 3-28）
     const rawScore = bvScore + tcScore + ddlScore + wlScore;
 
     return { ...req, rawScore };
@@ -578,7 +582,7 @@ const RequirementCard = ({
  * 内容结构：
  * - 第一部分：业务版（面向业务人员）
  * - 第二部分：产品/研发版（面向PM和研发）
- * - 第三部分：3-26分数区间设计说明
+ * - 第三部分：3-28分数区间设计说明
  * - 附注：术语解释
  *
  * @param onClose - 关闭弹窗回调函数
@@ -595,7 +599,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 prose prose-sm max-w-none">
-          <p className="text-sm text-gray-600">（业务版 + 产品/研发版，含分数区间"3–26"设计说明）</p>
+          <p className="text-sm text-gray-600">（业务版 + 产品/研发版，含分数区间"3–28"设计说明）</p>
           
           <p><strong>说明</strong>：本文将所有缩写在首次出现处标注英文全称与含义。评分全过程仅使用整数，最终对业务侧展示为<strong>1–100 的"热度分"</strong>与星级分档。</p>
 
@@ -603,7 +607,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
           
           <h3 className="text-lg font-semibold mt-4 mb-2">1. 需要提供的三项选择（全为选择题，无需计算）</h3>
           
-          <h4 className="font-semibold mt-3 mb-2">价值（BV, Business Value）—四选一</h4>
+          <h4 className="font-semibold mt-3 mb-2">业务价值（BV, Business Value）—四选一</h4>
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>局部体验优化</strong>：影响范围较小，锦上添花。</li>
             <li><strong>明显改善</strong>：能够看到指标改善或明确的节省时间/成本。</li>
@@ -612,7 +616,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
           </ul>
           <p className="text-sm text-gray-600 mt-2">说明：原 WSJF 中的 RR/OE（Risk Reduction / Opportunity Enablement，风险降低/机会开启）已并入 BV 的判断口径，不再单独打分。</p>
 
-          <h4 className="font-semibold mt-3 mb-2">迫切程度度（TC, Time Criticality）—三选一</h4>
+          <h4 className="font-semibold mt-3 mb-2">迫切程度（TC, Time Criticality）—三选一</h4>
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>随时可做</strong>：任何时间完成的效果基本等同。</li>
             <li><strong>需要在未来三个月内完成</strong>：存在明确业务窗口，越晚效果越差。</li>
@@ -643,12 +647,12 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
             <li><strong>BV（Business Value）</strong>：局部 3｜明显 6｜撬动核心 8｜战略/平台级 10。</li>
             <li><strong>TC（Time Criticality）</strong>：随时 0｜三个月窗口 3｜一月硬窗口 5。</li>
             <li><strong>DDL（Hard Deadline）</strong>：无 0｜有（凭据齐全）5。</li>
-            <li><strong>工作量分（WorkloadScore，正向加分）</strong>：≤5 → +6｜6–15 → +4｜16–30 → +2｜&gt;30 → +0。目的：以"加分"方式鼓励切分，避免"扣分"心智负担。</li>
-            <li><strong>就绪度（DoR, Definition of Ready）</strong>：非"已就绪"条目默认不可入池；如需例外，必须记录原因并在复盘中审视。</li>
+            <li><strong>工作量分（WorkloadScore，正向加分）</strong>：≤2 → +8｜3-5 → +7｜6-14 → +5｜15-30 → +3｜31-50 → +2｜51-100 → +1｜101-150 → +0｜&gt;150 → +0。目的：以"加分"方式鼓励切分，避免"扣分"心智负担。</li>
+            <li><strong>技术进展</strong>：只有"已评估工作量"或"已完成技术方案"的需求才能拖入迭代池排期；"未评估"状态的需求无法排期。</li>
           </ul>
 
           <h3 className="text-lg font-semibold mt-4 mb-2">2. 计算与展示（仅整数）</h3>
-          <p><strong>原始分（RawScore）</strong>：Raw = BV + TC + DDL + WorkloadScore（典型范围 3–26）。</p>
+          <p><strong>原始分（RawScore）</strong>：Raw = BV + TC + DDL + WorkloadScore（典型范围 3–28）。</p>
           <p><strong>归一化展示分（Display，1–100 整分）</strong>：使用当前待排批次的最小/最大 RawScore 进行线性归一化；当 max=min 时统一置为 60。</p>
           
           <h4 className="font-semibold mt-3 mb-2">星级与分档（用于标签与配色）</h4>
@@ -695,15 +699,15 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
             </table>
           </div>
 
-          <h2 className="text-xl font-bold mt-6 mb-3">第三部分｜"3–26"区间设计的原因与对比</h2>
+          <h2 className="text-xl font-bold mt-6 mb-3">第三部分｜"3–28"区间设计的原因与对比</h2>
           <h3 className="text-lg font-semibold mt-4 mb-2">1. 区间由四个整数映射自然组合而成</h3>
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>BV</strong>：3/6/8/10（区分"不错"与"真硬货"）。</li>
             <li><strong>TC</strong>：0/3/5（将"季度窗口"与"月度硬窗口"拉开 2 分）。</li>
             <li><strong>DDL</strong>：0/5（强截止一票难求）。</li>
-            <li><strong>工作量分</strong>：+6/+4/+2/+0（每档相差 2 分，切分有明确激励）。</li>
+            <li><strong>工作量分</strong>：+8/+7/+5/+3/+2/+1/+0（8档细分，2天内最高激励，超大需求零加分，强烈鼓励切分）。</li>
           </ul>
-          <p className="mt-2">由此，Raw 最小值 = 3 + 0 + 0 + 0 = 3；Raw 最大值 = 10 + 5 + 5 + 6 = 26。</p>
+          <p className="mt-2">由此，Raw 最小值 = 3 + 0 + 0 + 0 = 3；Raw 最大值 = 10 + 5 + 5 + 8 = 28。</p>
 
           <h3 className="text-lg font-semibold mt-4 mb-2">2. 为什么不采用 1–10 或 1–11 等更"整齐"的区间</h3>
           <ul className="list-disc pl-6 space-y-1">
@@ -712,16 +716,16 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
             <li><strong>对切分的激励不明显</strong>：工作量若仅为 +3/+2/+1/+0，每档差 1，难以促使大项拆分为可当期交付的 MVP。</li>
           </ul>
 
-          <p className="mt-2"><strong>结论</strong>：3–26 区间是"整数、好解释、能拉开差距、鼓励切分并保障窗口"的平衡点。前端仍统一展示为 1–100 的热度分与星级，业务无需接触底层数字。</p>
+          <p className="mt-2"><strong>结论</strong>：3–28 区间是"整数、好解释、能拉开差距、鼓励切分并保障窗口"的平衡点。前端仍统一展示为 1–100 的热度分与星级，业务无需接触底层数字。</p>
 
           <h2 className="text-xl font-bold mt-6 mb-3">附注（名词解释）</h2>
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>WSJF</strong>（Weighted Shortest Job First）：带权重的最短任务优先排序方法。</li>
             <li><strong>BV</strong>（Business Value）：业务价值。</li>
-            <li><strong>TC</strong>（Time Criticality）：迫切程度度。</li>
+            <li><strong>TC</strong>（Time Criticality）：迫切程度。</li>
             <li><strong>DDL</strong>（Hard Deadline）：强截止日期。</li>
             <li><strong>RR/OE</strong>（Risk Reduction / Opportunity Enablement）：风险降低/机会开启（在本方案中已并入 BV）。</li>
-            <li><strong>DoR</strong>（Definition of Ready）：就绪定义。</li>
+            <li><strong>技术进展</strong>：包含"未评估"、"已评估工作量"、"已完成技术方案"三个状态，只有后两种状态的需求才能排期。</li>
             <li><strong>MVP</strong>（Minimum Viable Product）：最小可行版本。</li>
             <li><strong>KPI</strong>（Key Performance Indicator）：关键绩效指标。</li>
           </ul>
@@ -921,14 +925,21 @@ const EditRequirementModal = ({
     // 工作量加分计算（与calculateScores保持一致）
     const getWL = (d: number) => {
       const validDays = Math.max(0, Number(d) || 0); // 健壮性检查
-      return validDays <= 5 ? 6 : validDays <= 15 ? 4 : validDays <= 30 ? 2 : 0;
+      if (validDays <= 2) return 8;
+      if (validDays <= 5) return 7;
+      if (validDays <= 14) return 5;
+      if (validDays <= 30) return 3;
+      if (validDays <= 50) return 2;
+      if (validDays <= 100) return 1;
+      if (validDays <= 150) return 0;
+      return 0; // >150天
     };
 
-    // 计算原始分（3-26范围）
+    // 计算原始分（3-28范围）
     const raw = (BV_MAP[form.bv] || 3) + (TC_MAP[form.tc] || 0) + (form.hardDeadline ? 5 : 0) + getWL(form.effortDays);
 
     // 归一化到展示分（10-100范围）
-    const display = Math.round(10 + 90 * (raw - 3) / (26 - 3));
+    const display = Math.round(10 + 90 * (raw - 3) / (28 - 3));
 
     return { raw, display };
   }, [form]);
@@ -1166,7 +1177,7 @@ const EditRequirementModal = ({
                 />
                 {canEditEffort && (
                   <div className="text-xs text-gray-500 mt-1">
-                    工作量加分: {form.effortDays <= 5 ? '+6分' : form.effortDays <= 15 ? '+4分' : form.effortDays <= 30 ? '+2分' : '不加分（建议切分）'}
+                    工作量加分: {form.effortDays <= 2 ? '+8分' : form.effortDays <= 5 ? '+7分' : form.effortDays <= 14 ? '+5分' : form.effortDays <= 30 ? '+3分' : form.effortDays <= 50 ? '+2分' : form.effortDays <= 100 ? '+1分' : '不加分（建议切分）'}
                   </div>
                 )}
               </div>
@@ -1935,7 +1946,7 @@ const UnscheduledArea = ({
             onChange={(e) => onBVFilterChange(e.target.value)}
             className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
           >
-            <option value="all" className="bg-gray-800 text-white">全部价值</option>
+            <option value="all" className="bg-gray-800 text-white">全部业务价值</option>
             <option value="局部" className="bg-gray-800 text-white">局部优化</option>
             <option value="明显" className="bg-gray-800 text-white">明显改善</option>
             <option value="撬动核心" className="bg-gray-800 text-white">撬动核心</option>

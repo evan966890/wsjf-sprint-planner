@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(git commit -m \"$(cat <<''EOF''\nFeature: 添加导入清空选项和代码配置API Key\n\n本次更新包含两个主要功能改进：\n\n1. 导入时清空已有需求选项\n   - 在导入预览Modal底部添加复选框\"清空已有需求并导入全新数据\"\n   - 勾选后导入将清空所有现有需求和迭代池中的需求\n   - 提供警告提示（红色文字）防止误操作\n   - 修改handleConfirmImport函数支持清空模式\n   - 清空模式下显示特殊的成功消息\n\n   实现位置：\n   - src/wsjf-sprint-planner.tsx:2243 - 添加clearBeforeImport状态\n   - src/wsjf-sprint-planner.tsx:2641-2668 - 修改导入逻辑支持清空\n   - src/wsjf-sprint-planner.tsx:3011-3043 - 添加清空选项UI\n\n2. 改为代码配置Gemini API Key\n   - 移除前台系统设置界面\n   - 在代码顶部添加GEMINI_API_KEY常量配置\n   - 方便管理员配置后所有用户共享使用\n   - 简化用户使用流程，无需每个人单独配置\n\n   实现位置：\n   - src/wsjf-sprint-planner.tsx:34-47 - 添加API配置区域和详细说明\n   - src/wsjf-sprint-planner.tsx:2530-2534 - 修改handleAIMapping使用常量\n   - 移除SettingsModal组件（107行）\n   - 移除设置按钮和相关状态\n\n   配置说明：\n   请在 src/wsjf-sprint-planner.tsx 第47行的 GEMINI_API_KEY 常量中填入您的 API Key\n   获取方式：https://makersuite.google.com/app/apikey\n\n构建验证：\n- TypeScript编译：✅ 通过（无错误）\n- 生产构建：✅ 成功（1804个模块，3.15秒）\n- 包大小：1.25MB（gzip后 388KB）\n\n用户体验改进：\n- 导入时可选择清空或追加模式\n- 简化API配置流程\n- 避免重复配置API Key的麻烦\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Read(//c/Users/Evan Tian/Downloads/**)",
+      "Bash(node:*)",
+      "Bash(dir:*)",
+      "Bash(test:*)",
+      "Bash(vercel whoami:*)",
+      "Bash(vercel:*)",
+      "Bash(cloudbase:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

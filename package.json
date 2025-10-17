@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:tencent": "npm run build && cloudbase framework deploy",
+    "deploy:vercel": "npm run build && vercel --prod"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",
