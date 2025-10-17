@@ -491,8 +491,9 @@ const RequirementCard = ({
             <div className={`font-semibold ${textColor} leading-tight line-clamp-2 ${nameSize}`}>
               {requirement.name}
             </div>
-            <div className={`${textColor} opacity-75 mt-0.5 ${daySize}`}>
-              {roundNumber(requirement.effortDays, 1)}天
+            <div className={`flex items-center justify-between ${textColor} opacity-75 mt-0.5 ${daySize}`}>
+              <span>{roundNumber(requirement.effortDays, 1)}天</span>
+              <span className="ml-1 truncate">{requirement.businessDomain === '自定义' ? requirement.customBusinessDomain || '自定义' : requirement.businessDomain}</span>
             </div>
           </div>
         </div>
@@ -534,6 +535,7 @@ const RequirementCard = ({
         >
           <div className="space-y-1">
             <div className="font-semibold border-b border-white/20 pb-1 mb-1">{requirement.name}</div>
+            <div>业务域: <span className="font-semibold">{requirement.businessDomain === '自定义' ? requirement.customBusinessDomain || '自定义' : requirement.businessDomain}</span></div>
             <div>提交方: <span className="font-semibold">{requirement.submitter}</span></div>
             <div>业务价值: <span className="font-semibold">{getBVLabel(requirement.bv)}</span></div>
             <div>迫切程度: <span className="font-semibold">{getTCLabel(requirement.tc)}</span></div>
@@ -904,7 +906,7 @@ const EditRequirementModal = ({
     submitDate: new Date().toISOString().split('T')[0],  // 提交日期默认今天
     submitter: '产品',                                    // 提交方默认产品
     isRMS: false,                                         // 默认非RMS重构
-    businessDomain: '新零售'                              // 业务域默认"新零售"
+    businessDomain: '国际零售通用'                        // 业务域默认"国际零售通用"
   });
 
   /**
@@ -952,18 +954,46 @@ const EditRequirementModal = ({
         <div className="p-6">
           <div className="grid grid-cols-3 gap-6">
             <div className="col-span-2 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  需求名称 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({...form, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
-                  placeholder="输入需求名称（必填）"
-                />
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    需求名称 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm({...form, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                    placeholder="输入需求名称（必填）"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">业务域</label>
+                  <select
+                    value={form.businessDomain}
+                    onChange={(e) => setForm({...form, businessDomain: e.target.value, customBusinessDomain: e.target.value === '自定义' ? form.customBusinessDomain : ''})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                  >
+                    <option value="新零售">新零售</option>
+                    <option value="渠道零售">渠道零售</option>
+                    <option value="国际零售通用">国际零售通用</option>
+                    <option value="自定义">自定义</option>
+                  </select>
+                </div>
               </div>
+
+              {form.businessDomain === '自定义' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">自定义业务域名称</label>
+                  <input
+                    type="text"
+                    value={form.customBusinessDomain || ''}
+                    onChange={(e) => setForm({...form, customBusinessDomain: e.target.value})}
+                    placeholder="请输入自定义业务域名称"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1153,33 +1183,6 @@ const EditRequirementModal = ({
                   <option value="Bug修复">Bug修复</option>
                 </select>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">业务域</label>
-                <select
-                  value={form.businessDomain}
-                  onChange={(e) => setForm({...form, businessDomain: e.target.value, customBusinessDomain: e.target.value === '自定义' ? form.customBusinessDomain : ''})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
-                >
-                  <option value="新零售">新零售</option>
-                  <option value="渠道零售">渠道零售</option>
-                  <option value="国际零售通用">国际零售通用</option>
-                  <option value="自定义">自定义</option>
-                </select>
-              </div>
-
-              {form.businessDomain === '自定义' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">自定义业务域名称</label>
-                  <input
-                    type="text"
-                    value={form.customBusinessDomain || ''}
-                    onChange={(e) => setForm({...form, customBusinessDomain: e.target.value})}
-                    placeholder="请输入自定义业务域名称"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
-                  />
-                </div>
-              )}
             </div>
 
             <div className="col-span-1">
@@ -1824,10 +1827,10 @@ const UnscheduledArea = ({
             onChange={(e) => onBusinessDomainFilterChange(e.target.value)}
             className="px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition whitespace-nowrap"
           >
-            <option value="all">全部业务域</option>
-            <option value="新零售">新零售</option>
-            <option value="渠道零售">渠道零售</option>
-            <option value="国际零售通用">国际零售通用</option>
+            <option value="all" className="text-gray-900">全部业务域</option>
+            <option value="新零售" className="text-gray-900">新零售</option>
+            <option value="渠道零售" className="text-gray-900">渠道零售</option>
+            <option value="国际零售通用" className="text-gray-900">国际零售通用</option>
           </select>
           <label className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
             <input
@@ -2847,7 +2850,7 @@ ${JSON.stringify(sampleRow, null, 2)}
           submitDate: mapped.submitDate || new Date().toISOString().split('T')[0],
           submitter: finalSubmitter,
           isRMS: mapped.isRMS || false,
-          businessDomain: '新零售', // 导入的需求默认为"新零售"业务域
+          businessDomain: '国际零售通用', // 导入的需求默认为"国际零售通用"业务域
         };
       });
 
