@@ -1,12 +1,15 @@
 {
   "name": "wsjf-sprint-planner",
-  "version": "1.1.0",
-  "description": "WSJF Sprint Planner - 基于WSJF方法的加权优先级排期可视化工具 (纯前端完整版)",
+  "version": "1.2.0",
+  "description": "WSJF Sprint Planner - 基于WSJF方法的加权优先级排期可视化工具 (v1.2.0: 10分制业务影响度评分系统)",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
     "deploy:tencent": "npm run build && cloudbase framework deploy",
     "deploy:vercel": "npm run build && vercel --prod"
   },
@@ -16,16 +19,23 @@
     "lucide-react": "^0.309.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.2.47",
     "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.16",
+    "jsdom": "^27.0.1",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
-    "vite": "^5.0.11"
+    "vite": "^5.0.11",
+    "vitest": "^3.2.4"
   }
 }

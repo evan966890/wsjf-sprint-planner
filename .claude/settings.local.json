@@ -12,7 +12,17 @@
       "Bash(cloudbase:*)",
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(tee:*)",
+      "Read(//d/**)",
+      "Bash(git tag:*)",
+      "Bash(npm run deploy:tencent:*)",
+      "Bash(awk:*)",
+      "Bash(npm run test:run:*)",
+      "Bash(npx vite build)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:reactbits.dev)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []
