@@ -24,7 +24,7 @@
  * @version 1.0.0
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle, X, Save, Plus, Star, HelpCircle, Download, Upload, FileSpreadsheet, FileText, Image as ImageIcon, LogOut, User as UserIcon, ArrowUpDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -286,6 +286,9 @@ export default function WSJFPlanner() {
   const deleteSprintPool = useStore((state) => state.deleteSprintPool);
   const clearAllRequirements = useStore((state) => state.clearAllRequirements);
 
+  // ========== 批量评估状态 ==========
+  const [showBatchEvalModal, setShowBatchEvalModal] = useState(false);
+
   // ========== 数据初始化和持久化 ==========
 
   /**
@@ -396,6 +399,31 @@ export default function WSJFPlanner() {
       const logout = useStore.getState().logout;
       logout();
     }
+  };
+
+  /**
+   * 处理批量评估分数应用
+   */
+  const handleApplyBatchScores = (updates: Map<string, number>) => {
+    // 更新需求的businessImpactScore
+    const updatedRequirements: Requirement[] = requirements.map(req => {
+      if (updates.has(req.id)) {
+        const score = updates.get(req.id)!;
+        return { ...req, businessImpactScore: Math.max(1, Math.min(10, Math.round(score))) as any };
+      }
+      return req;
+    });
+
+    // 重新计算分数
+    const withScores = calculateScores(updatedRequirements);
+    setRequirements(withScores);
+
+    // 更新unscheduled列表
+    const newUnscheduled = withScores.filter(r => !sprintPools.some(p => p.requirements.some(pr => pr.id === r.id)));
+    const sorted = newUnscheduled.sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0));
+    setUnscheduled(sorted);
+
+    alert(`成功应用 ${updates.size} 个需求的AI评分！`);
   };
 
   /**
@@ -1305,6 +1333,7 @@ ${JSON.stringify(sampleRow, null, 2)}
               setEditingReq(null);
               setIsNewReq(true);
             }}
+            onBatchEvaluate={() => setShowBatchEvalModal(true)}
             compact={compact}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
@@ -1458,6 +1487,17 @@ ${JSON.stringify(sampleRow, null, 2)}
 
       {/* 导入预览Modal */}
       <ImportPreviewModal />
+
+      {/* 批量AI评估Modal */}
+      {showBatchEvalModal && (
+        <BatchEvaluationModal
+          requirements={requirements}
+          selectedAIModel={selectedAIModel}
+          onClose={() => setShowBatchEvalModal(false)}
+          onApplyScores={handleApplyBatchScores}
+          apiKey={selectedAIModel === 'openai' ? OPENAI_API_KEY : DEEPSEEK_API_KEY}
+        />
+      )}
     </div>
   );
 }
