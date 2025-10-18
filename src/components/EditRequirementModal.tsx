@@ -42,6 +42,7 @@ const EditRequirementModal = ({
   const [isHandbookOpen, setIsHandbookOpen] = useState(false);
   const [selectedAIModel, setSelectedAIModel] = useState<AIModelType>('deepseek');
   const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
+  const [isRelevanceExpanded, setIsRelevanceExpanded] = useState(true);
 
   // AI分析状态
   const [isAIAnalyzing, setIsAIAnalyzing] = useState(false);
@@ -401,7 +402,42 @@ const EditRequirementModal = ({
               />
             </div>
 
-            {/* 3. 业务影响度评分 */}
+            {/* 3. 提交信息（三列布局） */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">提交日期</label>
+                <input
+                  type="date"
+                  value={form.submitDate}
+                  onChange={(e) => setForm({ ...form, submitDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">需求提交部门</label>
+                <select
+                  value={form.submitter}
+                  onChange={(e) => setForm({ ...form, submitter: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="产品">产品</option>
+                  <option value="研发">研发</option>
+                  <option value="业务">业务</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">提交人</label>
+                <input
+                  type="text"
+                  value={form.submitterName}
+                  onChange={(e) => setForm({ ...form, submitterName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="提交人姓名"
+                />
+              </div>
+            </div>
+
+            {/* 4. 业务影响度评分 */}
             <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <Target size={18} className="text-blue-600" />
@@ -416,7 +452,7 @@ const EditRequirementModal = ({
               />
             </div>
 
-            {/* 4. 上线时间窗口 */}
+            {/* 5. 上线时间窗口 */}
             <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <Info size={18} className="text-orange-600" />
@@ -472,7 +508,7 @@ const EditRequirementModal = ({
               </div>
             </div>
 
-            {/* 5. 文档管理与AI分析（整合） */}
+            {/* 6. 文档管理与AI分析（整合） */}
             <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles size={18} className="text-purple-600" />
@@ -603,7 +639,7 @@ const EditRequirementModal = ({
               </div>
             </div>
 
-            {/* 6. 业务域 */}
+            {/* 7. 业务域 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">业务域</label>
               <select
@@ -635,182 +671,7 @@ const EditRequirementModal = ({
               </div>
             )}
 
-            {/* 7. 业务团队（关键角色） */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
-                <Users size={14} />
-                业务团队（关键角色，多选）
-              </label>
-              <p className="text-xs text-gray-500 mb-2">
-                按住Ctrl(Windows)或Cmd(Mac)多选。可选角色根据所选业务域自动筛选。
-              </p>
-              <select
-                multiple
-                value={(form.impactScope?.keyRoles || []).map(kr => kr.roleName)}
-                onChange={(e) => {
-                  const selectedRoleNames = Array.from(e.target.selectedOptions, option => option.value)
-                    .filter(v => !v.startsWith('['));
-
-                  const keyRoles = selectedRoleNames.map(roleName => {
-                    const config = availableRoleConfigs.find(c => c.roles.includes(roleName));
-                    return {
-                      category: config?.category || 'hq-common' as any,
-                      roleName,
-                      isCustom: false
-                    };
-                  });
-
-                  setForm({
-                    ...form,
-                    impactScope: {
-                      storeTypes: form.impactScope?.storeTypes || [],
-                      regions: form.impactScope?.regions || [],
-                      keyRoles,
-                      storeCountRange: form.impactScope?.storeCountRange
-                    }
-                  });
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-32 text-sm"
-              >
-                {availableRoleConfigs.map(config => (
-                  <optgroup key={config.category} label={config.categoryName}>
-                    {config.roles.map(role => (
-                      <option key={role} value={role}>{role}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-
-            {/* 8. 与哪类门店有关？ */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
-                <Store size={14} />
-                与哪类门店有关？
-              </label>
-              <p className="text-xs text-gray-500 mb-2">
-                可选门店类型根据所选业务域自动筛选
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {availableStoreTypes.map(type => (
-                  <label key={type} className="flex items-center gap-2 cursor-pointer text-sm p-2 border border-gray-200 rounded hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={form.impactScope?.storeTypes?.includes(type)}
-                      onChange={(e) => {
-                        const storeTypes = e.target.checked
-                          ? [...(form.impactScope?.storeTypes || []), type]
-                          : (form.impactScope?.storeTypes || []).filter(t => t !== type);
-                        setForm({
-                          ...form,
-                          impactScope: {
-                            storeTypes,
-                            regions: form.impactScope?.regions || [],
-                            keyRoles: form.impactScope?.keyRoles || [],
-                            storeCountRange: form.impactScope?.storeCountRange
-                          }
-                        });
-                      }}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span>{type}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* 9. 涉及门店数量 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                涉及门店数量
-              </label>
-              <select
-                value={form.impactScope?.storeCountRange || ''}
-                onChange={(e) => setForm({
-                  ...form,
-                  impactScope: {
-                    storeTypes: form.impactScope?.storeTypes || [],
-                    regions: form.impactScope?.regions || [],
-                    keyRoles: form.impactScope?.keyRoles || [],
-                    storeCountRange: e.target.value || undefined
-                  }
-                })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">请选择</option>
-                {STORE_COUNT_RANGES.map(range => (
-                  <option key={range} value={range}>{range}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* 10. 与哪些地区有关？ */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                与哪些地区有关？（多选）
-              </label>
-              <select
-                multiple
-                value={form.impactScope?.regions || []}
-                onChange={(e) => {
-                  const selected = Array.from(e.target.selectedOptions, option => option.value);
-                  setForm({
-                    ...form,
-                    impactScope: {
-                      storeTypes: form.impactScope?.storeTypes || [],
-                      regions: selected,
-                      keyRoles: form.impactScope?.keyRoles || [],
-                      storeCountRange: form.impactScope?.storeCountRange
-                    }
-                  });
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-32 text-sm"
-              >
-                {regionOptions.map(option => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">按住Ctrl(Windows)或Cmd(Mac)多选</p>
-            </div>
-
-            {/* 11. 提交日期 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">提交日期</label>
-              <input
-                type="date"
-                value={form.submitDate}
-                onChange={(e) => setForm({ ...form, submitDate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* 12. 需求提交部门 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">需求提交部门</label>
-              <select
-                value={form.submitter}
-                onChange={(e) => setForm({ ...form, submitter: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="产品">产品</option>
-                <option value="研发">研发</option>
-                <option value="业务">业务</option>
-              </select>
-            </div>
-
-            {/* 13. 提交人 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">提交人</label>
-              <input
-                type="text"
-                value={form.submitterName}
-                onChange={(e) => setForm({ ...form, submitterName: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="提交人姓名"
-              />
-            </div>
-
-            {/* 14. RMS重构项目 */}
+            {/* 8. RMS重构项目 */}
             <div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -823,7 +684,183 @@ const EditRequirementModal = ({
               </label>
             </div>
 
-            {/* 15. 影响的指标 */}
+            {/* 9. 需求相关性（可选） */}
+            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+              <button
+                type="button"
+                onClick={() => setIsRelevanceExpanded(!isRelevanceExpanded)}
+                className="w-full flex items-center justify-between mb-3"
+              >
+                <div className="flex items-center gap-2">
+                  <Store size={18} className="text-green-600" />
+                  <h4 className="font-semibold text-gray-900">需求相关性</h4>
+                  <span className="text-xs text-gray-500">(可选)</span>
+                </div>
+                <div className={`transform transition-transform ${isRelevanceExpanded ? 'rotate-180' : ''}`}>
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </button>
+
+              {isRelevanceExpanded && (
+                <div className="space-y-4">
+                  {/* 业务团队（关键角色） */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                      <Users size={14} />
+                      业务团队（关键角色，多选）
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      按住Ctrl(Windows)或Cmd(Mac)多选。可选角色根据所选业务域自动筛选。
+                    </p>
+                    <select
+                      multiple
+                      value={(form.impactScope?.keyRoles || []).map(kr => kr.roleName)}
+                      onChange={(e) => {
+                        const selectedRoleNames = Array.from(e.target.selectedOptions, option => option.value)
+                          .filter(v => !v.startsWith('['));
+
+                        const keyRoles = selectedRoleNames.map(roleName => {
+                          const config = availableRoleConfigs.find(c => c.roles.includes(roleName));
+                          return {
+                            category: config?.category || 'hq-common' as any,
+                            roleName,
+                            isCustom: false
+                          };
+                        });
+
+                        setForm({
+                          ...form,
+                          impactScope: {
+                            storeTypes: form.impactScope?.storeTypes || [],
+                            regions: form.impactScope?.regions || [],
+                            keyRoles,
+                            storeCountRange: form.impactScope?.storeCountRange
+                          }
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-32 text-sm"
+                    >
+                      {availableRoleConfigs.map(config => (
+                        <optgroup key={config.category} label={config.categoryName}>
+                          {config.roles.map(role => (
+                            <option key={role} value={role}>{role}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 与哪类门店有关？ */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                      <Store size={14} />
+                      与哪类门店有关？
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      可选门店类型根据所选业务域自动筛选
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {availableStoreTypes.map(type => (
+                        <label key={type} className="flex items-center gap-2 cursor-pointer text-sm p-2 border border-gray-200 rounded hover:bg-gray-50">
+                          <input
+                            type="checkbox"
+                            checked={form.impactScope?.storeTypes?.includes(type)}
+                            onChange={(e) => {
+                              const storeTypes = e.target.checked
+                                ? [...(form.impactScope?.storeTypes || []), type]
+                                : (form.impactScope?.storeTypes || []).filter(t => t !== type);
+                              setForm({
+                                ...form,
+                                impactScope: {
+                                  storeTypes,
+                                  regions: form.impactScope?.regions || [],
+                                  keyRoles: form.impactScope?.keyRoles || [],
+                                  storeCountRange: form.impactScope?.storeCountRange
+                                }
+                              });
+                            }}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span>{type}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 涉及门店数量 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      涉及门店数量
+                    </label>
+                    <select
+                      value={form.impactScope?.storeCountRange || ''}
+                      onChange={(e) => setForm({
+                        ...form,
+                        impactScope: {
+                          storeTypes: form.impactScope?.storeTypes || [],
+                          regions: form.impactScope?.regions || [],
+                          keyRoles: form.impactScope?.keyRoles || [],
+                          storeCountRange: e.target.value || undefined
+                        }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">请选择</option>
+                      {STORE_COUNT_RANGES.map(range => (
+                        <option key={range} value={range}>{range}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 与哪些地区有关？ */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      与哪些地区有关？（多选）
+                    </label>
+                    <select
+                      multiple
+                      value={form.impactScope?.regions || []}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions, option => option.value);
+                        setForm({
+                          ...form,
+                          impactScope: {
+                            storeTypes: form.impactScope?.storeTypes || [],
+                            regions: selected,
+                            keyRoles: form.impactScope?.keyRoles || [],
+                            storeCountRange: form.impactScope?.storeCountRange
+                          }
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-32 text-sm"
+                    >
+                      {regionOptions.map(option => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">按住Ctrl(Windows)或Cmd(Mac)多选</p>
+                  </div>
+                </div>
+              )}
+
+              {!isRelevanceExpanded && (
+                <div className="text-sm text-green-700">
+                  {(() => {
+                    const filledCount = [
+                      (form.impactScope?.keyRoles || []).length > 0,
+                      (form.impactScope?.storeTypes || []).length > 0,
+                      form.impactScope?.storeCountRange,
+                      (form.impactScope?.regions || []).length > 0
+                    ].filter(Boolean).length;
+                    return filledCount > 0 ? `已填写 ${filledCount}/4 项` : '点击展开填写';
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {/* 10. 影响的指标 */}
             <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
               <button
                 type="button"
@@ -858,7 +895,7 @@ const EditRequirementModal = ({
               )}
             </div>
 
-            {/* 16. 产研填写 */}
+            {/* 11. 产研填写 */}
             <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-300 flex items-center gap-2">
                 <Info size={18} className="text-gray-600" />
