@@ -15,16 +15,31 @@
 // ========== 门店类型 ==========
 
 /**
- * 门店类型（4种）
+ * 门店类型（5种，包含"与门店无关"）
  */
 export const STORE_TYPES = [
   '新零售-直营店',
   '新零售-授权店',
   '新零售-专卖店',
-  '渠道零售门店'
+  '渠道零售门店',
+  '与门店无关'
 ] as const;
 
 export type StoreType = typeof STORE_TYPES[number];
+
+/**
+ * 根据业务域获取可选的门店类型
+ */
+export const getStoreTypesByDomain = (domain: string): string[] => {
+  if (domain === '新零售') {
+    return ['新零售-直营店', '新零售-授权店', '新零售-专卖店', '与门店无关'];
+  } else if (domain === '渠道零售') {
+    return ['渠道零售门店', '与门店无关'];
+  } else {
+    // 国际零售通用或自定义，返回所有选项
+    return [...STORE_TYPES];
+  }
+};
 
 // ========== 区域划分 ==========
 
@@ -212,6 +227,29 @@ export const getRoleCategory = (roleName: string): RoleCategory | undefined => {
     }
   }
   return undefined;
+};
+
+/**
+ * 根据业务域获取可选的关键角色配置
+ */
+export const getRoleConfigsByDomain = (domain: string): RoleConfig[] => {
+  // 区域角色和总部-通用角色对所有业务域开放
+  const commonConfigs = KEY_ROLES_CONFIG.filter(
+    config => config.category === 'regional' || config.category === 'hq-common'
+  );
+
+  if (domain === '新零售') {
+    // 新零售：区域 + 通用 + 新零售
+    const newRetailConfig = KEY_ROLES_CONFIG.find(c => c.category === 'hq-new-retail');
+    return newRetailConfig ? [...commonConfigs, newRetailConfig] : commonConfigs;
+  } else if (domain === '渠道零售') {
+    // 渠道零售：区域 + 通用 + 渠道零售
+    const channelRetailConfig = KEY_ROLES_CONFIG.find(c => c.category === 'hq-channel-retail');
+    return channelRetailConfig ? [...commonConfigs, channelRetailConfig] : commonConfigs;
+  } else {
+    // 国际零售通用或自定义：所有角色
+    return KEY_ROLES_CONFIG;
+  }
 };
 
 // ========== 业务团队 ==========
