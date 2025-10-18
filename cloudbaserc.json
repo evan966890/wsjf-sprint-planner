@@ -10,6 +10,7 @@
           "buildCommand": "npm run build",
           "outputPath": "dist",
           "cloudPath": "/",
+          "errorPath": "/index.html",
           "ignore": [
             ".git",
             ".github",
