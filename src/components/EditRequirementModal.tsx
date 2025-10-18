@@ -48,6 +48,10 @@ const EditRequirementModal = ({
   const [aiError, setAIError] = useState<string | null>(null);
   const [aiSuccess, setAISuccess] = useState(false);
 
+  // 文档管理状态
+  const [newDocTitle, setNewDocTitle] = useState('');
+  const [newDocUrl, setNewDocUrl] = useState('');
+
   // 表单状态
   const [form, setForm] = useState<Requirement>(requirement || {
     id: `REQ-${Date.now()}`,
@@ -57,7 +61,7 @@ const EditRequirementModal = ({
     productManager: '',
     developer: '',
     submitDate: new Date().toISOString().split('T')[0],
-    submitter: '产品',
+    submitter: '业务',
     type: '功能开发',
     businessDomain: '国际零售通用',
     businessTeam: '',
@@ -80,10 +84,6 @@ const EditRequirementModal = ({
     bv: '明显',
     tc: '随时'
   });
-
-  // 文档输入状态
-  const [newDocTitle, setNewDocTitle] = useState('');
-  const [newDocUrl, setNewDocUrl] = useState('');
 
   // 根据业务域更新可选项
   const availableStoreTypes = useMemo(() =>
@@ -147,22 +147,24 @@ const EditRequirementModal = ({
 
   // 添加文档
   const handleAddDocument = () => {
-    if (newDocTitle.trim() && newDocUrl.trim()) {
-      const newDoc: Document = {
-        id: `DOC-${Date.now()}`,
-        fileName: newDocTitle.trim(),
-        fileType: 'link',
-        fileSize: 0,
-        uploadedAt: new Date().toISOString(),
-        url: newDocUrl.trim()
-      };
-      setForm({
-        ...form,
-        documents: [...(form.documents || []), newDoc]
-      });
-      setNewDocTitle('');
-      setNewDocUrl('');
-    }
+    if (!newDocTitle.trim() || !newDocUrl.trim()) return;
+
+    const newDoc: Document = {
+      id: `DOC-${Date.now()}`,
+      fileName: newDocTitle,
+      fileType: 'link',
+      fileSize: 0,  // 链接文档没有实际大小
+      uploadedAt: new Date().toISOString(),
+      url: newDocUrl
+    };
+
+    setForm({
+      ...form,
+      documents: [...(form.documents || []), newDoc]
+    });
+
+    setNewDocTitle('');
+    setNewDocUrl('');
   };
 
   // 删除文档
@@ -175,7 +177,6 @@ const EditRequirementModal = ({
 
   // AI分析文档
   const handleAIAnalyze = async () => {
-    // 检查是否有文档或输入的URL
     const documentUrl = newDocUrl.trim() || (form.documents && form.documents.length > 0 ? form.documents[form.documents.length - 1].url : '');
 
     if (!documentUrl) {
@@ -187,7 +188,7 @@ const EditRequirementModal = ({
     const modelName = selectedAIModel === 'openai' ? 'OpenAI' : 'DeepSeek';
 
     if (!apiKey) {
-      setAIError(`${modelName} API Key未配置。请联系管理员配置环境变量。`);
+      setAIError(`${modelName} API Key未配置。请在项目根目录的 .env.local 文件中配置 ${selectedAIModel === 'openai' ? 'VITE_OPENAI_API_KEY' : 'VITE_DEEPSEEK_API_KEY'}。`);
       return;
     }
 
@@ -315,7 +316,7 @@ const EditRequirementModal = ({
       }));
 
       setAISuccess(true);
-      setNewDocUrl(''); // 清空输入
+      setNewDocUrl('');
 
       setTimeout(() => setAISuccess(false), 3000);
     } catch (err) {
@@ -400,7 +401,22 @@ const EditRequirementModal = ({
               />
             </div>
 
-            {/* 3. 上线时间窗口 */}
+            {/* 3. 业务影响度评分 */}
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Target size={18} className="text-blue-600" />
+                业务影响度评分
+                <span className="text-xs text-gray-500">(v1.2.0)</span>
+              </h4>
+              <BusinessImpactScoreSelector
+                value={form.businessImpactScore || 5}
+                onChange={(score) => setForm({ ...form, businessImpactScore: score })}
+                scoringStandards={scoringStandards}
+                onViewHandbook={() => setIsHandbookOpen(true)}
+              />
+            </div>
+
+            {/* 4. 上线时间窗口 */}
             <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <Info size={18} className="text-orange-600" />
@@ -456,7 +472,7 @@ const EditRequirementModal = ({
               </div>
             </div>
 
-            {/* 4. 文档管理与AI分析（整合） */}
+            {/* 5. 文档管理与AI分析（整合） */}
             <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles size={18} className="text-purple-600" />
@@ -587,7 +603,7 @@ const EditRequirementModal = ({
               </div>
             </div>
 
-            {/* 5. 业务域 */}
+            {/* 6. 业务域 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">业务域</label>
               <select
@@ -619,7 +635,7 @@ const EditRequirementModal = ({
               </div>
             )}
 
-            {/* 6. 业务团队（关键角色） */}
+            {/* 7. 业务团队（关键角色） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
                 <Users size={14} />
@@ -666,7 +682,7 @@ const EditRequirementModal = ({
               </select>
             </div>
 
-            {/* 7. 与哪类门店有关？ */}
+            {/* 8. 与哪类门店有关？ */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
                 <Store size={14} />
@@ -703,7 +719,7 @@ const EditRequirementModal = ({
               </div>
             </div>
 
-            {/* 8. 涉及门店数量 */}
+            {/* 9. 涉及门店数量 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 涉及门店数量
@@ -728,7 +744,7 @@ const EditRequirementModal = ({
               </select>
             </div>
 
-            {/* 9. 与哪些地区有关？ */}
+            {/* 10. 与哪些地区有关？ */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 与哪些地区有关？（多选）
@@ -757,7 +773,7 @@ const EditRequirementModal = ({
               <p className="text-xs text-gray-500 mt-1">按住Ctrl(Windows)或Cmd(Mac)多选</p>
             </div>
 
-            {/* 10. 提交日期 */}
+            {/* 11. 提交日期 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">提交日期</label>
               <input
@@ -768,7 +784,7 @@ const EditRequirementModal = ({
               />
             </div>
 
-            {/* 11. 需求提交部门 */}
+            {/* 12. 需求提交部门 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">需求提交部门</label>
               <select
@@ -782,7 +798,7 @@ const EditRequirementModal = ({
               </select>
             </div>
 
-            {/* 12. 提交人 */}
+            {/* 13. 提交人 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">提交人</label>
               <input
@@ -792,20 +808,6 @@ const EditRequirementModal = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 placeholder="提交人姓名"
               />
-            </div>
-
-            {/* 13. 需求类型 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">需求类型</label>
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="功能开发">功能开发</option>
-                <option value="技术债">技术债</option>
-                <option value="Bug修复">Bug修复</option>
-              </select>
             </div>
 
             {/* 14. RMS重构项目 */}
@@ -821,22 +823,7 @@ const EditRequirementModal = ({
               </label>
             </div>
 
-            {/* 15. 业务影响度评分 */}
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Target size={18} className="text-blue-600" />
-                业务影响度评分
-                <span className="text-xs text-gray-500">(v1.2.0)</span>
-              </h4>
-              <BusinessImpactScoreSelector
-                value={form.businessImpactScore || 5}
-                onChange={(score) => setForm({ ...form, businessImpactScore: score })}
-                scoringStandards={scoringStandards}
-                onViewHandbook={() => setIsHandbookOpen(true)}
-              />
-            </div>
-
-            {/* 16. 影响的指标 */}
+            {/* 15. 影响的指标 */}
             <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
               <button
                 type="button"
@@ -871,7 +858,7 @@ const EditRequirementModal = ({
               )}
             </div>
 
-            {/* 17. 产研填写 */}
+            {/* 16. 产研填写 */}
             <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-300 flex items-center gap-2">
                 <Info size={18} className="text-gray-600" />
@@ -879,6 +866,20 @@ const EditRequirementModal = ({
               </h4>
 
               <div className="grid grid-cols-2 gap-4">
+                {/* 需求类型 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">需求类型</label>
+                  <select
+                    value={form.type}
+                    onChange={(e) => setForm({ ...form, type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="功能开发">功能开发</option>
+                    <option value="技术债">技术债</option>
+                    <option value="Bug修复">Bug修复</option>
+                  </select>
+                </div>
+
                 {/* 产品经理 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">产品经理</label>

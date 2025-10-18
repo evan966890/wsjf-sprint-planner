@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, Filter, Trash2, ArrowUpDown } from 'lucide-react';
+import { Plus, Search, Filter, Trash2, ArrowUpDown, Sparkles } from 'lucide-react';
 import type { Requirement } from '../types';
 import { roundNumber } from '../utils/scoring';
 import RequirementCard from './RequirementCard';
@@ -38,6 +38,7 @@ const UnscheduledArea = ({
   onDrop,
   isDragOver,
   onAddNew,
+  onBatchEvaluate,
   compact,
   searchTerm,
   onSearchChange,
@@ -61,6 +62,7 @@ const UnscheduledArea = ({
   onDrop: () => void;
   isDragOver: boolean;
   onAddNew: () => void;
+  onBatchEvaluate: () => void;
   compact: boolean;
   searchTerm: string;
   onSearchChange: (term: string) => void;
@@ -221,12 +223,23 @@ const UnscheduledArea = ({
               </button>
             </div>
           </div>
-          <button
-            onClick={onAddNew}
-            className="text-white hover:bg-white/10 rounded-lg p-1.5 transition"
-          >
-            <Plus size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onBatchEvaluate}
+              className="text-white hover:bg-purple-600 bg-purple-500 rounded-lg px-2 py-1.5 transition flex items-center gap-1 text-xs font-medium"
+              title="AI批量评估"
+            >
+              <Sparkles size={14} />
+              <span>AI评估</span>
+            </button>
+            <button
+              onClick={onAddNew}
+              className="text-white hover:bg-white/10 rounded-lg p-1.5 transition"
+              title="新增需求"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 mb-2">

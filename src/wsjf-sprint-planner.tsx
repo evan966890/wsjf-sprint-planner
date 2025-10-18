@@ -51,6 +51,7 @@ import EditRequirementModal from './components/EditRequirementModal';
 import EditSprintModal from './components/EditSprintModal';
 import SprintPoolComponent from './components/SprintPoolComponent';
 import UnscheduledArea from './components/UnscheduledArea';
+import BatchEvaluationModal from './components/BatchEvaluationModal';
 
 // ============================================================================
 // 辅助函数 - 生成示例数据

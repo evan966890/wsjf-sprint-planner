@@ -154,21 +154,6 @@ const RequirementCard = ({
   const textColor = isLight ? 'text-gray-800' : 'text-white';
 
   /**
-   * 获取业务价值的完整标签
-   * @param bv - 业务价值简称
-   * @returns 完整标签文本
-   */
-  const getBVLabel = (bv: string): string => {
-    const labels: Record<string, string> = {
-      '局部': '局部体验优化',
-      '明显': '明显改善',
-      '撬动核心': '撬动核心指标',
-      '战略平台': '战略/平台级'
-    };
-    return labels[bv] || bv; // 未知值返回原值
-  };
-
-  /**
    * 获取时间临界性的完整标签
    * @param tc - 时间临界性简称
    * @returns 完整标签文本
@@ -321,7 +306,7 @@ const RequirementCard = ({
             <div className="font-semibold border-b border-white/20 pb-1 mb-1">{requirement.name}</div>
             <div>业务域: <span className="font-semibold">{requirement.businessDomain === '自定义' ? requirement.customBusinessDomain || '自定义' : requirement.businessDomain}</span></div>
             <div>提交方: <span className="font-semibold">{requirement.submitter}</span></div>
-            <div>业务价值: <span className="font-semibold">{getBVLabel(requirement.bv || '明显')}</span></div>
+            <div>业务影响度: <span className="font-semibold">{requirement.businessImpactScore || 5}分</span></div>
             <div>迫切程度: <span className="font-semibold">{getTCLabel(requirement.tc || '随时')}</span></div>
             <div>工作量: <span className="font-semibold">{roundNumber(requirement.effortDays, 1)}天</span></div>
             {requirement.isRMS && (
