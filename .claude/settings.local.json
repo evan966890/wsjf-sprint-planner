@@ -23,7 +23,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:reactbits.dev)",
       "Bash(npx tsc:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

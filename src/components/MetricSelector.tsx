@@ -1,18 +1,18 @@
 /**
  * WSJF Sprint Planner - 指标选择器组件
  *
- * v1.2.0: 支持选择影响的业务指标
+ * v1.2.1: 改进选择器交互体验
  *
  * 功能：
  * - 分类展示OKR指标和过程指标
  * - 支持多选
- * - 支持自定义指标名称（团队内部称呼）
- * - 支持填写预估影响值
+ * - 已选指标以tag形式显示在顶部，不从列表中移除
  * - 支持搜索和筛选
+ * - 支持快速填写预估影响值
  */
 
 import { useState } from 'react';
-import { Plus, X, Target, Activity, Edit2, Check } from 'lucide-react';
+import { Plus, X, Target, Activity, Search } from 'lucide-react';
 import type { MetricDefinition, AffectedMetric } from '../types';
 
 interface MetricSelectorProps {
@@ -33,9 +33,7 @@ interface MetricSelectorProps {
 }
 
 /**
- * 指标选择器组件
- *
- * 允许用户选择需求影响的业务指标，并填写自定义名称和预估影响
+ * 指标选择器组件（v1.2.1 - 改进版）
  */
 const MetricSelector = ({
   value,
@@ -46,14 +44,23 @@ const MetricSelector = ({
 }: MetricSelectorProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingMetricKey, setEditingMetricKey] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'okr' | 'process'>('all');
+  const [editingMetricKey, setEditingMetricKey] = useState<string | null>(null);
+  const [tempImpact, setTempImpact] = useState<string>('');
 
   /**
    * 检查指标是否已选中
    */
   const isMetricSelected = (metricKey: string): boolean => {
     return value.some(m => m.metricKey === metricKey);
+  };
+
+  /**
+   * 获取已选指标的影响值
+   */
+  const getMetricImpact = (metricKey: string): string => {
+    const metric = value.find(m => m.metricKey === metricKey);
+    return metric?.estimatedImpact || '';
   };
 
   /**
@@ -77,19 +84,6 @@ const MetricSelector = ({
   };
 
   /**
-   * 更新指标的自定义名称
-   */
-  const updateCustomName = (metricKey: string, customName: string) => {
-    onChange(
-      value.map(m =>
-        m.metricKey === metricKey
-          ? { ...m, customName, displayName: customName || m.metricName }
-          : m
-      )
-    );
-  };
-
-  /**
    * 更新指标的预估影响
    */
   const updateEstimatedImpact = (metricKey: string, estimatedImpact: string) => {
@@ -98,6 +92,33 @@ const MetricSelector = ({
         m.metricKey === metricKey ? { ...m, estimatedImpact } : m
       )
     );
+  };
+
+  /**
+   * 移除指标
+   */
+  const removeMetric = (metricKey: string) => {
+    onChange(value.filter(m => m.metricKey !== metricKey));
+    if (editingMetricKey === metricKey) {
+      setEditingMetricKey(null);
+    }
+  };
+
+  /**
+   * 开始编辑影响值
+   */
+  const startEditImpact = (metricKey: string) => {
+    setEditingMetricKey(metricKey);
+    setTempImpact(getMetricImpact(metricKey));
+  };
+
+  /**
+   * 保存影响值
+   */
+  const saveImpact = (metricKey: string) => {
+    updateEstimatedImpact(metricKey, tempImpact);
+    setEditingMetricKey(null);
+    setTempImpact('');
   };
 
   /**
@@ -140,14 +161,13 @@ const MetricSelector = ({
 
   return (
     <div className="space-y-3">
-      {/* 已选指标列表 */}
+      {/* 已选指标 - 紧凑tag形式 */}
       {value.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-sm font-medium text-gray-700">
-            已选择 {value.length} 个指标
+        <div>
+          <div className="text-sm font-medium text-gray-700 mb-2">
+            已选择 {value.length} 个指标：
           </div>
-
-          <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
             {value.map((metric) => {
               const isEditing = editingMetricKey === metric.metricKey;
 
@@ -155,89 +175,85 @@ const MetricSelector = ({
                 <div
                   key={metric.metricKey}
                   className={`
-                    border-2 rounded-lg p-3 transition-all
-                    ${metric.category === 'okr' ? 'border-blue-200 bg-blue-50' : 'border-purple-200 bg-purple-50'}
+                    inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all
+                    ${metric.category === 'okr' ? 'bg-blue-100 text-blue-800 border border-blue-300' : 'bg-purple-100 text-purple-800 border border-purple-300'}
+                    ${isEditing ? 'ring-2 ring-offset-1 ring-blue-500' : ''}
                   `}
                 >
-                  <div className="flex items-start gap-3">
-                    {/* 类型徽章 */}
-                    <div className={`
-                      flex-shrink-0 px-2 py-1 rounded text-xs font-medium
-                      ${metric.category === 'okr' ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'}
-                    `}>
-                      {metric.category === 'okr' ? 'OKR' : '过程'}
-                    </div>
-
-                    {/* 指标信息 */}
-                    <div className="flex-1 min-w-0">
-                      {/* 指标名称 */}
-                      <div className="mb-2">
-                        <div className="text-sm font-medium text-gray-900 mb-1">
-                          {metric.metricName}
-                        </div>
-
-                        {/* 自定义名称输入 */}
-                        {!isEditing ? (
-                          <button
-                            type="button"
-                            onClick={() => setEditingMetricKey(metric.metricKey)}
-                            disabled={disabled}
-                            className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1"
-                          >
-                            <Edit2 size={12} />
-                            {metric.customName ? (
-                              <span>团队称呼: <span className="font-medium">{metric.customName}</span></span>
-                            ) : (
-                              <span>添加团队内部称呼（可选）</span>
-                            )}
-                          </button>
-                        ) : (
-                          <div className="flex items-center gap-2 mt-1">
-                            <input
-                              type="text"
-                              placeholder="例如：GMV、月活、NPS等"
-                              value={metric.customName || ''}
-                              onChange={(e) => updateCustomName(metric.metricKey, e.target.value)}
-                              disabled={disabled}
-                              className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setEditingMetricKey(null)}
-                              className="text-green-600 hover:text-green-700 p-1"
-                            >
-                              <Check size={14} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* 预估影响输入 */}
-                      <input
-                        type="text"
-                        placeholder="预估影响（例如：+5%、明显提升、减少50%等）"
-                        value={metric.estimatedImpact}
-                        onChange={(e) => updateEstimatedImpact(metric.metricKey, e.target.value)}
-                        disabled={disabled}
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    {/* 删除按钮 */}
-                    {!disabled && (
-                      <button
-                        type="button"
-                        onClick={() => onChange(value.filter(m => m.metricKey !== metric.metricKey))}
-                        className="flex-shrink-0 text-gray-400 hover:text-red-600 transition p-1"
-                      >
-                        <X size={18} />
-                      </button>
-                    )}
-                  </div>
+                  <span className="font-medium">{metric.metricName}</span>
+                  {metric.estimatedImpact && !isEditing && (
+                    <span className="text-gray-600">({metric.estimatedImpact})</span>
+                  )}
+                  {!disabled && !isEditing && (
+                    <button
+                      type="button"
+                      onClick={() => startEditImpact(metric.metricKey)}
+                      className="hover:text-gray-900"
+                      title="编辑预估影响"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+                  )}
+                  {!disabled && (
+                    <button
+                      type="button"
+                      onClick={() => removeMetric(metric.metricKey)}
+                      className="hover:text-red-700"
+                      title="移除"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
               );
             })}
           </div>
+
+          {/* 编辑影响值输入框 */}
+          {editingMetricKey && (
+            <div className="mt-2 p-3 bg-gray-50 border border-gray-300 rounded-lg">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                预估影响 (如: +5%, 明显提升, 减少50%等)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={tempImpact}
+                  onChange={(e) => setTempImpact(e.target.value)}
+                  placeholder="输入预估影响..."
+                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      saveImpact(editingMetricKey);
+                    } else if (e.key === 'Escape') {
+                      setEditingMetricKey(null);
+                      setTempImpact('');
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => saveImpact(editingMetricKey)}
+                  className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded"
+                >
+                  保存
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingMetricKey(null);
+                    setTempImpact('');
+                  }}
+                  className="px-3 py-1 text-sm bg-gray-300 hover:bg-gray-400 text-gray-700 rounded"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -252,8 +268,19 @@ const MetricSelector = ({
         `}
       >
         <div className="flex items-center justify-center gap-2 text-gray-700">
-          <Plus size={18} />
-          <span className="font-medium">添加影响的指标</span>
+          {isExpanded ? (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              <span className="font-medium">收起指标选择器</span>
+            </>
+          ) : (
+            <>
+              <Plus size={18} />
+              <span className="font-medium">添加影响的指标</span>
+            </>
+          )}
         </div>
       </button>
 
@@ -262,13 +289,16 @@ const MetricSelector = ({
         <div className="border-2 border-gray-300 rounded-lg p-4 bg-white shadow-lg">
           {/* 搜索和筛选 */}
           <div className="flex gap-2 mb-4">
-            <input
-              type="text"
-              placeholder="搜索指标..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="flex-1 relative">
+              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="搜索指标..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as any)}
@@ -297,6 +327,7 @@ const MetricSelector = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {metrics.map((metric) => {
                       const isSelected = isMetricSelected(metric.key);
+                      const impact = getMetricImpact(metric.key);
 
                       return (
                         <button
@@ -312,20 +343,31 @@ const MetricSelector = ({
                             }
                           `}
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-start gap-2">
                             <div className={`
-                              w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0
+                              w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5
                               ${isSelected ? 'bg-white border-white' : 'bg-white border-gray-300'}
                             `}>
-                              {isSelected && <Check size={12} className="text-blue-600" />}
+                              {isSelected && (
+                                <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
                             </div>
-                            <span className="font-medium">{metric.defaultName}</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium block">{metric.defaultName}</span>
+                              {metric.description && (
+                                <div className={`text-xs mt-0.5 ${isSelected ? 'text-blue-100' : 'text-gray-600'}`}>
+                                  {metric.description}
+                                </div>
+                              )}
+                              {isSelected && impact && (
+                                <div className="text-xs mt-1 bg-white/20 px-2 py-0.5 rounded inline-block">
+                                  影响: {impact}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          {metric.description && (
-                            <div className={`text-xs mt-1 ml-6 ${isSelected ? 'text-blue-100' : 'text-gray-600'}`}>
-                              {metric.description}
-                            </div>
-                          )}
                         </button>
                       );
                     })}
@@ -352,6 +394,7 @@ const MetricSelector = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {metrics.map((metric) => {
                       const isSelected = isMetricSelected(metric.key);
+                      const impact = getMetricImpact(metric.key);
 
                       return (
                         <button
@@ -367,20 +410,31 @@ const MetricSelector = ({
                             }
                           `}
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-start gap-2">
                             <div className={`
-                              w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0
+                              w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5
                               ${isSelected ? 'bg-white border-white' : 'bg-white border-gray-300'}
                             `}>
-                              {isSelected && <Check size={12} className="text-purple-600" />}
+                              {isSelected && (
+                                <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
                             </div>
-                            <span className="font-medium">{metric.defaultName}</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium block">{metric.defaultName}</span>
+                              {metric.description && (
+                                <div className={`text-xs mt-0.5 ${isSelected ? 'text-purple-100' : 'text-gray-600'}`}>
+                                  {metric.description}
+                                </div>
+                              )}
+                              {isSelected && impact && (
+                                <div className="text-xs mt-1 bg-white/20 px-2 py-0.5 rounded inline-block">
+                                  影响: {impact}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          {metric.description && (
-                            <div className={`text-xs mt-1 ml-6 ${isSelected ? 'text-purple-100' : 'text-gray-600'}`}>
-                              {metric.description}
-                            </div>
-                          )}
                         </button>
                       );
                     })}
@@ -399,7 +453,10 @@ const MetricSelector = ({
           )}
 
           {/* 底部操作栏 */}
-          <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
+          <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              已选择 <span className="font-medium text-gray-900">{value.length}</span> 个指标
+            </div>
             <button
               type="button"
               onClick={() => setIsExpanded(false)}
