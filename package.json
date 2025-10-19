@@ -10,8 +10,9 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "deploy:tencent": "npm run build && cloudbase framework deploy",
-    "deploy:vercel": "npm run build && vercel --prod"
+    "pre-deploy-check": "bash scripts/pre-deploy-check.sh",
+    "deploy:tencent": "npm run pre-deploy-check && npm run build && cloudbase framework deploy",
+    "deploy:vercel": "npm run pre-deploy-check && npm run build && vercel --prod"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",
