@@ -14,7 +14,46 @@
  */
 
 // ============================================
-// 业务影响度评分标准（1-10分制）
+// 当前使用的业务价值标准（4档简化版，与 scoring.ts 一致）
+// ============================================
+
+export const BUSINESS_VALUE_LEVELS = {
+  '局部': {
+    score: 3,
+    name: '局部体验优化',
+    description: '影响范围较小，锦上添花的功能',
+    color: { from: '#DBEAFE', to: '#BFDBFE' }, // 浅蓝色
+    textColor: 'text-gray-800',
+    examples: ['UI微调', '小功能优化', '局部体验提升'],
+  },
+  '明显': {
+    score: 6,
+    name: '明显改善',
+    description: '能够看到指标改善或明确的节省时间/成本',
+    color: { from: '#60A5FA', to: '#3B82F6' }, // 中蓝色
+    textColor: 'text-white',
+    examples: ['流程优化', '效率提升', '过程指标改善'],
+  },
+  '撬动核心': {
+    score: 8,
+    name: '撬动核心指标',
+    description: '直接作用于北极星指标或关键KPI',
+    color: { from: '#2563EB', to: '#1D4ED8' }, // 深蓝色
+    textColor: 'text-white',
+    examples: ['转化率提升', 'GMV增长', 'NPS提升'],
+  },
+  '战略平台': {
+    score: 10,
+    name: '战略/平台级',
+    description: '形成可复用平台能力、显著降低合规/技术风险，或打开新业务线',
+    color: { from: '#1E40AF', to: '#1E3A8A' }, // 极深蓝色
+    textColor: 'text-white',
+    examples: ['平台能力搭建', '新业务线', '战略级项目'],
+  },
+} as const;
+
+// ============================================
+// 业务影响度评分标准（1-10分制，为未来升级预留）
 // ============================================
 
 export const BUSINESS_IMPACT_LEVELS = {
@@ -218,16 +257,20 @@ export const TIME_CRITICALITY_MAP = {
 } as const;
 
 // ============================================
-// 工作量奖励分数
+// 工作量奖励分数（8档细分，与 scoring.ts 一致）
 // ============================================
 
 export const EFFORT_BONUS_RULES = {
   description: '优先小任务，鼓励快速交付',
   rules: [
-    { range: '≤5天', bonus: 6, description: '极小任务，优先完成' },
-    { range: '6-15天', bonus: 4, description: '小任务，正常推进' },
-    { range: '16-30天', bonus: 2, description: '中等任务，需要规划' },
-    { range: '>30天', bonus: 0, description: '大任务，需拆分' },
+    { range: '≤2天', bonus: 8, description: '极小任务，最高奖励' },
+    { range: '3-5天', bonus: 7, description: '小任务，高优先级' },
+    { range: '6-14天', bonus: 5, description: '常规任务，正常推进' },
+    { range: '15-30天', bonus: 3, description: '中等任务，需要规划' },
+    { range: '31-50天', bonus: 2, description: '大任务，建议切分' },
+    { range: '51-100天', bonus: 1, description: '超大任务，必须切分' },
+    { range: '101-150天', bonus: 0, description: '巨型任务，严重超标' },
+    { range: '>150天', bonus: 0, description: '不可接受，禁止入池' },
   ],
 } as const;
 

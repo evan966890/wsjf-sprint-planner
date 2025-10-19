@@ -16,6 +16,7 @@ export * from './scoring-rules';
 // 默认导出（便于按需导入）
 export { UI_TEXT } from './ui-text';
 export {
+  BUSINESS_VALUE_LEVELS,
   BUSINESS_IMPACT_LEVELS,
   COMPLEXITY_LEVELS,
   TIME_CRITICALITY_MAP,
