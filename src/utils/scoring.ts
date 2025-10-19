@@ -2,7 +2,7 @@
  * WSJF Sprint Planner - 评分算法
  *
  * WSJF (Weighted Shortest Job First) 评分算法实现
- * 用于计算需求的优先级分数和星级
+ * 用于计算需求的权重分和星级
  */
 
 import type { Requirement } from '../types';
@@ -16,7 +16,7 @@ import type { Requirement } from '../types';
  * 3. 分档为星级(stars): 根据展示分划分为2-5星
  *
  * 评分维度：
- * - BV(业务价值): 局部3 | 明显6 | 撬动核心8 | 战略平台10
+ * - BV(业务影响度-旧字段): 局部3 | 明显6 | 撬动核心8 | 战略平台10
  * - TC(时间临界): 随时0 | 三月窗口3 | 一月硬窗口5
  * - DDL(强制截止): 无0 | 有5
  * - WorkloadScore(工作量奖励): ≤2天+8 | 3-5天+7 | 6-14天+5 | 15-30天+3 | 31-50天+2 | 51-100天+1 | 101-150天+0 | >150天+0
@@ -38,7 +38,7 @@ export const calculateScores = (requirements: Requirement[]): Requirement[] => {
     '战略平台': 10
   };
 
-  // 时间临界性映射表（默认值为"随时"的0分）
+  // 时间窗口映射表（默认值为"随时"的0分）
   const TC_MAP: Record<string, number> = {
     '随时': 0,
     '三月窗口': 3,

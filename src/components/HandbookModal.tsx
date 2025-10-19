@@ -10,13 +10,13 @@ import { UI_TEXT, STAR_RATING_RULES, BUSINESS_VALUE_LEVELS, TIME_CRITICALITY_MAP
  *
  * 功能说明：
  * - 展示实际使用的WSJF-Lite评分方法论
- * - 4档业务价值标准（蓝色深浅度卡片）
+ * - 4档业务影响度标准（蓝色深浅度卡片）
  * - 8档工作量奖励分制度
  * - 详细的计算公式和星级分档
  * - 提供示例帮助用户理解评分逻辑
  *
  * 内容结构：
- * - 第一部分：业务价值（4档蓝色深浅度）
+ * - 第一部分：业务影响度（4档蓝色深浅度）
  * - 第二部分：其他评分维度（时间窗口、工作量）
  * - 第三部分：计算公式和星级分档
  * - 第四部分：实战示例
@@ -24,7 +24,7 @@ import { UI_TEXT, STAR_RATING_RULES, BUSINESS_VALUE_LEVELS, TIME_CRITICALITY_MAP
  * @param onClose - 关闭弹窗回调函数
  */
 const HandbookModal = ({ onClose }: { onClose: () => void }) => {
-  // 业务价值数组（按分数排序）
+  // 业务影响度数组（按分数排序）
   const bvLevels = Object.entries(BUSINESS_VALUE_LEVELS).sort((a, b) => b[1].score - a[1].score);
 
   return (
@@ -45,14 +45,14 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
           {/* 概述 */}
           <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
             <p className="text-sm text-gray-700 m-0">
-              <strong>WSJF-Lite 方法论</strong>：基于业务价值、时间窗口和工作量三个维度，
+              <strong>WSJF-Lite 方法论</strong>：基于业务影响度、时间窗口和工作量三个维度，
               自动计算1-100的{UI_TEXT.WEIGHT_SCORE}和{UI_TEXT.STAR_RATING}，帮助团队科学决策需求优先级。
             </p>
           </div>
 
-          {/* ==================== 第一部分：业务价值 ==================== */}
+          {/* ==================== 第一部分：业务影响度 ==================== */}
           <h2 className="text-2xl font-bold mt-8 mb-4 text-gray-900 border-b-2 border-gray-300 pb-2">
-            一、业务价值评分（4档蓝色深浅度）
+            一、业务影响度评分（4档蓝色深浅度）
           </h2>
 
           <p className="text-gray-700 mb-4">
@@ -99,7 +99,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
 
           <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mt-4">
             <p className="text-sm text-yellow-800 m-0">
-              <strong>💡 提示</strong>：业务价值是优先级的核心因素。选择时应基于客观的业务影响，而非个人喜好。
+              <strong>💡 提示</strong>：业务影响度是优先级的核心因素。选择时应基于客观的业务影响，而非个人喜好。
             </p>
           </div>
 
@@ -189,7 +189,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
             <div className="bg-white rounded-lg p-4 mb-4 border-l-4 border-blue-500">
               <p className="text-xs text-gray-600 mb-1">步骤一：计算原始分（rawScore）</p>
               <p className="font-mono text-sm font-bold text-blue-700 mb-2">
-                rawScore = 业务价值 + 时间窗口 + 强制DDL + 工作量奖励
+                rawScore = 业务影响度 + 时间窗口 + 强制DDL + 工作量奖励
               </p>
               <p className="text-xs text-gray-600">
                 范围：3-28分。例如：战略平台(10) + 一月硬窗口(5) + 有DDL(5) + 2天内(+8) = 28分（最高）
@@ -251,7 +251,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
               <thead className="bg-gray-800 text-white">
                 <tr>
                   <th className="border border-gray-300 px-3 py-2 text-left">需求场景</th>
-                  <th className="border border-gray-300 px-2 py-2">业务价值</th>
+                  <th className="border border-gray-300 px-2 py-2">业务影响度</th>
                   <th className="border border-gray-300 px-2 py-2">时间窗口</th>
                   <th className="border border-gray-300 px-2 py-2">强制DDL</th>
                   <th className="border border-gray-300 px-2 py-2">工作量</th>
@@ -359,7 +359,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
               </li>
               <li className="flex items-start">
                 <span className="text-green-600 font-bold mr-2 text-lg">✓</span>
-                <span><strong>色彩参考</strong>：蓝色深浅代表业务价值，红色代表有强制DDL。卡片越深色/越红，优先级越高。</span>
+                <span><strong>色彩参考</strong>：蓝色深浅代表业务影响度，红色代表有强制DDL。卡片越深色/越红，优先级越高。</span>
               </li>
               <li className="flex items-start">
                 <span className="text-red-600 font-bold mr-2 text-lg">✗</span>

@@ -119,7 +119,7 @@ const BatchEvaluationModal: React.FC<Props> = ({
 - 业务团队：${req.businessTeam || '未指定'}
 - 业务域：${req.businessDomain === '自定义' ? req.customBusinessDomain || '自定义' : req.businessDomain}
 - 工作量：${req.effortDays}天
-- 时间临界性：${req.timeCriticality || req.tc || '随时'}
+- 时间窗口：${req.timeCriticality || req.tc || '随时'}
 - 强制DDL：${req.hardDeadline ? '是' : '否'}${req.deadlineDate ? ` (${req.deadlineDate})` : ''}
 - RMS重构项目：${req.isRMS ? '是' : '否'}
 ${req.impactScope ? `- 用户已填写影响范围：

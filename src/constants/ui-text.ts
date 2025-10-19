@@ -29,7 +29,7 @@ export const UI_TEXT = {
 
   // === 术语描述 ===
   WEIGHT_SCORE_DESC: 'WSJF 计算后的 1-100 归一化分数',
-  BUSINESS_IMPACT_DESC: '1-10 分制评分，评估业务价值',
+  BUSINESS_IMPACT_DESC: '1-10 分制评分，评估业务影响度',
   COMPLEXITY_DESC: '1-10 分制评分，评估技术难度',
   EFFORT_DESC: '预估人天数',
   TIME_CRITICALITY_DESC: '随时/三月窗口/一月硬窗口',

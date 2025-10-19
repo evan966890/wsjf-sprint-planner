@@ -23,7 +23,7 @@ const BV_TO_SCORE_MAP: Record<string, number> = {
 };
 
 /**
- * 时间临界性加分表
+ * 时间窗口加分表
  */
 const TC_BONUS_MAP: Record<string, number> = {
   '随时': 0,
@@ -46,7 +46,7 @@ export const migrateRequirement = (oldReq: Requirement): Requirement => {
   // 计算新的业务影响度评分
   let score = BV_TO_SCORE_MAP[oldReq.bv || '局部'] || 3;
 
-  // 加上时间临界性的加分
+  // 加上时间窗口的加分
   score += TC_BONUS_MAP[oldReq.tc || '随时'] || 0;
 
   // 如果有强制截止日期，额外加1分

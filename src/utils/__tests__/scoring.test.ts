@@ -403,7 +403,7 @@ describe('calculateScores', () => {
   });
 
   /**
-   * 测试：业务价值和时间临界性映射
+   * 测试：业务影响度和时间窗口映射
    * 验证不同枚举值对应的分数
    */
   it('should map BV and TC values correctly', () => {

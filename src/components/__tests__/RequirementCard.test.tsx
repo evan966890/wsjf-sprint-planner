@@ -58,7 +58,7 @@ describe('RequirementCard', () => {
     // 验证业务域显示
     expect(screen.getByText('国际零售通用')).toBeInTheDocument();
 
-    // 验证热度分显示
+    // 验证权重分显示
     expect(screen.getByText('75')).toBeInTheDocument();
   });
 

@@ -156,12 +156,12 @@ export interface Requirement {
   isRMS: boolean;                // 是否为RMS重构项目
 
   // === 旧字段（保留用于数据迁移和向后兼容）===
-  bv?: string;                   // 旧：Business Value 业务价值（局部/明显/撬动核心/战略平台）
-  tc?: string;                   // 旧：Time Criticality 时间临界性（随时/三月窗口/一月硬窗口）
+  bv?: string;                   // 旧：Business Value 业务影响度(旧字段)（局部/明显/撬动核心/战略平台）
+  tc?: string;                   // 旧：Time Criticality 时间窗口(旧字段)（随时/三月窗口/一月硬窗口）
 
   // === 计算结果（由系统自动计算）===
   rawScore?: number;             // 原始分数（3-28范围，由WSJF算法计算）
-  displayScore?: number;         // 展示分数（1-100范围，归一化后的热度分）
+  displayScore?: number;         // 展示分数（1-100范围，归一化后的权重分）
   stars?: number;                // 星级评定（2-5星，基于displayScore分档）
 }
 

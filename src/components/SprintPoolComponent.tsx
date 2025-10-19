@@ -94,7 +94,7 @@ const SprintPoolComponent = ({
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
             <h3 className="font-semibold text-lg">
-              {pool.name} <span className="text-sm font-normal text-gray-300">总人日{roundNumber(pool.totalDays, 1)}（可用{roundNumber(netAvailable, 1)}+不可用{roundNumber(reservedDays, 1)}）</span>
+              {pool.name} <span className="text-sm font-normal text-gray-300">总工作量{roundNumber(pool.totalDays, 1)}天（可用{roundNumber(netAvailable, 1)}+不可用{roundNumber(reservedDays, 1)}）</span>
             </h3>
             <p className="text-sm text-gray-300 mt-0.5">{pool.startDate} ~ {pool.endDate}</p>
           </div>
@@ -118,7 +118,7 @@ const SprintPoolComponent = ({
 
         <div>
           <div className="flex justify-between items-baseline mb-1.5">
-            <span className="text-lg font-bold text-white">{roundNumber(usedDays, 1)}/{roundNumber(netAvailable, 1)}人日</span>
+            <span className="text-lg font-bold text-white">{roundNumber(usedDays, 1)}/{roundNumber(netAvailable, 1)}天</span>
             <span className={`text-base font-bold ${percentage >= 100 ? 'text-red-400' : percentage >= 90 ? 'text-amber-400' : 'text-teal-400'}`}>
               {percentage}%
             </span>
@@ -136,7 +136,7 @@ const SprintPoolComponent = ({
         </div>
 
         <div className="mt-1.5 text-xs text-gray-400 bg-white/5 rounded-lg px-2 py-1">
-          不可用: {roundNumber(reservedDays, 1)}人日 (Bug {pool.bugReserve}% · 重构 {pool.refactorReserve}% · 其他 {pool.otherReserve}%)
+          不可用: {roundNumber(reservedDays, 1)}天 (Bug {pool.bugReserve}% · 重构 {pool.refactorReserve}% · 其他 {pool.otherReserve}%)
         </div>
       </div>
 

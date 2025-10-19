@@ -19,7 +19,7 @@ import { roundNumber } from '../utils/scoring';
  *
  * 视觉设计：
  * - 强制DDL：红色渐变背景 + 红色边框 + 感叹号标记
- * - 业务价值：蓝色系渐变（局部→明显→撬动核心→战略平台，颜色逐渐加深）
+ * - 业务影响度：蓝色系渐变（局部→明显→撬动核心→战略平台，颜色逐渐加深）
  * - RMS重构：紫色标签
  *
  * @param requirement - 需求对象
@@ -122,13 +122,13 @@ const RequirementCard = ({
    *
    * 颜色策略：
    * - 强制DDL：红色渐变（最高优先级，视觉警示）
-   * - 业务价值：蓝色系渐变，价值越高颜色越深
+   * - 业务影响度：蓝色系渐变，价值越高颜色越深
    *   - 局部：浅蓝色（#DBEAFE → #BFDBFE）
    *   - 明显：中蓝色（#60A5FA → #3B82F6）
    *   - 撬动核心：深蓝色（#2563EB → #1D4ED8）
    *   - 战略平台：极深蓝色（#1E40AF → #1E3A8A）
    *
-   * @param bv - 业务价值
+   * @param bv - 业务影响度(旧字段)
    * @param hardDeadline - 是否有强制截止日期
    * @returns CSS渐变字符串
    */
@@ -154,8 +154,8 @@ const RequirementCard = ({
   const textColor = isLight ? 'text-gray-800' : 'text-white';
 
   /**
-   * 获取时间临界性的完整标签
-   * @param tc - 时间临界性简称
+   * 获取时间窗口的完整标签
+   * @param tc - 时间窗口简称
    * @returns 完整标签文本
    */
   const getTCLabel = (tc: string): string => {

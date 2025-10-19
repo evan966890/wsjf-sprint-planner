@@ -9,7 +9,7 @@
  * - 影响门店数范围
  * - 关键角色（区域 + 总部）
  * - 业务团队
- * - 时间临界性
+ * - 时间窗口
  */
 
 // ========== 门店类型 ==========
@@ -270,10 +270,10 @@ export const BUSINESS_TEAMS = [
 
 export type BusinessTeam = typeof BUSINESS_TEAMS[number];
 
-// ========== 时间临界性 ==========
+// ========== 时间窗口 ==========
 
 /**
- * 时间临界性（3档）
+ * 时间窗口（3档）
  */
 export const TIME_CRITICALITY = [
   '随时',
@@ -284,7 +284,7 @@ export const TIME_CRITICALITY = [
 export type TimeCriticality = typeof TIME_CRITICALITY[number];
 
 /**
- * 时间临界性描述
+ * 时间窗口描述
  */
 export const TIME_CRITICALITY_DESCRIPTIONS: Record<TimeCriticality, string> = {
   '随时': '没有明确的时间要求，可以在适当的时候做',

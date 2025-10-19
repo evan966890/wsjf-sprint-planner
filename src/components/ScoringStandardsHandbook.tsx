@@ -83,7 +83,7 @@ const ScoringStandardsHandbook = ({
             <BookOpen size={24} />
             <div>
               <h2 className="text-xl font-bold">业务影响度评分标准说明书</h2>
-              <p className="text-sm text-blue-100 mt-0.5">10分制评分体系 - 帮助您准确评估需求的业务价值</p>
+              <p className="text-sm text-blue-100 mt-0.5">10分制评分体系 - 帮助您准确评估需求的业务影响度</p>
             </div>
           </div>
           <button

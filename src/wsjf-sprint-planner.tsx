@@ -3,7 +3,7 @@
  *
  * 项目概述：
  * 基于 WSJF (Weighted Shortest Job First) 方法的迭代需求排期决策工具
- * 帮助团队通过业务价值、时间临界性、工作量等维度评估需求优先级
+ * 帮助团队通过业务影响度、时间窗口、工作量等维度评估需求优先级
  *
  * 技术栈：
  * - React 18 + TypeScript
@@ -13,10 +13,10 @@
  * - jsPDF + html2canvas (PDF导出)
  *
  * 核心功能：
- * 1. WSJF评分算法：自动计算需求热度分(1-100)和星级(2-5星)
+ * 1. WSJF评分算法：自动计算需求权重分(1-100)和星级(2-5星)
  * 2. 拖拽排期：支持需求在迭代池间拖拽移动
  * 3. 数据持久化：LocalStorage存储用户数据
- * 4. 多维筛选：按业务价值、时间临界性、截止日期等筛选
+ * 4. 多维筛选：按业务影响度、时间窗口、截止日期等筛选
  * 5. 数据导入导出：支持Excel、JSON格式导入导出，支持PDF导出
  * 6. 智能映射：AI辅助字段映射(集成Gemini API)
  *
@@ -530,8 +530,8 @@ export default function WSJFPlanner() {
       submitterName: ['提交人', '提交人姓名', 'submitter', 'author', '作者'],
       productManager: ['产品经理', '产品', 'pm', 'product manager', '负责人', '产品主r'],
       developer: ['开发人员', '开发', 'developer', 'dev', '开发者', '研发主r', '研发负责人'],
-      effortDays: ['工作量', '人天', '工作日', 'effort', 'days', '人日', '天数', '工时', '预估工时', 'workday'],
-      bv: ['业务价值', 'bv', 'business value', '价值', '重要性', '业务重要性', '优先级'],
+      effortDays: ['工作量', '人天', 'effort', 'days', '天数', '工时', '预估工时', 'workday'],
+      bv: ['业务影响度', 'bv', 'business value', '价值', '重要性', '业务重要性'],
       tc: ['时间临界', 'tc', 'time critical', '临界性', '紧急', '迫切'],
       hardDeadline: ['强制截止', 'ddl', 'deadline', '截止', '上线时间', '交付时间'],
       // techProgress: 不自动映射，使用智能默认值（有工作量=已评估工作量，无工作量=未评估）
@@ -586,7 +586,7 @@ export default function WSJFPlanner() {
         productManager: '产品经理',
         developer: '开发人员',
         effortDays: '工作量（天数）',
-        bv: '业务价值（局部/明显/撬动核心/战略平台）',
+        bv: '业务影响度（局部/明显/撬动核心/战略平台）',
         tc: '时间临界（随时/三月窗口/一月硬窗口）',
         hardDeadline: '是否有强制截止日期（true/false）',
         techProgress: '技术进展（未评估/已评估工作量/已完成技术方案）',
@@ -782,7 +782,7 @@ ${JSON.stringify(sampleRow, null, 2)}
           finalTechProgress = '已评估工作量';
         }
 
-        // 验证业务价值
+        // 验证业务影响度
         const validBV = ['局部', '明显', '撬动核心', '战略平台'];
         let finalBV = validBV.includes(mapped.bv) ? mapped.bv : '明显';
 
@@ -884,7 +884,7 @@ ${JSON.stringify(sampleRow, null, 2)}
           '研发同学': req.developer,
           '类型': req.type,
           '工作量(天)': req.effortDays,
-          '业务价值': req.bv,
+          '业务影响度': req.bv,
           '迫切程度': req.tc,
           '强制DDL': req.hardDeadline ? '是' : '否',
           '权重分': req.displayScore || 0,
@@ -903,10 +903,10 @@ ${JSON.stringify(sampleRow, null, 2)}
         '研发同学': req.developer,
         '类型': req.type,
         '工作量(天)': req.effortDays,
-        '业务价值': req.bv,
+        '业务影响度': req.bv,
         '迫切程度': req.tc,
         '强制DDL': req.hardDeadline ? '是' : '否',
-        '热度分': req.displayScore || 0,
+        '权重分': req.displayScore || 0,
         '星级': '★'.repeat(req.stars || 0),
         '技术评估': req.techProgress
       });
@@ -1002,7 +1002,7 @@ ${JSON.stringify(sampleRow, null, 2)}
       { value: 'productManager', label: '产品经理' },
       { value: 'developer', label: '开发人员' },
       { value: 'effortDays', label: '工作量(天数)' },
-      { value: 'bv', label: '业务价值' },
+      { value: 'bv', label: '业务影响度' },
       { value: 'tc', label: '时间临界' },
       { value: 'hardDeadline', label: '强制截止' },
       { value: 'techProgress', label: '技术进展' },
@@ -1241,7 +1241,7 @@ ${JSON.stringify(sampleRow, null, 2)}
                   <div className="w-3 h-3 rounded-sm bg-gradient-to-br from-blue-600 to-blue-700" title="撬动核心"></div>
                   <div className="w-3 h-3 rounded-sm bg-gradient-to-br from-blue-800 to-blue-900" title="战略平台"></div>
                 </div>
-                <span>业务价值</span>
+                <span>业务影响度</span>
               </div>
 
               <div className="flex items-center gap-1">

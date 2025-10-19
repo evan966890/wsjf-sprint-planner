@@ -92,7 +92,7 @@ const EditSprintModal = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">总可用人日</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">总可用工作量（天）</label>
             <input
               type="number"
               value={form.totalDays}
@@ -133,10 +133,10 @@ const EditSprintModal = ({
 
           <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-1">
             <div className="text-sm text-gray-700">
-              不可用人日: <span className="font-semibold text-red-600">{reservedDays}</span> ({totalReserve}%)
+              不可用工作量: <span className="font-semibold text-red-600">{reservedDays}</span>天 ({totalReserve}%)
             </div>
             <div className="text-sm font-medium text-teal-900 border-t border-teal-200 pt-2">
-              净可用资源: <span className="text-2xl font-bold text-teal-600">{netAvailable}</span> 人日
+              净可用资源: <span className="text-2xl font-bold text-teal-600">{netAvailable}</span>天
             </div>
           </div>
         </div>

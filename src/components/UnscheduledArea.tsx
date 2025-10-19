@@ -21,14 +21,14 @@ import RequirementCard from './RequirementCard';
  * 筛选维度：
  * - 搜索：需求名称、提交人、产品经理、研发负责人
  * - 需求类型：功能开发、Bug修复、技术债务等
- * - 热度分：高(≥70)、中(40-69)、低(<40)
+ * - 权重分：高(≥70)、中(40-69)、低(<40)
  * - 工作量：微小(≤3)、小(4-10)、中(11-30)、大(31-60)、超大(61-100)、巨大(>100)
- * - 业务价值：局部、明显、撬动核心、战略平台
+ * - 业务影响度：局部、明显、撬动核心、战略平台
  * - RMS重构：是/否
  *
  * 排序方式：
- * - 热度分（默认降序）
- * - 业务价值
+ * - 权重分（默认降序）
+ * - 业务影响度
  * - 提交日期
  * - 工作量
  */
@@ -129,7 +129,7 @@ const UnscheduledArea = ({
     // 类型匹配
     const matchesType = filterType === 'all' || req?.type === filterType;
 
-    // 热度分匹配
+    // 权重分匹配
     let matchesScore = true;
     const displayScore = Number(req?.displayScore) || 0;
     if (scoreFilter === 'high') matchesScore = displayScore >= 70;
@@ -284,7 +284,7 @@ const UnscheduledArea = ({
             className="flex-1 px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
           >
             <option value="score" className="bg-gray-800 text-white">按权重分</option>
-            <option value="bv" className="bg-gray-800 text-white">按业务价值</option>
+            <option value="bv" className="bg-gray-800 text-white">按业务影响度</option>
             <option value="submitDate" className="bg-gray-800 text-white">按提交时间</option>
             <option value="effort" className="bg-gray-800 text-white">按工作量</option>
           </select>
@@ -350,7 +350,7 @@ const UnscheduledArea = ({
             onChange={(e) => onBVFilterChange(e.target.value)}
             className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
           >
-            <option value="all" className="bg-gray-800 text-white">全部业务价值</option>
+            <option value="all" className="bg-gray-800 text-white">全部业务影响度</option>
             <option value="局部" className="bg-gray-800 text-white">局部优化</option>
             <option value="明显" className="bg-gray-800 text-white">明显改善</option>
             <option value="撬动核心" className="bg-gray-800 text-white">撬动核心</option>

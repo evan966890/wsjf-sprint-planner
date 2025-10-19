@@ -134,14 +134,6 @@ const EditRequirementModal = ({
     [form.businessDomain]
   );
 
-  // v1.3.1：仅获取总部角色（用于基础信息区域的业务团队选择）
-  const hqRolesOnly = useMemo(() =>
-    availableRoleConfigs
-      .filter(config => config.category.startsWith('hq-'))
-      .flatMap(config => config.roles),
-    [availableRoleConfigs]
-  );
-
   // 当业务域变化时，清理不合法的选项
   useEffect(() => {
     const validStoreTypes = (form.impactScope?.storeTypes || []).filter(
@@ -732,17 +724,14 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">业务团队（总部）</label>
-                  <select
+                  <label className="block text-xs font-medium text-gray-700 mb-1">业务团队</label>
+                  <input
+                    type="text"
                     value={form.businessTeam || ''}
                     onChange={(e) => setForm({ ...form, businessTeam: e.target.value })}
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">请选择</option>
-                    {hqRolesOnly.map(role => (
-                      <option key={role} value={role}>{role}</option>
-                    ))}
-                  </select>
+                    placeholder="如：开店团队"
+                  />
                 </div>
               </div>
 
@@ -1244,7 +1233,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
               )}
             </div>
 
-            {/* 3. 业务影响度评分 */}
+            {/* 4. 业务影响度评分 */}
             <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <Target size={18} className="text-blue-600" />
@@ -1259,7 +1248,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
               />
             </div>
 
-            {/* 4. 上线时间窗口 */}
+            {/* 3. 上线时间窗口 */}
             <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <Info size={18} className="text-orange-600" />
@@ -1315,7 +1304,474 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
               </div>
             </div>
 
-            {/* 5. 需求相关性（可选） */}
+            {/* 6. AI智能打分及填写需求明细 */}
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={18} className="text-purple-600" />
+                <h4 className="font-semibold text-gray-900">AI智能打分及填写需求明细</h4>
+                <span className="text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">Beta</span>
+              </div>
+
+              {/* AI模型选择 */}
+              <div className="flex items-center gap-2 mb-3">
+                <label className="text-xs font-medium text-gray-700">AI模型：</label>
+                <select
+                  value={selectedAIModel}
+                  onChange={(e) => handleAIModelChange(e.target.value as AIModelType)}
+                  disabled={isAIAnalyzing}
+                  className="text-xs px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="deepseek">DeepSeek（推荐国内）</option>
+                  <option value="openai">OpenAI（推荐海外）</option>
+                </select>
+              </div>
+
+              {/* 已添加的文档列表 */}
+              {(form.documents || []).length > 0 && (
+                <div className="space-y-2 mb-3">
+                  <div className="text-sm font-medium text-gray-700">已添加文档：</div>
+                  {form.documents!.map((doc, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-white p-2 rounded border border-gray-200">
+                      <LinkIcon size={14} className="text-gray-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">{doc.fileName}</div>
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline truncate block"
+                        >
+                          {doc.url}
+                        </a>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDocument(index)}
+                        className="text-red-500 hover:text-red-700 flex-shrink-0"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 添加新文档 v1.3.1：标题自动提取，可编辑 */}
+              <div className="space-y-2 mb-3">
+                <input
+                  type="url"
+                  placeholder="📎 文档链接（如飞书文档、Google Docs等）"
+                  value={newDocUrl}
+                  onChange={(e) => handleUrlChange(e.target.value)}
+                  disabled={isAIAnalyzing}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                />
+                <input
+                  type="text"
+                  placeholder="📝 文档标题（可选，留空则自动从链接提取）"
+                  value={newDocTitle}
+                  onChange={(e) => setNewDocTitle(e.target.value)}
+                  disabled={isAIAnalyzing}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded focus:ring-2 focus:ring-purple-500 bg-gray-50"
+                />
+                {/* v1.3.1：添加内容充足性实时提示 */}
+                {(() => {
+                  const sufficiency = checkContentSufficiency();
+                  if (!sufficiency.canStartAI) {
+                    return (
+                      <div className="flex items-start gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                        <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                        <span>内容不足：请补充描述(至少50字)或上传文档</span>
+                      </div>
+                    );
+                  } else if (sufficiency.isDescSufficient && sufficiency.hasFiles) {
+                    return (
+                      <div className="flex items-start gap-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+                        <CheckCircle size={14} className="flex-shrink-0 mt-0.5" />
+                        <span>描述和文档齐全，AI分析效果更好</span>
+                      </div>
+                    );
+                  } else if (sufficiency.isDescSufficient) {
+                    return (
+                      <div className="flex items-start gap-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-800">
+                        <CheckCircle size={14} className="flex-shrink-0 mt-0.5" />
+                        <span>描述充足，可启动AI分析</span>
+                      </div>
+                    );
+                  } else if (sufficiency.hasFiles) {
+                    return (
+                      <div className="flex items-start gap-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-800">
+                        <CheckCircle size={14} className="flex-shrink-0 mt-0.5" />
+                        <span>已上传文档，可启动AI分析</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddDocument}
+                    disabled={!newDocUrl.trim() || isAIAnalyzing}
+                    className="flex-1 px-3 py-2 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+                  >
+                    <LinkIcon size={14} className="inline mr-1" />
+                    添加文档
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAIAnalyze}
+                    disabled={isAIAnalyzing || !checkContentSufficiency().canStartAI}
+                    className="flex-1 px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                  >
+                    {isAIAnalyzing ? (
+                      <>
+                        <Loader size={14} className="animate-spin" />
+                        分析中...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} />
+                        AI智能分析
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* AI分析进度 */}
+              {isAIAnalyzing && aiAnalysisProgress > 0 && (
+                <div className="space-y-2 p-3 bg-purple-50 border border-purple-200 rounded">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-purple-900 font-medium">{aiAnalysisStep}</span>
+                    <span className="text-purple-700">{aiAnalysisProgress}%</span>
+                  </div>
+                  <div className="w-full bg-purple-200 rounded-full h-2">
+                    <div
+                      className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${aiAnalysisProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* AI分析错误提示 */}
+              {aiError && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                  <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-medium">分析失败</div>
+                    <div className="text-xs">{aiError}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* AI分析结果展示 v1.3.1：支持折叠和状态指示 */}
+              {aiAnalysisResult && (
+                <div className={`space-y-3 p-4 rounded-lg border-2 ${
+                  aiAdoptionStatus === 'adopted' ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300' :
+                  aiAdoptionStatus === 'partial' ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300' :
+                  aiAdoptionStatus === 'ignored' ? 'bg-gray-50 border-gray-300' :
+                  'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300'
+                }`}>
+                  {/* 标题栏 - 可点击折叠/展开 */}
+                  <div
+                    className="flex items-center gap-2 mb-2 cursor-pointer hover:opacity-80 transition"
+                    onClick={() => setIsAIPanelCollapsed(!isAIPanelCollapsed)}
+                  >
+                    {aiAdoptionStatus === 'adopted' && <CheckCircle size={18} className="text-green-600" />}
+                    {aiAdoptionStatus === 'partial' && <Sparkles size={18} className="text-blue-600" />}
+                    {aiAdoptionStatus === 'ignored' && <X size={18} className="text-gray-600" />}
+                    {aiAdoptionStatus === 'pending' && <Sparkles size={18} className="text-purple-600" />}
+
+                    <h5 className={`font-semibold flex-1 ${
+                      aiAdoptionStatus === 'adopted' ? 'text-green-900' :
+                      aiAdoptionStatus === 'partial' ? 'text-blue-900' :
+                      aiAdoptionStatus === 'ignored' ? 'text-gray-700' :
+                      'text-purple-900'
+                    }`}>
+                      AI建议: {aiAnalysisResult.suggestedScore}分
+                      {aiAdoptionStatus === 'adopted' && ' [✓ 已采纳]'}
+                      {aiAdoptionStatus === 'partial' && ' [⚡ 部分采纳]'}
+                      {aiAdoptionStatus === 'ignored' && ' [⊗ 已忽略]'}
+                      {aiAdoptionStatus === 'pending' && ' [待处理]'}
+                    </h5>
+
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      aiAdoptionStatus === 'adopted' ? 'text-green-700 bg-green-100' :
+                      aiAdoptionStatus === 'partial' ? 'text-blue-700 bg-blue-100' :
+                      aiAdoptionStatus === 'ignored' ? 'text-gray-600 bg-gray-100' :
+                      'text-purple-700 bg-purple-100'
+                    }`}>
+                      {lastAnalyzedModel === 'openai' ? 'OpenAI' : 'DeepSeek'}
+                    </span>
+
+                    <span className="text-xs text-gray-500">
+                      {isAIPanelCollapsed ? '展开 ▼' : '收起 ▲'}
+                    </span>
+                  </div>
+
+                  {/* 采纳状态摘要（折叠时显示） */}
+                  {isAIPanelCollapsed && aiAdoptedAt && (
+                    <div className="text-xs text-gray-600">
+                      {aiAdoptionStatus === 'adopted' && '已全部采纳 '}
+                      {aiAdoptionStatus === 'partial' && `已采纳: ${aiAdoptedItems.score ? '✓评分 ' : ''}${aiAdoptedItems.okrMetrics ? '✓OKR ' : ''}${aiAdoptedItems.processMetrics ? '✓过程指标' : ''}`}
+                      {aiAdoptionStatus === 'ignored' && '已忽略，可随时查看'}
+                      · 时间: {new Date(aiAdoptedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  )}
+
+                  {/* 展开的详细内容 */}
+                  {!isAIPanelCollapsed && (<>
+
+                  {/* 建议评分 */}
+                  <div className="bg-white p-3 rounded-lg border border-green-200">
+                    <div className="text-sm font-medium text-gray-700 mb-2">建议评分</div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500 text-white font-bold text-xl">
+                        {aiAnalysisResult.suggestedScore}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xs text-gray-500">
+                          {aiAnalysisResult.currentScore && aiAnalysisResult.currentScore !== aiAnalysisResult.suggestedScore && (
+                            <span>当前评分: {aiAnalysisResult.currentScore}分</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 分析理由 */}
+                  {aiAnalysisResult.reasoning && aiAnalysisResult.reasoning.length > 0 && (
+                    <div className="bg-white p-3 rounded-lg border border-green-200">
+                      <div className="text-sm font-medium text-gray-700 mb-2">分析理由</div>
+                      <ul className="space-y-1 text-sm text-gray-600">
+                        {aiAnalysisResult.reasoning.map((reason, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-green-600 mt-0.5">•</span>
+                            <span>{reason}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 建议的OKR指标 */}
+                  {aiAnalysisResult.suggestedOKRMetrics && aiAnalysisResult.suggestedOKRMetrics.length > 0 && (
+                    <div className="bg-white p-3 rounded-lg border border-green-200">
+                      <div className="text-sm font-medium text-gray-700 mb-2">建议的核心OKR指标</div>
+                      <div className="space-y-2">
+                        {aiAnalysisResult.suggestedOKRMetrics.map((metric, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700">{metric.metricName}</span>
+                            <span className="text-green-600 font-medium">{metric.estimatedImpact}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 建议的过程指标 */}
+                  {aiAnalysisResult.suggestedProcessMetrics && aiAnalysisResult.suggestedProcessMetrics.length > 0 && (
+                    <div className="bg-white p-3 rounded-lg border border-green-200">
+                      <div className="text-sm font-medium text-gray-700 mb-2">建议的过程指标</div>
+                      <div className="space-y-2">
+                        {aiAnalysisResult.suggestedProcessMetrics.map((metric, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700">{metric.metricName}</span>
+                            <span className="text-green-600 font-medium">{metric.estimatedImpact}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* v1.3.1：采纳选项（根据状态显示不同内容） */}
+                  <div className="pt-2 border-t border-gray-200">
+                    {aiAdoptionStatus === 'pending' && (
+                      <>
+                        <div className="text-xs text-gray-600 mb-2">选择采纳方式：</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={handleAdoptAll}
+                            className="px-3 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded transition font-medium"
+                          >
+                            ✨ 全部采纳
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleAdoptScoreOnly}
+                            className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition"
+                          >
+                            📊 仅采纳评分
+                          </button>
+                          {aiAnalysisResult.suggestedOKRMetrics && aiAnalysisResult.suggestedOKRMetrics.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={handleAdoptOKRMetrics}
+                              className="px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded transition"
+                            >
+                              🎯 仅采纳OKR指标
+                            </button>
+                          )}
+                          {aiAnalysisResult.suggestedProcessMetrics && aiAnalysisResult.suggestedProcessMetrics.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={handleAdoptProcessMetrics}
+                              className="px-3 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded transition"
+                            >
+                              📈 仅采纳过程指标
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleIgnoreAI}
+                            className="px-3 py-2 text-sm bg-gray-400 hover:bg-gray-500 text-white rounded transition"
+                          >
+                            ❌ 忽略建议
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleReanalyze}
+                            className="px-3 py-2 text-sm bg-purple-500 hover:bg-purple-600 text-white rounded transition"
+                          >
+                            🔄 重新分析
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {aiAdoptionStatus === 'partial' && (
+                      <>
+                        <div className="text-xs text-gray-600 mb-2">
+                          已采纳: {aiAdoptedItems.score && '✓ 评分 '}{aiAdoptedItems.okrMetrics && '✓ OKR指标 '}{aiAdoptedItems.processMetrics && '✓ 过程指标'}
+                          · 继续采纳其他项：
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {!aiAdoptedItems.score && (
+                            <button
+                              type="button"
+                              onClick={handleAdoptScoreOnly}
+                              className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition"
+                            >
+                              📊 采纳评分
+                            </button>
+                          )}
+                          {!aiAdoptedItems.okrMetrics && aiAnalysisResult.suggestedOKRMetrics && aiAnalysisResult.suggestedOKRMetrics.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={handleAdoptOKRMetrics}
+                              className="px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded transition"
+                            >
+                              🎯 采纳OKR指标
+                            </button>
+                          )}
+                          {!aiAdoptedItems.processMetrics && aiAnalysisResult.suggestedProcessMetrics && aiAnalysisResult.suggestedProcessMetrics.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={handleAdoptProcessMetrics}
+                              className="px-3 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded transition"
+                            >
+                              📈 采纳过程指标
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleReanalyze}
+                            className="px-3 py-2 text-sm bg-purple-500 hover:bg-purple-600 text-white rounded transition"
+                          >
+                            🔄 重新分析
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {(aiAdoptionStatus === 'adopted' || aiAdoptionStatus === 'ignored') && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={handleReanalyze}
+                          className="px-3 py-2 text-sm bg-purple-500 hover:bg-purple-600 text-white rounded transition"
+                        >
+                          🔄 重新分析
+                        </button>
+                        {aiAdoptionStatus === 'ignored' && (
+                          <button
+                            type="button"
+                            onClick={() => setIsAIPanelCollapsed(false)}
+                            className="px-3 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded transition"
+                          >
+                            👁️ 查看建议
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  </>)}
+                </div>
+              )}
+
+              {/* 使用提示 v1.3.1 */}
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+                <div className="font-medium mb-1">💡 使用提示：</div>
+                <ul className="space-y-0.5 ml-4 list-disc">
+                  <li>输入文档链接后，标题会自动提取，您也可以手动修改</li>
+                  <li>需求描述至少50字，或者添加文档链接，才能启动AI分析</li>
+                  <li>点击"AI智能分析"会综合分析需求描述和文档内容</li>
+                  <li>AI建议可以全部采纳、分项采纳，采纳后可随时查看</li>
+                  <li>点击AI建议标题栏可以折叠/展开，节省屏幕空间</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* 7. 业务域 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">业务域</label>
+              <select
+                value={form.businessDomain}
+                onChange={(e) => setForm({
+                  ...form,
+                  businessDomain: e.target.value,
+                  customBusinessDomain: e.target.value === '自定义' ? form.customBusinessDomain : ''
+                })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="新零售">新零售</option>
+                <option value="渠道零售">渠道零售</option>
+                <option value="国际零售通用">国际零售通用</option>
+                <option value="自定义">自定义</option>
+              </select>
+            </div>
+
+            {form.businessDomain === '自定义' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">自定义业务域名称</label>
+                <input
+                  type="text"
+                  value={form.customBusinessDomain || ''}
+                  onChange={(e) => setForm({ ...form, customBusinessDomain: e.target.value })}
+                  placeholder="请输入自定义业务域名称"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            )}
+
+            {/* 8. RMS重构项目 */}
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.isRMS}
+                  onChange={(e) => setForm({ ...form, isRMS: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">RMS重构项目</span>
+              </label>
+            </div>
+
+            {/* 9. 需求相关性（可选） */}
             <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
               <button
                 type="button"
@@ -1336,62 +1792,51 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
 
               {isRelevanceExpanded && (
                 <div className="space-y-4">
-                  {/* 该业务主要为谁服务？v1.3.1优化：改用checkbox网格 */}
+                  {/* 业务团队（关键角色） */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
                       <Users size={14} />
-                      该业务主要为谁服务？（多选）
+                      业务团队（关键角色，多选）
                     </label>
                     <p className="text-xs text-gray-500 mb-2">
-                      可选角色根据所选业务域自动筛选
+                      按住Ctrl(Windows)或Cmd(Mac)多选。可选角色根据所选业务域自动筛选。
                     </p>
-                    <div className="space-y-3">
-                      {availableRoleConfigs.map(config => (
-                        <div key={config.category}>
-                          <div className="text-xs font-medium text-gray-600 mb-1.5">{config.categoryName}</div>
-                          <div className="grid grid-cols-3 gap-2">
-                            {config.roles.map(role => {
-                              const isSelected = (form.impactScope?.keyRoles || []).some(kr => kr.roleName === role);
-                              return (
-                                <label
-                                  key={role}
-                                  className="flex items-center gap-2 cursor-pointer text-sm p-2 border border-gray-200 rounded hover:bg-gray-50 transition"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={(e) => {
-                                      const keyRoles = e.target.checked
-                                        ? [
-                                            ...(form.impactScope?.keyRoles || []),
-                                            {
-                                              category: config.category as any,
-                                              roleName: role,
-                                              isCustom: false
-                                            }
-                                          ]
-                                        : (form.impactScope?.keyRoles || []).filter(kr => kr.roleName !== role);
+                    <select
+                      multiple
+                      value={(form.impactScope?.keyRoles || []).map(kr => kr.roleName)}
+                      onChange={(e) => {
+                        const selectedRoleNames = Array.from(e.target.selectedOptions, option => option.value)
+                          .filter(v => !v.startsWith('['));
 
-                                      setForm({
-                                        ...form,
-                                        impactScope: {
-                                          storeTypes: form.impactScope?.storeTypes || [],
-                                          regions: form.impactScope?.regions || [],
-                                          keyRoles,
-                                          storeCountRange: form.impactScope?.storeCountRange
-                                        }
-                                      });
-                                    }}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                  />
-                                  <span>{role}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
+                        const keyRoles = selectedRoleNames.map(roleName => {
+                          const config = availableRoleConfigs.find(c => c.roles.includes(roleName));
+                          return {
+                            category: config?.category || 'hq-common' as any,
+                            roleName,
+                            isCustom: false
+                          };
+                        });
+
+                        setForm({
+                          ...form,
+                          impactScope: {
+                            storeTypes: form.impactScope?.storeTypes || [],
+                            regions: form.impactScope?.regions || [],
+                            keyRoles,
+                            storeCountRange: form.impactScope?.storeCountRange
+                          }
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-32 text-sm"
+                    >
+                      {availableRoleConfigs.map(config => (
+                        <optgroup key={config.category} label={config.categoryName}>
+                          {config.roles.map(role => (
+                            <option key={role} value={role}>{role}</option>
+                          ))}
+                        </optgroup>
                       ))}
-                    </div>
+                    </select>
                   </div>
 
                   {/* 与哪类门店有关？ */}
@@ -1431,122 +1876,58 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                     </div>
                   </div>
 
-                  {/* 涉及门店数量 v1.3.1优化：改用单选按钮卡片 */}
+                  {/* 涉及门店数量 */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       涉及门店数量
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {STORE_COUNT_RANGES.map(range => {
-                        const isSelected = form.impactScope?.storeCountRange === range;
-                        return (
-                          <label
-                            key={range}
-                            className={`flex items-center justify-center cursor-pointer text-sm p-3 border-2 rounded-lg transition ${
-                              isSelected
-                                ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
-                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="storeCountRange"
-                              checked={isSelected}
-                              onChange={() => setForm({
-                                ...form,
-                                impactScope: {
-                                  storeTypes: form.impactScope?.storeTypes || [],
-                                  regions: form.impactScope?.regions || [],
-                                  keyRoles: form.impactScope?.keyRoles || [],
-                                  storeCountRange: range
-                                }
-                              })}
-                              className="sr-only"
-                            />
-                            <span>{range}</span>
-                          </label>
-                        );
+                    <select
+                      value={form.impactScope?.storeCountRange || ''}
+                      onChange={(e) => setForm({
+                        ...form,
+                        impactScope: {
+                          storeTypes: form.impactScope?.storeTypes || [],
+                          regions: form.impactScope?.regions || [],
+                          keyRoles: form.impactScope?.keyRoles || [],
+                          storeCountRange: e.target.value || undefined
+                        }
                       })}
-                    </div>
-                    {form.impactScope?.storeCountRange && (
-                      <button
-                        type="button"
-                        onClick={() => setForm({
-                          ...form,
-                          impactScope: {
-                            storeTypes: form.impactScope?.storeTypes || [],
-                            regions: form.impactScope?.regions || [],
-                            keyRoles: form.impactScope?.keyRoles || [],
-                            storeCountRange: undefined
-                          }
-                        })}
-                        className="mt-2 text-xs text-gray-500 hover:text-gray-700 underline"
-                      >
-                        清除选择
-                      </button>
-                    )}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">请选择</option>
+                      {STORE_COUNT_RANGES.map(range => (
+                        <option key={range} value={range}>{range}</option>
+                      ))}
+                    </select>
                   </div>
 
-                  {/* 与哪些地区有关？v1.3.1优化：改用checkbox网格 */}
+                  {/* 与哪些地区有关？ */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       与哪些地区有关？（多选）
                     </label>
-                    <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto p-2 border border-gray-200 rounded-lg bg-gray-50">
-                      {regionOptions.map(region => {
-                        const isSelected = (form.impactScope?.regions || []).includes(region);
-                        return (
-                          <label
-                            key={region}
-                            className="flex items-center gap-2 cursor-pointer text-sm p-2 border border-gray-200 rounded hover:bg-white transition bg-white"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const regions = e.target.checked
-                                  ? [...(form.impactScope?.regions || []), region]
-                                  : (form.impactScope?.regions || []).filter(r => r !== region);
-
-                                setForm({
-                                  ...form,
-                                  impactScope: {
-                                    storeTypes: form.impactScope?.storeTypes || [],
-                                    regions,
-                                    keyRoles: form.impactScope?.keyRoles || [],
-                                    storeCountRange: form.impactScope?.storeCountRange
-                                  }
-                                });
-                              }}
-                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                            />
-                            <span className="truncate">{region}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                    {(form.impactScope?.regions || []).length > 0 && (
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-xs text-gray-600">
-                          已选择 {form.impactScope?.regions?.length} 个地区
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setForm({
-                            ...form,
-                            impactScope: {
-                              storeTypes: form.impactScope?.storeTypes || [],
-                              regions: [],
-                              keyRoles: form.impactScope?.keyRoles || [],
-                              storeCountRange: form.impactScope?.storeCountRange
-                            }
-                          })}
-                          className="text-xs text-gray-500 hover:text-gray-700 underline"
-                        >
-                          清除全部
-                        </button>
-                      </div>
-                    )}
+                    <select
+                      multiple
+                      value={form.impactScope?.regions || []}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions, option => option.value);
+                        setForm({
+                          ...form,
+                          impactScope: {
+                            storeTypes: form.impactScope?.storeTypes || [],
+                            regions: selected,
+                            keyRoles: form.impactScope?.keyRoles || [],
+                            storeCountRange: form.impactScope?.storeCountRange
+                          }
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-32 text-sm"
+                    >
+                      {regionOptions.map(option => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">按住Ctrl(Windows)或Cmd(Mac)多选</p>
                   </div>
                 </div>
               )}
@@ -1566,7 +1947,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
               )}
             </div>
 
-            {/* 6. 影响的指标 */}
+            {/* 10. 影响的指标 */}
             <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
               <button
                 type="button"
@@ -1601,7 +1982,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
               )}
             </div>
 
-            {/* 7. 产研填写 */}
+            {/* 11. 产研填写 */}
             <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-300 flex items-center gap-2">
                 <Info size={18} className="text-gray-600" />
@@ -1621,19 +2002,6 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                     <option value="技术债">技术债</option>
                     <option value="Bug修复">Bug修复</option>
                   </select>
-                </div>
-
-                {/* RMS重构项目（移动到产研区域） */}
-                <div className="flex items-center">
-                  <label className="flex items-center gap-2 cursor-pointer mt-6">
-                    <input
-                      type="checkbox"
-                      checked={form.isRMS}
-                      onChange={(e) => setForm({ ...form, isRMS: e.target.checked })}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700">RMS重构项目</span>
-                  </label>
                 </div>
 
                 {/* 产品经理 */}
@@ -1697,7 +2065,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                 {/* 开发工作量 */}
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    开发工作量（天）
+                    开发工作量（人日）
                     {!canEditEffort && <span className="text-xs text-red-600 ml-2">需先完成技术评估</span>}
                   </label>
                   <input
