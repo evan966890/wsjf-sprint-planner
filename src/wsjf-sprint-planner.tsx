@@ -2926,7 +2926,7 @@ ${rawDataStr}
                     }
                     useStore.getState().setAIFillingCancelled(true);
                     setShowTerminateConfirm(false);
-                    showToast('正在终止AI分析...已分析的数据将会保留', 'info');
+                    // 不显示中间提示，直接等待AI循环检测到终止标志后显示详细消息
                   }}
                   className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition font-medium shadow-md"
                 >

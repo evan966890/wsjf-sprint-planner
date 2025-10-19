@@ -1354,7 +1354,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                               const isSelected = (form.impactScope?.keyRoles || []).some(kr => kr.roleName === role);
                               return (
                                 <label
-                                  key={role}
+                                  key={`${config.category}-${role}`}
                                   className="flex items-center gap-2 cursor-pointer text-sm p-2 border border-gray-200 rounded hover:bg-gray-50 transition"
                                 >
                                   <input

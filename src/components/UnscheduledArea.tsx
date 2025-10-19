@@ -23,7 +23,7 @@ import RequirementCard from './RequirementCard';
  * - 需求类型：功能开发、Bug修复、技术债务等
  * - 权重分：高(≥70)、中(40-69)、低(<40)
  * - 工作量：微小(≤3)、小(4-10)、中(11-30)、大(31-60)、超大(61-100)、巨大(>100)
- * - 业务影响度：局部、明显、撬动核心、战略平台
+ * - 业务影响度：高(8-10分)、中(5-7分)、低(1-4分) [v1.2.0升级为10分制]
  * - RMS重构：是/否
  *
  * 排序方式：
@@ -146,8 +146,19 @@ const UnscheduledArea = ({
     else if (effortFilter === 'xlarge') matchesEffort = effortDays >= 61 && effortDays <= 100;
     else if (effortFilter === 'huge') matchesEffort = effortDays > 100;
 
-    // 业务价值匹配
-    const matchesBV = bvFilter === 'all' || req?.bv === bvFilter;
+    // 业务影响度匹配（v1.2.0升级：支持10分制）
+    let matchesBV = true;
+    if (bvFilter !== 'all') {
+      const score = req?.businessImpactScore;
+      if (score) {
+        if (bvFilter === 'high') matchesBV = score >= 8;           // 高：8-10分
+        else if (bvFilter === 'medium') matchesBV = score >= 5 && score <= 7;  // 中：5-7分
+        else if (bvFilter === 'low') matchesBV = score >= 1 && score <= 4;     // 低：1-4分
+      } else {
+        // 如果没有新的businessImpactScore，尝试使用旧的bv字段（向后兼容）
+        matchesBV = req?.bv === bvFilter;
+      }
+    }
 
     // 业务域匹配（国际零售通用 = 新零售 + 渠道零售）
     let matchesBusinessDomain = true;
@@ -179,8 +190,18 @@ const UnscheduledArea = ({
     if (sortBy === 'score') {
       comparison = (b.displayScore || 0) - (a.displayScore || 0);
     } else if (sortBy === 'bv') {
-      const bvOrder: Record<string, number> = { '战略平台': 4, '撬动核心': 3, '明显': 2, '局部': 1 };
-      comparison = (bvOrder[b.bv || '明显'] || 0) - (bvOrder[a.bv || '明显'] || 0);
+      // v1.2.0升级：优先使用10分制businessImpactScore，向后兼容旧的bv字段
+      const scoreB = b.businessImpactScore || 0;
+      const scoreA = a.businessImpactScore || 0;
+
+      if (scoreB > 0 || scoreA > 0) {
+        // 至少有一个有新评分，使用新评分排序
+        comparison = scoreB - scoreA;
+      } else {
+        // 都没有新评分，使用旧的bv字段排序
+        const bvOrder: Record<string, number> = { '战略平台': 4, '撬动核心': 3, '明显': 2, '局部': 1 };
+        comparison = (bvOrder[b.bv || '明显'] || 0) - (bvOrder[a.bv || '明显'] || 0);
+      }
     } else if (sortBy === 'submitDate') {
       comparison = new Date(b.submitDate).getTime() - new Date(a.submitDate).getTime();
     } else if (sortBy === 'effort') {
@@ -351,10 +372,9 @@ const UnscheduledArea = ({
             className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
           >
             <option value="all" className="bg-gray-800 text-white">全部业务影响度</option>
-            <option value="局部" className="bg-gray-800 text-white">局部优化</option>
-            <option value="明显" className="bg-gray-800 text-white">明显改善</option>
-            <option value="撬动核心" className="bg-gray-800 text-white">撬动核心</option>
-            <option value="战略平台" className="bg-gray-800 text-white">战略平台</option>
+            <option value="high" className="bg-gray-800 text-white">🔴 高 (8-10分)</option>
+            <option value="medium" className="bg-gray-800 text-white">🟡 中 (5-7分)</option>
+            <option value="low" className="bg-gray-800 text-white">🟢 低 (1-4分)</option>
           </select>
           </div>
         )}
