@@ -1574,7 +1574,9 @@ ${rawDataStr}
           // 清空模式：清除所有现有数据
           setRequirements(scoredRequirements);
           setUnscheduled(scoredRequirements);
-          setSprintPools([]);
+          // 清空所有迭代池中的需求，但保留迭代池结构
+          const clearedPools = sprintPools.map(pool => ({ ...pool, requirements: [] }));
+          setSprintPools(clearedPools);
 
           // 重置所有筛选器，确保导入的需求可见
           setSearchTerm('');
@@ -1883,7 +1885,7 @@ ${rawDataStr}
    * 支持手动调整映射和AI辅助映射
    */
   const ImportPreviewModal = () => {
-    console.log('[ImportPreviewModal] 组件渲染, showImportModal:', showImportModal, 'importData.length:', importData.length);
+    // console.log('[ImportPreviewModal] 组件渲染, showImportModal:', showImportModal, 'importData.length:', importData.length);
     if (!showImportModal || importData.length === 0) return null;
 
     // 从Store获取AI填充相关状态和滚动位置
@@ -1936,17 +1938,20 @@ ${rawDataStr}
       if (!elem) return;
 
       const saveScroll = () => {
-        // 🚫 防止在恢复滚动过程中保存滚动位置（使用全局state）
-        if (isRestoringImportModalScroll) {
-          console.log('[Scroll Event] ⏸️ 跳过保存（正在恢复滚动）');
+        const { isRestoringImportModalScroll: restoring, importModalScrollTop: currentPos, setImportModalScrollTop } = useStore.getState();
+
+        // 🚫 防止在恢复滚动过程中保存滚动位置
+        if (restoring) {
+          // console.log('[Scroll Event] ⏸️ 跳过保存（正在恢复滚动）');
           return;
         }
 
         const newScroll = elem.scrollTop;
-        if (Math.abs(newScroll - importModalScrollTop) > 5) {
-          console.log('[Scroll Event] 保存新位置:', newScroll, '旧位置:', importModalScrollTop);
+        // 只在变化超过5px时保存，减少不必要的state更新
+        if (Math.abs(newScroll - currentPos) > 5) {
+          // console.log('[Scroll Event] 保存新位置:', newScroll);
+          setImportModalScrollTop(newScroll);
         }
-        setImportModalScrollTop(newScroll);
       };
 
       elem.addEventListener('scroll', saveScroll, { passive: true });
@@ -1954,7 +1959,7 @@ ${rawDataStr}
       return () => {
         elem.removeEventListener('scroll', saveScroll);
       };
-    }, [importModalScrollTop, setImportModalScrollTop, isRestoringImportModalScroll]);
+    }, []); // ✅ 空依赖数组，避免重复添加监听器
 
     // 关键修复：使用 useLayoutEffect 在浏览器绘制之前同步恢复滚动位置
     // 使用全局状态确保滚动位置不会因为组件重新渲染而丢失
@@ -1967,7 +1972,7 @@ ${rawDataStr}
 
       // 只在真正需要恢复且不在恢复过程中时才执行
       if (targetScroll > 0 && currentScroll !== targetScroll && !isRestoringImportModalScroll) {
-        console.log('[useLayoutEffect] 🔄 恢复滚动位置从', currentScroll, '到', targetScroll);
+        // console.log('[useLayoutEffect] 🔄 恢复滚动位置从', currentScroll, '到', targetScroll);
 
         // 🔒 设置全局标志，防止滚动事件监听器保存中间状态
         setIsRestoringImportModalScroll(true);
@@ -1978,14 +1983,14 @@ ${rawDataStr}
         // 双重保护：在下一帧再次检查并恢复，然后解锁
         requestAnimationFrame(() => {
           if (elem && elem.scrollTop !== targetScroll) {
-            console.log('[useLayoutEffect RAF] 再次恢复从', elem.scrollTop, '到', targetScroll);
+            // console.log('[useLayoutEffect RAF] 再次恢复从', elem.scrollTop, '到', targetScroll);
             elem.scrollTop = targetScroll;
           }
 
           // 🔓 恢复完成，允许滚动事件监听器保存新的滚动位置
           setTimeout(() => {
             setIsRestoringImportModalScroll(false);
-            console.log('[useLayoutEffect] ✅ 滚动恢复完成，解除锁定');
+            // console.log('[useLayoutEffect] ✅ 滚动恢复完成，解除锁定');
           }, 100);
         });
       }
