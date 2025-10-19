@@ -17,6 +17,12 @@ export type AIModelType = 'openai' | 'deepseek';
 export type BusinessImpactScore = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 /**
+ * 技术复杂度评分（1-10分制）
+ * v1.3.0新增：评估技术实现的复杂程度
+ */
+export type ComplexityScore = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+
+/**
  * 评分标准接口
  * 定义10分制评分标准的完整信息
  */
@@ -28,6 +34,22 @@ export interface ScoringStandard {
   impactScope: string[];           // 影响范围列表（维度B）
   typicalCases: string[];          // 典型场景案例（可配置）
   affectedOKRs: string[];          // 通常影响的核心OKR指标
+}
+
+/**
+ * 技术复杂度标准接口
+ * 定义10分制技术复杂度评分标准的完整信息
+ */
+export interface ComplexityStandard {
+  score: ComplexityScore;          // 分值（1-10）
+  name: string;                    // 标准名称：全新技术平台/核心架构重构/系统级改造/...
+  shortDescription: string;        // 一句话总结（用于下拉选择器）
+  technicalChallenge: string[];    // 技术挑战列表
+  architectureImpact: string[];    // 架构影响列表
+  technicalRisk: string[];         // 技术风险列表
+  typicalCases: string[];          // 典型案例
+  testingRequirement: string[];    // 测试要求列表
+  estimatedEffort: string;         // 参考工作量（如 "5-10人天"）
 }
 
 /**
@@ -124,6 +146,7 @@ export interface Requirement {
 
   // === 技术信息（产品/研发后续填写）===
   effortDays: number;            // 预估工作量（人天）
+  complexityScore?: ComplexityScore;  // v1.3.0新增：技术复杂度评分（1-10分制）
   type: string;                  // 需求类型
   productManager: string;        // 产品经理
   developer: string;             // 研发负责人
@@ -165,4 +188,28 @@ export interface SprintPool {
 export interface User {
   name: string;                  // 用户姓名
   email: string;                 // 用户邮箱
+}
+
+/**
+ * AI分析结果接口
+ * v1.2.1新增：AI智能分析功能的返回结果
+ */
+export interface AIAnalysisResult {
+  // 建议的业务影响度评分
+  suggestedScore: BusinessImpactScore;
+
+  // AI分析理由
+  reasoning: string[];
+
+  // 建议的核心OKR指标
+  suggestedOKRMetrics: AffectedMetric[];
+
+  // 建议的过程指标
+  suggestedProcessMetrics: AffectedMetric[];
+
+  // 用户当前的评分（用于对比）
+  currentScore?: BusinessImpactScore;
+
+  // 分析的置信度（0-1）
+  confidence?: number;
 }

@@ -133,6 +133,14 @@ const BusinessImpactScoreSelector = ({
             {sortedStandards.map((standard) => {
               const isSelected = standard.score === value;
 
+              // 生成悬浮提示内容
+              const tooltipContent = [
+                `【${standard.score}分 - ${standard.name}】`,
+                '',
+                '典型案例：',
+                ...standard.typicalCases.slice(0, 2).map((c, i) => `${i + 1}. ${c}`)
+              ].join('\n');
+
               return (
                 <button
                   key={standard.score}
@@ -141,6 +149,7 @@ const BusinessImpactScoreSelector = ({
                     onChange(standard.score);
                     setIsExpanded(false);
                   }}
+                  title={tooltipContent}
                   className={`
                     w-full px-4 py-3 border-b border-gray-200 last:border-b-0
                     transition-colors hover:bg-gray-50
@@ -166,6 +175,7 @@ const BusinessImpactScoreSelector = ({
                             当前选中
                           </span>
                         )}
+                        <span className="text-xs text-gray-400">(悬浮查看案例)</span>
                       </div>
                       <div className="text-sm text-gray-600 mt-0.5">
                         {standard.shortDescription}

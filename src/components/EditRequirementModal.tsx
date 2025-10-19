@@ -9,13 +9,14 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { X, Save, Info, Link as LinkIcon, Users, Store, Target, Sparkles, Loader, AlertCircle, CheckCircle } from 'lucide-react';
-import type { Requirement, BusinessImpactScore, AffectedMetric, Document, AIModelType } from '../types';
+import { X, Save, Info, Link as LinkIcon, Users, Store, Target, Sparkles, Loader, AlertCircle, CheckCircle, Settings } from 'lucide-react';
+import type { Requirement, BusinessImpactScore, ComplexityScore, AffectedMetric, Document, AIModelType, AIAnalysisResult } from '../types';
 import { useStore } from '../store/useStore';
 import BusinessImpactScoreSelector from './BusinessImpactScoreSelector';
 import MetricSelector from './MetricSelector';
 import ScoringStandardsHandbook from './ScoringStandardsHandbook';
 import { OPENAI_API_KEY, DEEPSEEK_API_KEY } from '../config/api';
+import { formatAIPrompt, AI_SYSTEM_MESSAGE } from '../config/aiPrompts';
 import {
   getStoreTypesByDomain,
   getRoleConfigsByDomain,
@@ -23,6 +24,7 @@ import {
   STORE_COUNT_RANGES,
   TIME_CRITICALITY_DESCRIPTIONS
 } from '../config/businessFields';
+import { COMPLEXITY_STANDARDS } from '../config/complexityStandards';
 
 interface EditRequirementModalProps {
   requirement: Requirement | null;
@@ -41,13 +43,16 @@ const EditRequirementModal = ({
 
   const [isHandbookOpen, setIsHandbookOpen] = useState(false);
   const [selectedAIModel, setSelectedAIModel] = useState<AIModelType>('deepseek');
+  const [lastAnalyzedModel, setLastAnalyzedModel] = useState<AIModelType | null>(null); // v1.2.1：记录上次使用的AI模型
   const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
-  const [isRelevanceExpanded, setIsRelevanceExpanded] = useState(true);
+  const [isRelevanceExpanded, setIsRelevanceExpanded] = useState(false);
 
-  // AI分析状态
+  // AI分析状态（v1.2.1增强）
   const [isAIAnalyzing, setIsAIAnalyzing] = useState(false);
+  const [aiAnalysisProgress, setAIAnalysisProgress] = useState(0); // 分析进度 0-100
+  const [aiAnalysisStep, setAIAnalysisStep] = useState(''); // 当前分析步骤描述
+  const [aiAnalysisResult, setAIAnalysisResult] = useState<AIAnalysisResult | null>(null);
   const [aiError, setAIError] = useState<string | null>(null);
-  const [aiSuccess, setAISuccess] = useState(false);
 
   // 文档管理状态
   const [newDocTitle, setNewDocTitle] = useState('');
@@ -81,6 +86,7 @@ const EditRequirementModal = ({
     productProgress: '待评估',
     techProgress: '待评估',
     effortDays: 0,
+    complexityScore: 5 as ComplexityScore,  // v1.3.0新增：技术复杂度评分
     isRMS: false,
     bv: '明显',
     tc: '随时'
@@ -176,12 +182,38 @@ const EditRequirementModal = ({
     });
   };
 
-  // AI分析文档
-  const handleAIAnalyze = async () => {
-    const documentUrl = newDocUrl.trim() || (form.documents && form.documents.length > 0 ? form.documents[form.documents.length - 1].url : '');
+  /**
+   * 处理AI模型切换
+   * v1.2.1：如果之前有AI分析结果，提示用户切换会覆盖
+   */
+  const handleAIModelChange = (newModel: AIModelType) => {
+    // 如果有上次分析的模型且不同于当前选择的模型，提示用户
+    if (lastAnalyzedModel && lastAnalyzedModel !== newModel && aiAnalysisResult) {
+      const confirmed = window.confirm(
+        `切换AI模型将覆盖之前${lastAnalyzedModel === 'openai' ? 'OpenAI' : 'DeepSeek'}的分析结果，是否继续？`
+      );
 
-    if (!documentUrl) {
-      setAIError('请先添加文档或输入文档链接');
+      if (!confirmed) {
+        return; // 用户取消切换
+      }
+
+      // 用户确认切换，清空之前的分析结果
+      setAIAnalysisResult(null);
+    }
+
+    setSelectedAIModel(newModel);
+  };
+
+  /**
+   * AI分析文档（v1.2.1增强版）
+   * 包含进度跟踪、详细结果展示、多种采纳选项
+   */
+  const handleAIAnalyze = async () => {
+    const documentUrl = newDocUrl.trim() || (form.documents && form.documents.length > 0 ? form.documents[form.documents.length - 1].url || '' : '');
+    const reqDescription = form.description?.trim() || '';
+
+    if (!documentUrl && !reqDescription) {
+      setAIError('请先添加文档或填写需求描述');
       return;
     }
 
@@ -195,43 +227,22 @@ const EditRequirementModal = ({
 
     setIsAIAnalyzing(true);
     setAIError(null);
-    setAISuccess(false);
+    setAIAnalysisResult(null);
+    setAIAnalysisProgress(0);
+    setAIAnalysisStep('初始化分析...');
 
     try {
-      const prompt = `请分析以下PRD文档链接的内容，提取需求的关键信息：
+      // 阶段1：读取文档/需求描述
+      setAIAnalysisProgress(20);
+      setAIAnalysisStep('已读取需求信息');
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-文档链接：${documentUrl}
+      // 阶段2：准备AI分析
+      setAIAnalysisProgress(40);
+      setAIAnalysisStep('正在进行业务影响度分析...');
 
-请尽可能提取以下信息（如果文档中没有某项信息，该字段留空）：
-
-1. 需求名称：简洁明了的需求标题
-2. 需求描述：背景、目标、预期效果（100-200字）
-3. 业务影响度（1-10分）：根据影响范围和重要性评估
-4. 影响的门店类型：新零售-直营店、新零售-授权店、新零售-专卖店、渠道零售门店、与门店无关
-5. 影响的区域：南亚、东南亚、欧洲等
-6. 涉及的关键角色：店长、区域经理、GTM等
-7. 涉及门店数量范围：<10家、10-50家、50-200家等
-8. 上线时间窗口：随时、三月窗口、一月硬窗口
-9. 是否有强制截止日期：是/否
-10. 截止日期：YYYY-MM-DD格式
-11. 业务团队：开店团队、门店销售团队等
-
-请以JSON格式返回结果，格式如下：
-{
-  "name": "需求名称",
-  "description": "需求描述",
-  "businessImpactScore": 5,
-  "storeTypes": ["新零售-直营店"],
-  "regions": ["南亚"],
-  "keyRoles": ["店长", "区域经理"],
-  "storeCountRange": "50-200家",
-  "timeCriticality": "三月窗口",
-  "hardDeadline": false,
-  "deadlineDate": "2025-12-31",
-  "businessTeam": "门店销售团队"
-}
-
-注意：只返回JSON，不要其他解释。如果无法访问文档内容，请基于URL和常识做合理推测。`;
+      // 使用配置文件中的提示词模板
+      const prompt = formatAIPrompt(documentUrl, reqDescription, form.name || '未填写');
 
       let apiUrl: string;
       let requestBody: any;
@@ -241,39 +252,77 @@ const EditRequirementModal = ({
         requestBody = {
           model: 'gpt-3.5-turbo',
           messages: [
-            { role: 'system', content: '你是一个专业的产品需求分析专家，擅长从PRD文档中提取关键信息。' },
+            { role: 'system', content: AI_SYSTEM_MESSAGE },
             { role: 'user', content: prompt }
           ],
           temperature: 0.3,
-          max_tokens: 1500
+          max_tokens: 2000
         };
       } else {
         apiUrl = 'https://api.deepseek.com/v1/chat/completions';
         requestBody = {
           model: 'deepseek-chat',
           messages: [
-            { role: 'system', content: '你是一个专业的产品需求分析专家，擅长从PRD文档中提取关键信息。' },
+            { role: 'system', content: AI_SYSTEM_MESSAGE },
             { role: 'user', content: prompt }
           ],
           temperature: 0.3,
-          max_tokens: 1500
+          max_tokens: 2000
         };
       }
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(requestBody)
-      });
+      // 阶段3：调用AI API（带超时控制）
+      setAIAnalysisProgress(60);
+      setAIAnalysisStep('AI模型分析中...');
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error?.message || response.statusText;
-        throw new Error(`${modelName} API请求失败 (${response.status}): ${errorMsg}`);
+      // 创建超时控制器
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+
+      let response: Response | undefined;
+      try {
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId); // 清除超时定时器
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMsg = errorData.error?.message || response.statusText;
+          throw new Error(`${modelName} API请求失败 (${response.status}): ${errorMsg}`);
+        }
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId); // 确保清除超时定时器
+
+        // 判断是否为超时错误
+        if (fetchError.name === 'AbortError') {
+          throw new Error(`${modelName} API请求超时（30秒）。请检查网络连接或稍后重试。`);
+        }
+
+        // 网络错误
+        if (fetchError.message.includes('Failed to fetch') || fetchError.message.includes('NetworkError')) {
+          throw new Error(`网络连接失败，无法访问${modelName} API。请检查网络或代理设置。`);
+        }
+
+        // 其他错误
+        throw fetchError;
       }
+
+      // 确保response存在
+      if (!response) {
+        throw new Error('API请求失败，未获取到响应');
+      }
+
+      // 阶段4：解析结果
+      setAIAnalysisProgress(80);
+      setAIAnalysisStep('解析分析结果...');
 
       const result = await response.json();
       const aiText = result.choices?.[0]?.message?.content || '';
@@ -289,43 +338,114 @@ const EditRequirementModal = ({
 
       const parsedData = JSON.parse(jsonMatch[0]);
 
+      // 构建AI分析结果
+      const analysis: AIAnalysisResult = {
+        suggestedScore: parsedData.suggestedScore || 5,
+        reasoning: parsedData.reasoning || [],
+        suggestedOKRMetrics: (parsedData.suggestedOKRMetrics || []).map((m: any) => ({
+          ...m,
+          displayName: m.metricName
+        })),
+        suggestedProcessMetrics: (parsedData.suggestedProcessMetrics || []).map((m: any) => ({
+          ...m,
+          displayName: m.metricName
+        })),
+        currentScore: form.businessImpactScore,
+        confidence: 0.8
+      };
+
       // 如果使用的是新输入的URL且未保存，先保存它
       if (newDocUrl.trim() && newDocTitle.trim()) {
         handleAddDocument();
       }
 
-      // 填充表单
-      setForm(prev => ({
-        ...prev,
-        name: parsedData.name || prev.name,
-        description: parsedData.description || prev.description,
-        businessImpactScore: parsedData.businessImpactScore || prev.businessImpactScore,
-        impactScope: {
-          storeTypes: parsedData.storeTypes || prev.impactScope?.storeTypes || [],
-          regions: parsedData.regions || prev.impactScope?.regions || [],
-          keyRoles: (parsedData.keyRoles || []).map((role: string) => ({
-            category: 'hq-common' as any,
-            roleName: role,
-            isCustom: false
-          })),
-          storeCountRange: parsedData.storeCountRange || prev.impactScope?.storeCountRange
-        },
-        timeCriticality: parsedData.timeCriticality || prev.timeCriticality,
-        hardDeadline: parsedData.hardDeadline || prev.hardDeadline,
-        deadlineDate: parsedData.deadlineDate || prev.deadlineDate,
-        businessTeam: parsedData.businessTeam || prev.businessTeam
-      }));
-
-      setAISuccess(true);
+      // 存储AI分析结果
+      setAIAnalysisResult(analysis);
+      setLastAnalyzedModel(selectedAIModel);
       setNewDocUrl('');
 
-      setTimeout(() => setAISuccess(false), 3000);
+      // 阶段5：完成
+      setAIAnalysisProgress(100);
+      setAIAnalysisStep('分析完成');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 显示结果
+      setAIAnalysisProgress(0);
+      setAIAnalysisStep('');
     } catch (err) {
       console.error('AI分析失败:', err);
       setAIError(err instanceof Error ? err.message : '未知错误');
+      setAIAnalysisProgress(0);
+      setAIAnalysisStep('');
     } finally {
       setIsAIAnalyzing(false);
     }
+  };
+
+  /**
+   * 采纳AI建议 - 全部采纳
+   */
+  const handleAdoptAll = () => {
+    if (!aiAnalysisResult) return;
+
+    setForm(prev => ({
+      ...prev,
+      businessImpactScore: aiAnalysisResult.suggestedScore,
+      affectedMetrics: [
+        ...aiAnalysisResult.suggestedOKRMetrics,
+        ...aiAnalysisResult.suggestedProcessMetrics
+      ]
+    }));
+
+    setAIAnalysisResult(null);
+  };
+
+  /**
+   * 采纳AI建议 - 仅采纳评分
+   */
+  const handleAdoptScoreOnly = () => {
+    if (!aiAnalysisResult) return;
+
+    setForm(prev => ({
+      ...prev,
+      businessImpactScore: aiAnalysisResult.suggestedScore
+    }));
+
+    setAIAnalysisResult(null);
+  };
+
+  /**
+   * 采纳AI建议 - 仅采纳OKR指标
+   */
+  const handleAdoptOKRMetrics = () => {
+    if (!aiAnalysisResult) return;
+
+    setForm(prev => ({
+      ...prev,
+      affectedMetrics: [
+        ...(prev.affectedMetrics || []).filter(m => m.category !== 'okr'),
+        ...aiAnalysisResult.suggestedOKRMetrics
+      ]
+    }));
+
+    setAIAnalysisResult(null);
+  };
+
+  /**
+   * 采纳AI建议 - 仅采纳过程指标
+   */
+  const handleAdoptProcessMetrics = () => {
+    if (!aiAnalysisResult) return;
+
+    setForm(prev => ({
+      ...prev,
+      affectedMetrics: [
+        ...(prev.affectedMetrics || []).filter(m => m.category !== 'process'),
+        ...aiAnalysisResult.suggestedProcessMetrics
+      ]
+    }));
+
+    setAIAnalysisResult(null);
   };
 
   // 展开所有区域的国家列表
@@ -508,11 +628,11 @@ const EditRequirementModal = ({
               </div>
             </div>
 
-            {/* 6. 文档管理与AI分析（整合） */}
+            {/* 6. AI智能打分及填写需求明细 */}
             <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles size={18} className="text-purple-600" />
-                <h4 className="font-semibold text-gray-900">PRD文档与AI智能分析</h4>
+                <h4 className="font-semibold text-gray-900">AI智能打分及填写需求明细</h4>
                 <span className="text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">Beta</span>
               </div>
 
@@ -521,7 +641,7 @@ const EditRequirementModal = ({
                 <label className="text-xs font-medium text-gray-700">AI模型：</label>
                 <select
                   value={selectedAIModel}
-                  onChange={(e) => setSelectedAIModel(e.target.value as AIModelType)}
+                  onChange={(e) => handleAIModelChange(e.target.value as AIModelType)}
                   disabled={isAIAnalyzing}
                   className="text-xs px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
                 >
@@ -609,7 +729,23 @@ const EditRequirementModal = ({
                 </div>
               </div>
 
-              {/* AI分析结果提示 */}
+              {/* AI分析进度 */}
+              {isAIAnalyzing && aiAnalysisProgress > 0 && (
+                <div className="space-y-2 p-3 bg-purple-50 border border-purple-200 rounded">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-purple-900 font-medium">{aiAnalysisStep}</span>
+                    <span className="text-purple-700">{aiAnalysisProgress}%</span>
+                  </div>
+                  <div className="w-full bg-purple-200 rounded-full h-2">
+                    <div
+                      className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${aiAnalysisProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* AI分析错误提示 */}
               {aiError && (
                 <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
                   <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
@@ -620,10 +756,124 @@ const EditRequirementModal = ({
                 </div>
               )}
 
-              {aiSuccess && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-700">
-                  <CheckCircle size={16} />
-                  <span className="font-medium">AI分析完成！已自动填充表单</span>
+              {/* AI分析结果展示 */}
+              {aiAnalysisResult && (
+                <div className="space-y-3 p-4 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle size={18} className="text-green-600" />
+                    <h5 className="font-semibold text-green-900">AI分析完成</h5>
+                    <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                      {lastAnalyzedModel === 'openai' ? 'OpenAI' : 'DeepSeek'}
+                    </span>
+                  </div>
+
+                  {/* 建议评分 */}
+                  <div className="bg-white p-3 rounded-lg border border-green-200">
+                    <div className="text-sm font-medium text-gray-700 mb-2">建议评分</div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500 text-white font-bold text-xl">
+                        {aiAnalysisResult.suggestedScore}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xs text-gray-500">
+                          {aiAnalysisResult.currentScore && aiAnalysisResult.currentScore !== aiAnalysisResult.suggestedScore && (
+                            <span>当前评分: {aiAnalysisResult.currentScore}分</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 分析理由 */}
+                  {aiAnalysisResult.reasoning && aiAnalysisResult.reasoning.length > 0 && (
+                    <div className="bg-white p-3 rounded-lg border border-green-200">
+                      <div className="text-sm font-medium text-gray-700 mb-2">分析理由</div>
+                      <ul className="space-y-1 text-sm text-gray-600">
+                        {aiAnalysisResult.reasoning.map((reason, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-green-600 mt-0.5">•</span>
+                            <span>{reason}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 建议的OKR指标 */}
+                  {aiAnalysisResult.suggestedOKRMetrics && aiAnalysisResult.suggestedOKRMetrics.length > 0 && (
+                    <div className="bg-white p-3 rounded-lg border border-green-200">
+                      <div className="text-sm font-medium text-gray-700 mb-2">建议的核心OKR指标</div>
+                      <div className="space-y-2">
+                        {aiAnalysisResult.suggestedOKRMetrics.map((metric, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700">{metric.metricName}</span>
+                            <span className="text-green-600 font-medium">{metric.estimatedImpact}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 建议的过程指标 */}
+                  {aiAnalysisResult.suggestedProcessMetrics && aiAnalysisResult.suggestedProcessMetrics.length > 0 && (
+                    <div className="bg-white p-3 rounded-lg border border-green-200">
+                      <div className="text-sm font-medium text-gray-700 mb-2">建议的过程指标</div>
+                      <div className="space-y-2">
+                        {aiAnalysisResult.suggestedProcessMetrics.map((metric, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700">{metric.metricName}</span>
+                            <span className="text-green-600 font-medium">{metric.estimatedImpact}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 采纳选项 */}
+                  <div className="pt-2 border-t border-green-200">
+                    <div className="text-xs text-gray-600 mb-2">选择采纳方式：</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAdoptAll}
+                        className="px-3 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded transition"
+                      >
+                        全部采纳
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAdoptScoreOnly}
+                        className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition"
+                      >
+                        仅采纳评分
+                      </button>
+                      {aiAnalysisResult.suggestedOKRMetrics && aiAnalysisResult.suggestedOKRMetrics.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleAdoptOKRMetrics}
+                          className="px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded transition"
+                        >
+                          仅采纳OKR指标
+                        </button>
+                      )}
+                      {aiAnalysisResult.suggestedProcessMetrics && aiAnalysisResult.suggestedProcessMetrics.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleAdoptProcessMetrics}
+                          className="px-3 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded transition"
+                        >
+                          仅采纳过程指标
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setAIAnalysisResult(null)}
+                        className="px-3 py-2 text-sm bg-gray-300 hover:bg-gray-400 text-gray-700 rounded transition"
+                      >
+                        暂不采纳
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -994,6 +1244,51 @@ const EditRequirementModal = ({
                       工作量加分: {form.effortDays <= 2 ? '+8分' : form.effortDays <= 5 ? '+7分' : form.effortDays <= 14 ? '+5分' : form.effortDays <= 30 ? '+3分' : form.effortDays <= 50 ? '+2分' : form.effortDays <= 100 ? '+1分' : '不加分'}
                     </div>
                   )}
+                </div>
+
+                {/* 技术复杂度评分 (v1.3.0新增) */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                    <Settings size={16} className="text-gray-600" />
+                    技术复杂度评分（1-10分）
+                    <span className="text-xs text-gray-500">(v1.3.0)</span>
+                  </label>
+                  <select
+                    value={form.complexityScore || 5}
+                    onChange={(e) => setForm({ ...form, complexityScore: parseInt(e.target.value) as ComplexityScore })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    {COMPLEXITY_STANDARDS.sort((a, b) => b.score - a.score).map((standard) => {
+                      // 生成悬浮提示
+                      const tooltipText = `【${standard.score}分 - ${standard.name}】\n${standard.shortDescription}\n\n典型案例：${standard.typicalCases.slice(0, 1).join('；')}`;
+
+                      return (
+                        <option
+                          key={standard.score}
+                          value={standard.score}
+                          title={tooltipText}
+                        >
+                          {standard.score}分 - {standard.name} ({standard.shortDescription})
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {(() => {
+                      const selectedStandard = COMPLEXITY_STANDARDS.find(s => s.score === (form.complexityScore || 5));
+                      if (!selectedStandard) return null;
+                      return (
+                        <div>
+                          <div className="font-medium text-gray-700 mb-1">
+                            {selectedStandard.name}：{selectedStandard.shortDescription}
+                          </div>
+                          <div className="text-gray-600">
+                            参考工作量：{selectedStandard.estimatedEffort}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
             </div>

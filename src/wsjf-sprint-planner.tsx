@@ -1492,10 +1492,8 @@ ${JSON.stringify(sampleRow, null, 2)}
       {showBatchEvalModal && (
         <BatchEvaluationModal
           requirements={requirements}
-          selectedAIModel={selectedAIModel}
           onClose={() => setShowBatchEvalModal(false)}
           onApplyScores={handleApplyBatchScores}
-          apiKey={selectedAIModel === 'openai' ? OPENAI_API_KEY : DEEPSEEK_API_KEY}
         />
       )}
     </div>

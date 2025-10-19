@@ -1,26 +1,26 @@
 /**
- * 批量AI评估Modal组件
+ * 批量AI评估Modal组件 - v2.0
  *
  * 功能说明：
- * - 显示所有需求列表，支持多选
- * - 一键批量调用AI评估业务影响度分数（1-10分）
- * - 高亮显示AI评分结果
- * - 对比用户已打分和AI评分的差异
- * - 支持一键应用AI评分或保留用户评分
+ * - 显示所有需求的完整信息（评估前后）
+ * - 支持选择AI模型（OpenAI / DeepSeek）
+ * - 一键批量调用AI评估业务影响度分数
+ * - 展示所有需求字段详情
+ * - 对比用户评分和AI评分的差异
+ * - 支持单个应用或批量应用评估结果
  *
- * @version 1.2.2
+ * @version 2.0.0
  */
 
 import React, { useState } from 'react';
-import { X, CheckSquare, Square, Sparkles, AlertCircle, Check } from 'lucide-react';
+import { X, CheckSquare, Square, Sparkles, AlertCircle, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Requirement, BusinessImpactScore, AIModelType } from '../types';
+import { OPENAI_API_KEY, DEEPSEEK_API_KEY } from '../config/api';
 
 interface Props {
   requirements: Requirement[];
-  selectedAIModel: AIModelType;
   onClose: () => void;
   onApplyScores: (updates: Map<string, BusinessImpactScore>) => void;
-  apiKey: string;
 }
 
 interface EvaluationResult {
@@ -28,46 +28,78 @@ interface EvaluationResult {
   aiScore: BusinessImpactScore;
   userScore?: BusinessImpactScore;
   reasoning: string;
+  // AI建议的完整需求信息
+  aiSuggestions?: {
+    name?: string;
+    description?: string;
+    businessDomain?: string;
+    timeCriticality?: string;
+    hardDeadline?: boolean;
+  };
 }
 
 const BatchEvaluationModal: React.FC<Props> = ({
   requirements,
-  selectedAIModel,
   onClose,
-  onApplyScores,
-  apiKey
+  onApplyScores
 }) => {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedAIModel, setSelectedAIModel] = useState<AIModelType>('deepseek');
+  const [selectedReqIds, setSelectedReqIds] = useState<Set<string>>(new Set());
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [results, setResults] = useState<Map<string, EvaluationResult>>(new Map());
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [expandedReqId, setExpandedReqId] = useState<string | null>(null);
+  const [selectedResultIds, setSelectedResultIds] = useState<Set<string>>(new Set());
 
-  // 全选/取消全选
+  // API Key
+  const apiKey = selectedAIModel === 'openai' ? OPENAI_API_KEY : DEEPSEEK_API_KEY;
+  const modelName = selectedAIModel === 'openai' ? 'OpenAI' : 'DeepSeek';
+
+  // 全选/取消全选待评估需求
   const toggleSelectAll = () => {
-    if (selectedIds.size === requirements.length) {
-      setSelectedIds(new Set());
+    if (selectedReqIds.size === requirements.length) {
+      setSelectedReqIds(new Set());
     } else {
-      setSelectedIds(new Set(requirements.map(r => r.id)));
+      setSelectedReqIds(new Set(requirements.map(r => r.id)));
     }
   };
 
-  // 切换单个需求选择状态
-  const toggleSelect = (id: string) => {
-    const newSet = new Set(selectedIds);
+  // 切换单个需求选择
+  const toggleSelectReq = (id: string) => {
+    const newSet = new Set(selectedReqIds);
     if (newSet.has(id)) {
       newSet.delete(id);
     } else {
       newSet.add(id);
     }
-    setSelectedIds(newSet);
+    setSelectedReqIds(newSet);
+  };
+
+  // 全选/取消全选评估结果
+  const toggleSelectAllResults = () => {
+    const resultIds = Array.from(results.keys());
+    if (selectedResultIds.size === resultIds.length && resultIds.length > 0) {
+      setSelectedResultIds(new Set());
+    } else {
+      setSelectedResultIds(new Set(resultIds));
+    }
+  };
+
+  // 切换单个结果选择
+  const toggleSelectResult = (id: string) => {
+    const newSet = new Set(selectedResultIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedResultIds(newSet);
   };
 
   /**
    * 调用AI评估单个需求
    */
   const evaluateRequirement = async (req: Requirement): Promise<EvaluationResult> => {
-    const modelName = selectedAIModel === 'openai' ? 'OpenAI' : 'DeepSeek';
-
     // 构建评估提示词
     const prompt = `你是小米国际零售业务的需求评估专家。请基于WSJF-Lite方法论，为以下需求评估业务影响度分数（1-10分）。
 
@@ -75,11 +107,14 @@ const BatchEvaluationModal: React.FC<Props> = ({
 - 需求名称：${req.name}
 - 需求描述：${req.description || '（无详细描述）'}
 - 提交方：${req.submitter}
+- 提交人：${req.submitterName || '未指定'}
+- 提交日期：${req.submitDate}
 - 业务团队：${req.businessTeam || '未指定'}
 - 业务域：${req.businessDomain === '自定义' ? req.customBusinessDomain || '自定义' : req.businessDomain}
 - 工作量：${req.effortDays}天
 - 时间临界性：${req.timeCriticality || req.tc || '随时'}
 - 强制DDL：${req.hardDeadline ? '是' : '否'}${req.deadlineDate ? ` (${req.deadlineDate})` : ''}
+- RMS重构项目：${req.isRMS ? '是' : '否'}
 ${req.impactScope ? `- 影响范围：
   * 门店类型：${req.impactScope.storeTypes?.join(', ') || '未指定'}
   * 区域：${req.impactScope.regions?.join(', ') || '未指定'}
@@ -188,22 +223,22 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
    */
   const handleBatchEvaluate = async () => {
     if (!apiKey) {
-      alert('AI评估功能未配置。请联系管理员配置API Key。');
+      alert(`AI评估功能未配置。请配置 ${modelName} API Key。\n\n在项目根目录创建 .env.local 文件，添加：\n${selectedAIModel === 'openai' ? 'VITE_OPENAI_API_KEY' : 'VITE_DEEPSEEK_API_KEY'}=你的API-Key`);
       return;
     }
 
-    if (selectedIds.size === 0) {
+    if (selectedReqIds.size === 0) {
       alert('请至少选择一个需求进行评估');
       return;
     }
 
     setIsEvaluating(true);
-    setProgress({ current: 0, total: selectedIds.size });
+    setProgress({ current: 0, total: selectedReqIds.size });
     const newResults = new Map<string, EvaluationResult>();
 
     try {
       let current = 0;
-      for (const reqId of selectedIds) {
+      for (const reqId of selectedReqIds) {
         const req = requirements.find(r => r.id === reqId);
         if (!req) continue;
 
@@ -211,7 +246,7 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
           const result = await evaluateRequirement(req);
           newResults.set(reqId, result);
           current++;
-          setProgress({ current, total: selectedIds.size });
+          setProgress({ current, total: selectedReqIds.size });
         } catch (error) {
           console.error(`评估需求 ${req.name} 失败:`, error);
           // 继续评估其他需求
@@ -219,6 +254,8 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
       }
 
       setResults(newResults);
+      // 默认全选所有结果
+      setSelectedResultIds(new Set(newResults.keys()));
       alert(`批量评估完成！成功评估 ${newResults.size} 个需求。`);
     } catch (error) {
       console.error('批量评估失败:', error);
@@ -229,34 +266,58 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
   };
 
   /**
-   * 应用AI评分
+   * 应用选中的AI评分
    */
-  const handleApplyScores = () => {
-    if (results.size === 0) {
-      alert('没有可应用的评分结果');
+  const handleApplySelectedScores = () => {
+    if (selectedResultIds.size === 0) {
+      alert('请至少选择一个评估结果进行应用');
       return;
     }
 
     const updates = new Map<string, BusinessImpactScore>();
-    results.forEach((result, reqId) => {
-      updates.set(reqId, result.aiScore);
+    selectedResultIds.forEach(reqId => {
+      const result = results.get(reqId);
+      if (result) {
+        updates.set(reqId, result.aiScore);
+      }
     });
 
     onApplyScores(updates);
     onClose();
   };
 
+  /**
+   * 应用单个AI评分
+   */
+  const handleApplySingleScore = (reqId: string) => {
+    const result = results.get(reqId);
+    if (!result) return;
+
+    const updates = new Map<string, BusinessImpactScore>();
+    updates.set(reqId, result.aiScore);
+    onApplyScores(updates);
+
+    // 从results中移除已应用的
+    const newResults = new Map(results);
+    newResults.delete(reqId);
+    setResults(newResults);
+
+    // 从选中结果中移除
+    const newSelected = new Set(selectedResultIds);
+    newSelected.delete(reqId);
+    setSelectedResultIds(newSelected);
+
+    alert(`已应用需求"${requirements.find(r => r.id === reqId)?.name}"的AI评分`);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* 标题栏 */}
         <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Sparkles className="text-white" size={24} />
             <h2 className="text-xl font-bold text-white">AI批量评估 - 业务影响度打分</h2>
-            <span className="text-xs text-white/80 bg-white/20 px-2 py-1 rounded">
-              {selectedAIModel === 'deepseek' ? 'DeepSeek' : 'OpenAI'}
-            </span>
           </div>
           <button
             onClick={onClose}
@@ -266,15 +327,31 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
           </button>
         </div>
 
-        {/* 操作栏 */}
+        {/* AI模型选择和操作栏 */}
         <div className="border-b border-gray-200 px-6 py-4 bg-gray-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              {/* AI模型选择 */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">AI模型：</label>
+                <select
+                  value={selectedAIModel}
+                  onChange={(e) => setSelectedAIModel(e.target.value as AIModelType)}
+                  disabled={isEvaluating}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="deepseek">DeepSeek（推荐国内）</option>
+                  <option value="openai">OpenAI（推荐海外）</option>
+                </select>
+              </div>
+
+              <div className="h-6 w-px bg-gray-300"></div>
+
               <button
                 onClick={toggleSelectAll}
                 className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
-                {selectedIds.size === requirements.length ? (
+                {selectedReqIds.size === requirements.length ? (
                   <>
                     <CheckSquare size={18} />
                     取消全选
@@ -287,99 +364,201 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
                 )}
               </button>
               <span className="text-sm text-gray-600">
-                已选择 <strong className="text-gray-900">{selectedIds.size}</strong> 个需求
+                已选择 <strong className="text-gray-900">{selectedReqIds.size}</strong> 个需求
               </span>
             </div>
             <button
               onClick={handleBatchEvaluate}
-              disabled={isEvaluating || selectedIds.size === 0 || !apiKey}
+              disabled={isEvaluating || selectedReqIds.size === 0 || !apiKey}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg transition flex items-center gap-2 font-medium"
             >
               <Sparkles size={16} />
               {isEvaluating ? `评估中... ${progress.current}/${progress.total}` : '开始AI评估'}
             </button>
           </div>
+
+          {!apiKey && (
+            <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800 flex items-center gap-2">
+                <AlertCircle size={16} />
+                <span>AI评估功能未配置。请在项目根目录创建 .env.local 文件，配置 {selectedAIModel === 'openai' ? 'VITE_OPENAI_API_KEY' : 'VITE_DEEPSEEK_API_KEY'}</span>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 需求列表 */}
         <div className="flex-1 overflow-y-auto p-6">
-          {!apiKey && (
-            <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800 flex items-center gap-2">
-                <AlertCircle size={16} />
-                <span>AI评估功能未配置。请联系管理员在代码中配置 {selectedAIModel === 'deepseek' ? 'DeepSeek' : 'OpenAI'} API Key。</span>
-              </p>
-            </div>
-          )}
-
           <div className="space-y-3">
             {requirements.map(req => {
-              const isSelected = selectedIds.has(req.id);
+              const isSelected = selectedReqIds.has(req.id);
               const result = results.get(req.id);
+              const hasResult = !!result;
               const hasDifference = result && result.userScore && result.aiScore !== result.userScore;
+              const isExpanded = expandedReqId === req.id;
+              const isResultSelected = selectedResultIds.has(req.id);
 
               return (
                 <div
                   key={req.id}
-                  className={`border rounded-lg p-4 transition ${
+                  className={`border rounded-lg transition ${
                     isSelected ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'
                   } ${result ? 'ring-2 ring-green-200' : ''}`}
                 >
-                  <div className="flex items-start gap-3">
-                    {/* 复选框 */}
-                    <button
-                      onClick={() => toggleSelect(req.id)}
-                      className="flex-shrink-0 mt-1"
-                    >
-                      {isSelected ? (
-                        <CheckSquare size={20} className="text-purple-600" />
-                      ) : (
-                        <Square size={20} className="text-gray-400" />
-                      )}
-                    </button>
+                  {/* 需求基本信息 */}
+                  <div className="p-4">
+                    <div className="flex items-start gap-3">
+                      {/* 复选框 */}
+                      <button
+                        onClick={() => toggleSelectReq(req.id)}
+                        className="flex-shrink-0 mt-1"
+                        disabled={isEvaluating}
+                      >
+                        {isSelected ? (
+                          <CheckSquare size={20} className="text-purple-600" />
+                        ) : (
+                          <Square size={20} className="text-gray-400" />
+                        )}
+                      </button>
 
-                    {/* 需求信息 */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 text-sm mb-1">{req.name}</h3>
-                          <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                            <span>业务域: {req.businessDomain === '自定义' ? req.customBusinessDomain : req.businessDomain}</span>
-                            <span>•</span>
-                            <span>提交方: {req.submitter}</span>
-                            <span>•</span>
-                            <span>工作量: {req.effortDays}天</span>
-                            {req.businessImpactScore && (
-                              <>
-                                <span>•</span>
-                                <span className="font-semibold text-blue-600">
-                                  用户评分: {req.businessImpactScore}分
-                                </span>
-                              </>
+                      {/* 需求信息 */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4 mb-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 text-base mb-1">{req.name}</h3>
+                            {req.description && (
+                              <p className="text-sm text-gray-600 line-clamp-2 mb-2">{req.description}</p>
                             )}
+                            <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+                              <span className="flex items-center gap-1">
+                                <span className="font-medium">提交人:</span> {req.submitterName || '未填写'}
+                              </span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <span className="font-medium">部门:</span> {req.submitter}
+                              </span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <span className="font-medium">业务域:</span> {req.businessDomain === '自定义' ? req.customBusinessDomain : req.businessDomain}
+                              </span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <span className="font-medium">工作量:</span> {req.effortDays}天
+                              </span>
+                              {req.businessImpactScore && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-semibold text-blue-600">
+                                    用户评分: {req.businessImpactScore}分
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          {req.description && (
-                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{req.description}</p>
+
+                          {/* AI评分结果 */}
+                          {result && (
+                            <div className="flex-shrink-0 flex items-start gap-2">
+                              {hasResult && (
+                                <button
+                                  onClick={() => toggleSelectResult(req.id)}
+                                  className="flex-shrink-0"
+                                >
+                                  {isResultSelected ? (
+                                    <CheckSquare size={18} className="text-green-600" />
+                                  ) : (
+                                    <Square size={18} className="text-gray-400" />
+                                  )}
+                                </button>
+                              )}
+                              <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 min-w-[200px]">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Check size={14} className="text-green-600" />
+                                  <span className="text-xs font-semibold text-green-700">AI评分结果</span>
+                                </div>
+                                <div className="flex items-baseline gap-2">
+                                  <span className="text-2xl font-bold text-green-600">{result.aiScore}</span>
+                                  <span className="text-xs text-gray-600">分</span>
+                                  {hasDifference && (
+                                    <span className="text-xs text-orange-600 font-semibold">
+                                      (vs 用户: {result.userScore}分)
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-600 mt-1">{result.reasoning}</p>
+                                <button
+                                  onClick={() => handleApplySingleScore(req.id)}
+                                  className="mt-2 w-full px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition"
+                                >
+                                  应用此评分
+                                </button>
+                              </div>
+                            </div>
                           )}
                         </div>
 
-                        {/* AI评分结果 */}
-                        {result && (
-                          <div className="flex-shrink-0 bg-green-50 border border-green-200 rounded-lg px-3 py-2 min-w-[200px]">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Check size={14} className="text-green-600" />
-                              <span className="text-xs font-semibold text-green-700">AI评分结果</span>
+                        {/* 展开/收起详情按钮 */}
+                        <button
+                          onClick={() => setExpandedReqId(isExpanded ? null : req.id)}
+                          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 mt-2"
+                        >
+                          {isExpanded ? (
+                            <>
+                              <ChevronUp size={16} />
+                              收起详情
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown size={16} />
+                              展开详情
+                            </>
+                          )}
+                        </button>
+
+                        {/* 详细信息（展开时显示） */}
+                        {isExpanded && (
+                          <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm space-y-2">
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                              <div><span className="font-medium">提交日期:</span> {req.submitDate}</div>
+                              <div><span className="font-medium">业务团队:</span> {req.businessTeam || '未填写'}</div>
+                              <div><span className="font-medium">时间窗口:</span> {req.timeCriticality || req.tc || '随时'}</div>
+                              <div><span className="font-medium">强制DDL:</span> {req.hardDeadline ? `是 (${req.deadlineDate})` : '否'}</div>
+                              <div><span className="font-medium">RMS重构:</span> {req.isRMS ? '是' : '否'}</div>
+                              <div><span className="font-medium">需求类型:</span> {req.type}</div>
+                              <div><span className="font-medium">产品经理:</span> {req.productManager || '未分配'}</div>
+                              <div><span className="font-medium">研发负责人:</span> {req.developer || '未分配'}</div>
+                              <div><span className="font-medium">产品进展:</span> {req.productProgress}</div>
+                              <div><span className="font-medium">技术进展:</span> {req.techProgress}</div>
                             </div>
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-2xl font-bold text-green-600">{result.aiScore}</span>
-                              <span className="text-xs text-gray-600">分</span>
-                              {hasDifference && (
-                                <span className="text-xs text-orange-600 font-semibold">
-                                  (用户: {result.userScore}分)
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-600 mt-1">{result.reasoning}</p>
+
+                            {req.impactScope && (req.impactScope.storeTypes.length > 0 || req.impactScope.regions.length > 0) && (
+                              <div className="pt-2 border-t border-gray-300">
+                                <div className="font-medium mb-1">需求相关性:</div>
+                                {req.impactScope.storeTypes.length > 0 && (
+                                  <div className="text-xs text-gray-600 ml-2">• 门店类型: {req.impactScope.storeTypes.join(', ')}</div>
+                                )}
+                                {req.impactScope.regions.length > 0 && (
+                                  <div className="text-xs text-gray-600 ml-2">• 影响地区: {req.impactScope.regions.join(', ')}</div>
+                                )}
+                                {req.impactScope.storeCountRange && (
+                                  <div className="text-xs text-gray-600 ml-2">• 门店数量: {req.impactScope.storeCountRange}</div>
+                                )}
+                                {req.impactScope.keyRoles && req.impactScope.keyRoles.length > 0 && (
+                                  <div className="text-xs text-gray-600 ml-2">• 涉及角色: {req.impactScope.keyRoles.map(r => r.roleName).join(', ')}</div>
+                                )}
+                              </div>
+                            )}
+
+                            {req.affectedMetrics && req.affectedMetrics.length > 0 && (
+                              <div className="pt-2 border-t border-gray-300">
+                                <div className="font-medium mb-1">影响的指标:</div>
+                                {req.affectedMetrics.map((metric, idx) => (
+                                  <div key={idx} className="text-xs text-gray-600 ml-2">
+                                    • {metric.displayName}: {metric.estimatedImpact}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -393,11 +572,30 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
 
         {/* 底部操作栏 */}
         <div className="border-t border-gray-200 px-6 py-4 flex justify-between items-center bg-gray-50">
-          <div className="text-sm text-gray-600">
+          <div className="flex items-center gap-4">
             {results.size > 0 && (
-              <span className="text-green-600 font-semibold">
-                已完成 {results.size} 个需求的AI评估
-              </span>
+              <>
+                <button
+                  onClick={toggleSelectAllResults}
+                  className="flex items-center gap-2 text-sm text-green-600 hover:text-green-700 font-medium"
+                >
+                  {selectedResultIds.size === results.size && results.size > 0 ? (
+                    <>
+                      <CheckSquare size={18} />
+                      取消全选结果
+                    </>
+                  ) : (
+                    <>
+                      <Square size={18} />
+                      全选结果
+                    </>
+                  )}
+                </button>
+                <span className="text-sm text-gray-600">
+                  已完成 <strong className="text-green-600">{results.size}</strong> 个评估，
+                  选中 <strong className="text-gray-900">{selectedResultIds.size}</strong> 个待应用
+                </span>
+              </>
             )}
           </div>
           <div className="flex gap-3">
@@ -408,12 +606,12 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
               取消
             </button>
             <button
-              onClick={handleApplyScores}
-              disabled={results.size === 0}
+              onClick={handleApplySelectedScores}
+              disabled={selectedResultIds.size === 0}
               className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:text-gray-500 text-white rounded-lg transition font-medium flex items-center gap-2"
             >
               <Check size={18} />
-              应用AI评分 ({results.size}个)
+              批量应用选中评分 ({selectedResultIds.size}个)
             </button>
           </div>
         </div>
