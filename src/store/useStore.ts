@@ -7,7 +7,7 @@
 
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import type { Requirement, SprintPool, User, AIModelType, ScoringStandard, MetricDefinition } from '../types';
+import type { Requirement, SprintPool, User, AIModelType, ScoringStandard, MetricDefinition, AIFilledRequirement } from '../types';
 import { calculateScores } from '../utils/scoring';
 import { SCORING_STANDARDS } from '../config/scoringStandards';
 import { OKR_METRICS, PROCESS_METRICS } from '../config/metrics';
@@ -49,6 +49,18 @@ interface StoreState {
   isAIMappingLoading: boolean;
   clearBeforeImport: boolean;
   selectedAIModel: AIModelType;
+  importModalScrollTop: number;  // 导入Modal的滚动位置（用于恢复滚动状态）
+  isRestoringImportModalScroll: boolean;  // 是否正在恢复导入Modal滚动位置（防止保存中间状态）
+
+  // ========== AI智能填充状态 ==========
+  isAIFillingLoading: boolean;                      // AI填充进度中
+  aiFillingProgress: number;                        // 进度百分比 0-100
+  aiFillingCurrentIndex: number;                    // 当前分析到第几条
+  aiFillingCurrentName: string;                     // 当前分析的需求名称
+  aiFilledData: AIFilledRequirement[];              // AI填充后的数据
+  selectedRequirementIndex: number | null;          // 侧边栏选中的需求索引
+  aiFillingCancelled: boolean;                      // AI填充是否被用户取消
+  aiAnalysisLogs: string[];                         // AI分析过程日志
 
   // ========== 编辑状态 ==========
   editingReq: Requirement | null;
@@ -107,9 +119,22 @@ interface StoreState {
   setShowImportModal: (show: boolean) => void;
   setImportData: (data: ImportDataRow[]) => void;
   setImportMapping: (mapping: Record<string, string>) => void;
+  setImportModalScrollTop: (scrollTop: number) => void;
+  setIsRestoringImportModalScroll: (restoring: boolean) => void;
   setIsAIMappingLoading: (loading: boolean) => void;
   setClearBeforeImport: (clear: boolean) => void;
   setSelectedAIModel: (model: AIModelType) => void;
+
+  // AI智能填充
+  setIsAIFillingLoading: (loading: boolean) => void;
+  setAIFillingProgress: (progress: number) => void;
+  setAIFillingCurrentIndex: (index: number) => void;
+  setAIFillingCurrentName: (name: string) => void;
+  setAIFilledData: (data: AIFilledRequirement[]) => void;
+  setSelectedRequirementIndex: (index: number | null) => void;
+  setAIFillingCancelled: (cancelled: boolean) => void;
+  addAIAnalysisLog: (log: string) => void;
+  clearAIAnalysisLogs: () => void;
 
   // 编辑状态
   setEditingReq: (req: Requirement | null) => void;
@@ -171,6 +196,18 @@ export const useStore = create<StoreState>()(
         isAIMappingLoading: false,
         clearBeforeImport: false,
         selectedAIModel: 'deepseek',
+        importModalScrollTop: 0,
+        isRestoringImportModalScroll: false,
+
+        // AI智能填充状态
+        isAIFillingLoading: false,
+        aiFillingProgress: 0,
+        aiFillingCurrentIndex: 0,
+        aiFillingCurrentName: '',
+        aiFilledData: [],
+        selectedRequirementIndex: null,
+        aiFillingCancelled: false,
+        aiAnalysisLogs: [],
 
         // 编辑状态
         editingReq: null,
@@ -393,9 +430,24 @@ export const useStore = create<StoreState>()(
         setShowImportModal: (show) => set({ showImportModal: show }),
         setImportData: (data) => set({ importData: data }),
         setImportMapping: (mapping) => set({ importMapping: mapping }),
+        setImportModalScrollTop: (scrollTop) => set({ importModalScrollTop: scrollTop }),
+        setIsRestoringImportModalScroll: (restoring) => set({ isRestoringImportModalScroll: restoring }),
         setIsAIMappingLoading: (loading) => set({ isAIMappingLoading: loading }),
         setClearBeforeImport: (clear) => set({ clearBeforeImport: clear }),
         setSelectedAIModel: (model) => set({ selectedAIModel: model }),
+
+        // AI智能填充
+        setIsAIFillingLoading: (loading) => set({ isAIFillingLoading: loading }),
+        setAIFillingProgress: (progress) => set({ aiFillingProgress: progress }),
+        setAIFillingCurrentIndex: (index) => set({ aiFillingCurrentIndex: index }),
+        setAIFillingCurrentName: (name) => set({ aiFillingCurrentName: name }),
+        setAIFilledData: (data) => set({ aiFilledData: data }),
+        setSelectedRequirementIndex: (index) => set({ selectedRequirementIndex: index }),
+        setAIFillingCancelled: (cancelled) => set({ aiFillingCancelled: cancelled }),
+        addAIAnalysisLog: (log) => set((state) => ({
+          aiAnalysisLogs: [...state.aiAnalysisLogs.slice(-20), log] // 只保留最近21条（显示最新20条）
+        })),
+        clearAIAnalysisLogs: () => set({ aiAnalysisLogs: [] }),
 
         // 编辑状态
         setEditingReq: (req) => set({ editingReq: req }),
@@ -424,7 +476,7 @@ export const useStore = create<StoreState>()(
       }),
       {
         name: 'wsjf-storage',
-        version: 3, // v1.3.2: 升级版本号，更新指标配置
+        version: 4, // v1.3.3: 重置AI模型默认值为deepseek
         // 只持久化部分数据，避免存储过多临时状态
         // 注意：scoringStandards/okrMetrics/processMetrics 不再持久化
         // 原因：这些是代码配置而非用户数据，应始终从代码读取最新版本
@@ -440,7 +492,7 @@ export const useStore = create<StoreState>()(
         }),
         // 数据迁移逻辑
         migrate: (persistedState: any, version: number) => {
-          logger.log(`[Store] 检测到存储版本: ${version}，当前版本: 3`);
+          logger.log(`[Store] 检测到存储版本: ${version}，当前版本: 4`);
 
           const state = persistedState;
 
@@ -487,6 +539,12 @@ export const useStore = create<StoreState>()(
           }
           if (state.processMetrics) {
             delete state.processMetrics;
+          }
+
+          // v1.3.3：重置AI模型默认值为deepseek
+          if (version < 4) {
+            logger.log('[Store] v3→v4迁移: 重置AI模型为deepseek');
+            state.selectedAIModel = 'deepseek';
           }
 
           return state;

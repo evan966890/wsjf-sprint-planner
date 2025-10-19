@@ -174,6 +174,25 @@ export interface Requirement {
 }
 
 /**
+ * AI分析状态
+ * 用于标识导入数据的AI分析状态
+ */
+export type AIAnalysisStatus = 'pending' | 'analyzing' | 'success' | 'failed';
+
+/**
+ * AI填充的需求对象（扩展Requirement）
+ * 用于导入功能的AI智能填充
+ * 包含AI填充的元数据，用于UI标注
+ */
+export interface AIFilledRequirement extends Requirement {
+  _aiFilledFields?: string[];                       // AI填充的字段名列表
+  _aiConfidenceScores?: Record<string, number>;     // 各字段置信度 0-1
+  _aiAnalysisStatus?: AIAnalysisStatus;             // 分析状态
+  _aiErrorMessage?: string;                         // 分析失败的错误消息
+  _isSelected?: boolean;                            // 是否被用户勾选导入
+}
+
+/**
  * 迭代池接口
  * 描述一个迭代周期的时间范围、资源预留和已排期需求
  */
