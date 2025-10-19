@@ -132,25 +132,48 @@ const RequirementCard = ({
    * @param hardDeadline - 是否有强制截止日期
    * @returns CSS渐变字符串
    */
-  const getColor = (bv: string, hardDeadline: boolean): string => {
+  const getColor = (req: Requirement): string => {
     // 强制DDL优先级最高，使用红色渐变
-    if (hardDeadline) {
+    if (req.hardDeadline) {
       return 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)';
     }
 
-    // 根据业务价值返回不同深度的蓝色渐变
+    // v1.2.0升级：优先使用10分制businessImpactScore，映射到4档蓝色
+    let tier = '明显'; // 默认档位
+
+    if (req.businessImpactScore) {
+      // 10分制映射到4档：战略平台(10)、撬动核心(8-9)、明显(5-7)、局部(1-4)
+      const score = req.businessImpactScore;
+      if (score === 10) tier = '战略平台';
+      else if (score >= 8) tier = '撬动核心';
+      else if (score >= 5) tier = '明显';
+      else tier = '局部';
+    } else if (req.bv) {
+      // 向后兼容：使用旧的bv字段
+      tier = req.bv;
+    }
+
+    // 根据业务价值档位返回不同深度的蓝色渐变
     const gradients: Record<string, string> = {
-      '局部': 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',
-      '明显': 'linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%)',
-      '撬动核心': 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
-      '战略平台': 'linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%)'
+      '局部': 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',      // blue-100 to blue-200
+      '明显': 'linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%)',      // blue-400 to blue-500
+      '撬动核心': 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',  // blue-600 to blue-700
+      '战略平台': 'linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%)'   // blue-800 to blue-900
     };
-    return gradients[bv] || gradients['明显']; // 未知值默认为"明显"
+    return gradients[tier] || gradients['明显'];
   };
 
   // 计算视觉样式
-  const bgGradient = getColor(requirement.bv || '明显', requirement.hardDeadline);
-  const isLight = (requirement.bv || '明显') === '局部' && !requirement.hardDeadline; // 浅色背景需要深色文字
+  const bgGradient = getColor(requirement);
+
+  // 判断是否是浅色背景（需要深色文字）
+  let isLight = false;
+  if (requirement.businessImpactScore) {
+    isLight = requirement.businessImpactScore <= 4;
+  } else {
+    isLight = (requirement.bv || '明显') === '局部';
+  }
+  isLight = isLight && !requirement.hardDeadline;
   const textColor = isLight ? 'text-gray-800' : 'text-white';
 
   /**

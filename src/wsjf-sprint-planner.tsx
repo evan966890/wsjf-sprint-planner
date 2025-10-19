@@ -400,19 +400,39 @@ export default function WSJFPlanner() {
     type: 'success' | 'error' | 'info';
   }
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const terminationToastIdRef = React.useRef<number | null>(null); // 终止分析时的持久toast ID
 
   /**
    * 显示Toast通知
    * @param message 通知消息
    * @param type 通知类型
+   * @param options 可选配置：duration(显示时长ms，默认3000)，persistent(是否持久显示，默认false)
+   * @returns toast ID，用于手动移除持久toast
    */
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const showToast = (
+    message: string,
+    type: 'success' | 'error' | 'info' = 'info',
+    options?: { duration?: number; persistent?: boolean }
+  ): number => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
-    // 3秒后自动移除
-    setTimeout(() => {
-      setToasts(prev => prev.filter(toast => toast.id !== id));
-    }, 3000);
+
+    // 如果不是持久toast，则在指定时间后自动移除
+    if (!options?.persistent) {
+      const duration = options?.duration || 3000;
+      setTimeout(() => {
+        setToasts(prev => prev.filter(toast => toast.id !== id));
+      }, duration);
+    }
+
+    return id; // 返回ID，用于手动移除
+  };
+
+  /**
+   * 手动移除指定ID的toast
+   */
+  const dismissToast = (id: number) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
   // 全局滚动监听（诊断用）- 检查是否是整个页面在跳动
@@ -1460,7 +1480,15 @@ ${rawDataStr}
         const { aiFillingCancelled, addAIAnalysisLog: log } = useStore.getState();
         if (aiFillingCancelled) {
           log(`⏹️ 用户手动终止分析`);
-          showToast(`⚠️ AI分析已终止！已完成：${i}条，未完成：${totalCount - i}条。已分析的数据已保存，您可以查看结果。`, 'info');
+
+          // 移除持久的"正在终止"提示
+          if (terminationToastIdRef.current !== null) {
+            dismissToast(terminationToastIdRef.current);
+            terminationToastIdRef.current = null;
+          }
+
+          // 显示终止详情，使用更长的显示时间（6秒）
+          showToast(`⚠️ AI分析已终止！已完成：${i}条，未完成：${totalCount - i}条。已分析的数据已保存，您可以查看结果。`, 'info', { duration: 6000 });
           break;
         }
 
@@ -1528,7 +1556,14 @@ ${rawDataStr}
       const successCount = filledResults.filter(r => r._aiAnalysisStatus === 'success').length;
       const failedCount = filledResults.filter(r => r._aiAnalysisStatus === 'failed').length;
 
-      showToast(`AI智能填充完成！✅ 成功: ${successCount} 条，❌ 失败: ${failedCount} 条。请在预览表格中检查结果。`, 'success');
+      // 移除持久的"正在终止"提示（如果还存在）
+      if (terminationToastIdRef.current !== null) {
+        dismissToast(terminationToastIdRef.current);
+        terminationToastIdRef.current = null;
+      }
+
+      // 显示完成总结，使用更长的显示时间（6秒）
+      showToast(`AI智能填充完成！✅ 成功: ${successCount} 条，❌ 失败: ${failedCount} 条。请在预览表格中检查结果。`, 'success', { duration: 6000 });
     } catch (error) {
       console.error('AI智能填充过程中发生错误:', error);
       showToast(`AI智能填充失败：${error instanceof Error ? error.message : '未知错误'}`, 'error');
@@ -1912,8 +1947,7 @@ ${rawDataStr}
     const aiProgressBoxRef = React.useRef<HTMLDivElement>(null); // AI进度框ref
     const logContainerRef = React.useRef<HTMLDivElement>(null); // 日志容器ref
     const fieldMappingRef = React.useRef<HTMLDivElement>(null); // 字段映射配置ref
-    const shouldAutoScroll = React.useRef<boolean>(false); // 是否应该自动滚动到进度框
-    const hasAutoScrolled = React.useRef<boolean>(false); // 是否已经自动滚动过
+    const hasAutoScrolled = React.useRef<boolean>(false); // 是否已经自动滚动过（防止重复滚动）
     // isRestoringScroll 已移到全局state，防止组件remount时丢失
 
     // 终止分析确认对话框状态
@@ -2005,14 +2039,14 @@ ${rawDataStr}
 
     // 方式二：AI智能填充开始时，自动滚动到进度框（只滚动一次）
     React.useEffect(() => {
-      if (isAIFillingLoading && aiProgressBoxRef.current && !hasAutoScrolled.current && shouldAutoScroll.current) {
+      if (isAIFillingLoading && aiProgressBoxRef.current && !hasAutoScrolled.current) {
         hasAutoScrolled.current = true;
-        setTimeout(() => scrollToAIProgress(), 300);
+        // 延迟滚动，确保进度框已渲染
+        setTimeout(() => scrollToAIProgress(), 100);
       }
       // 当加载结束时重置标志
       if (!isAIFillingLoading) {
         hasAutoScrolled.current = false;
-        shouldAutoScroll.current = false;
       }
     }, [isAIFillingLoading]);
 
@@ -2289,7 +2323,7 @@ ${rawDataStr}
                       console.log('[方式二点击] 保存滚动位置:', scroll);
                       setImportModalScrollTop(scroll);
                     }
-                    shouldAutoScroll.current = true; // 标记需要自动滚动到进度框
+                    // 开始AI智能填充，自动滚动会由useEffect触发
                     handleAISmartFill();
                   }}
                   disabled={isAIMappingLoading || isAIFillingLoading}
@@ -2926,7 +2960,10 @@ ${rawDataStr}
                     }
                     useStore.getState().setAIFillingCancelled(true);
                     setShowTerminateConfirm(false);
-                    // 不显示中间提示，直接等待AI循环检测到终止标志后显示详细消息
+
+                    // 显示持久化的"正在终止"提示，存储toast ID以便后续手动移除
+                    const toastId = showToast('⏹️ 正在终止AI分析，请稍候...', 'info', { persistent: true });
+                    terminationToastIdRef.current = toastId;
                   }}
                   className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition font-medium shadow-md"
                 >

@@ -27,6 +27,14 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
   // 业务影响度数组（按分数排序）
   const bvLevels = Object.entries(BUSINESS_VALUE_LEVELS).sort((a, b) => b[1].score - a[1].score);
 
+  // 10分制映射到4档的区间定义
+  const scoreRangeMap: Record<string, string> = {
+    '战略平台': '10分档',
+    '撬动核心': '8-9分档',
+    '明显': '5-7分档',
+    '局部': '1-4分档',
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -73,7 +81,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h3 className={`text-xl font-bold m-0 ${level.textColor}`}>{level.name}</h3>
-                      <p className={`text-sm mt-1 ${level.textColor} opacity-90`}>分值：{level.score}分</p>
+                      <p className={`text-sm mt-1 ${level.textColor} opacity-90`}>分值：{scoreRangeMap[key]}</p>
                     </div>
                     <div className={`px-4 py-2 rounded-full ${isLight ? 'bg-gray-800 text-white' : 'bg-white/20 backdrop-blur-sm text-white'} font-bold text-sm`}>
                       {key}

@@ -126,8 +126,9 @@ const UnscheduledArea = ({
                          (req?.productManager || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
                          (req?.developer || '').toLowerCase().includes((searchTerm || '').toLowerCase());
 
-    // 类型匹配
-    const matchesType = filterType === 'all' || req?.type === filterType;
+    // 类型匹配（v1.2.0：增强健壮性，处理空格和undefined，默认为功能开发）
+    const reqType = req?.type?.trim() || '功能开发'; // 如果type为空，默认为功能开发
+    const matchesType = filterType === 'all' || reqType === filterType;
 
     // 权重分匹配
     let matchesScore = true;
@@ -146,14 +147,16 @@ const UnscheduledArea = ({
     else if (effortFilter === 'xlarge') matchesEffort = effortDays >= 61 && effortDays <= 100;
     else if (effortFilter === 'huge') matchesEffort = effortDays > 100;
 
-    // 业务影响度匹配（v1.2.0升级：支持10分制）
+    // 业务影响度匹配（v1.2.0升级：支持10分制映射到4档）
     let matchesBV = true;
     if (bvFilter !== 'all') {
       const score = req?.businessImpactScore;
       if (score) {
-        if (bvFilter === 'high') matchesBV = score >= 8;           // 高：8-10分
-        else if (bvFilter === 'medium') matchesBV = score >= 5 && score <= 7;  // 中：5-7分
-        else if (bvFilter === 'low') matchesBV = score >= 1 && score <= 4;     // 低：1-4分
+        // 10分制映射到4档：战略平台(10)、撬动核心(8-9)、明显(5-7)、局部(1-4)
+        if (bvFilter === '战略平台') matchesBV = score === 10;
+        else if (bvFilter === '撬动核心') matchesBV = score >= 8 && score <= 9;
+        else if (bvFilter === '明显') matchesBV = score >= 5 && score <= 7;
+        else if (bvFilter === '局部') matchesBV = score >= 1 && score <= 4;
       } else {
         // 如果没有新的businessImpactScore，尝试使用旧的bv字段（向后兼容）
         matchesBV = req?.bv === bvFilter;
@@ -372,9 +375,10 @@ const UnscheduledArea = ({
             className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
           >
             <option value="all" className="bg-gray-800 text-white">全部业务影响度</option>
-            <option value="high" className="bg-gray-800 text-white">🔴 高 (8-10分)</option>
-            <option value="medium" className="bg-gray-800 text-white">🟡 中 (5-7分)</option>
-            <option value="low" className="bg-gray-800 text-white">🟢 低 (1-4分)</option>
+            <option value="战略平台" className="bg-blue-900 text-white font-medium">■ 战略平台 (10分)</option>
+            <option value="撬动核心" className="bg-blue-700 text-white font-medium">■ 撬动核心 (8-9分)</option>
+            <option value="明显" className="bg-blue-500 text-white font-medium">■ 明显 (5-7分)</option>
+            <option value="局部" className="bg-blue-200 text-gray-800 font-medium">■ 局部 (1-4分)</option>
           </select>
           </div>
         )}

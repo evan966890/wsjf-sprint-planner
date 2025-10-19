@@ -17,7 +17,7 @@ export const SCORING_STANDARDS: ScoringStandard[] = [
   {
     score: 10,
     name: '致命缺陷',
-    shortDescription: '业务停摆或重大合规风险',
+    shortDescription: '【10分档-战略平台】业务停摆或重大合规风险',
     businessConsequence: [
       '已经导致业务完全无法开展，每天都在造成重大损失',
       '违反法律法规，存在合规风险，可能被罚款或禁止运营',
@@ -40,7 +40,7 @@ export const SCORING_STANDARDS: ScoringStandard[] = [
   {
     score: 9,
     name: '严重阻塞',
-    shortDescription: '关键流程严重受阻，人工兜底成本极高',
+    shortDescription: '【8-9分档-撬动核心】关键流程严重受阻，人工兜底成本极高',
     businessConsequence: [
       '关键业务流程严重受阻，需要大量人工兜底，成本极高且无法持续',
       '核心OKR指标正在明显恶化，每周/每月都能看到负面数据',
@@ -63,7 +63,7 @@ export const SCORING_STANDARDS: ScoringStandard[] = [
   {
     score: 8,
     name: '战略必需',
-    shortDescription: '战略方向支撑或竞争力缺失',
+    shortDescription: '【8-9分档-撬动核心】战略方向支撑或竞争力缺失',
     businessConsequence: [
       '战略方向的必要支撑，不做会错失战略机会（如新市场拓展、新业务线）',
       '竞争力缺失：竞品已有，我们没有，客户/经销商在对比中选择竞品',
@@ -86,7 +86,7 @@ export const SCORING_STANDARDS: ScoringStandard[] = [
   {
     score: 7,
     name: '显著影响',
-    shortDescription: '明确影响核心OKR指标，有量化损失',
+    shortDescription: '【5-7分档-明显】明确影响核心OKR指标，有量化损失',
     businessConsequence: [
       '明确影响核心OKR指标，有清晰的量化损失（如转化率下降X%、处理时长增加Y小时）',
       '持续产生中高成本：每周/每月都需要人工处理，或产生额外成本',
@@ -109,7 +109,7 @@ export const SCORING_STANDARDS: ScoringStandard[] = [
   {
     score: 6,
     name: '重要改善',
-    shortDescription: '持续负面影响，有临时方案勉强支撑',
+    shortDescription: '【5-7分档-明显】持续负面影响，有临时方案勉强支撑',
     businessConsequence: [
       '持续产生中等程度的负面影响，有临时方案但效率低',
       '可能影响过程指标（非核心OKR，但与业务相关）',
@@ -132,7 +132,7 @@ export const SCORING_STANDARDS: ScoringStandard[] = [
   {
     score: 5,
     name: '明确需求',
-    shortDescription: '影响体验/效率，影响可控',
+    shortDescription: '【5-7分档-明显】影响体验/效率，影响可控',
     businessConsequence: [
       '业务明确提出需求，不做会影响体验或效率，但影响可控',
       '有明确的使用场景，频次中等，不是高频操作',
@@ -155,7 +155,7 @@ export const SCORING_STANDARDS: ScoringStandard[] = [
   {
     score: 4,
     name: '体验优化',
-    shortDescription: '锦上添花，不影响主流程',
+    shortDescription: '【1-4分档-局部】锦上添花，不影响主流程',
     businessConsequence: [
       '锦上添花的改进，不做不影响主流程，做了会更顺手',
       '使用频次较低，或只在特定场景下有用',
@@ -178,7 +178,7 @@ export const SCORING_STANDARDS: ScoringStandard[] = [
   {
     score: 3,
     name: '便利性改进',
-    shortDescription: '少数人诉求，影响范围小',
+    shortDescription: '【1-4分档-局部】少数人诉求，影响范围小',
     businessConsequence: [
       '少数人的便利性诉求，影响范围小，频次低',
       'nice to have，有人提出但不强烈'
@@ -198,7 +198,7 @@ export const SCORING_STANDARDS: ScoringStandard[] = [
   {
     score: 2,
     name: '个性化需求',
-    shortDescription: '单个客户特殊诉求，缺少普适性',
+    shortDescription: '【1-4分档-局部】单个客户特殊诉求，缺少普适性',
     businessConsequence: [
       '单个客户/单个场景的特殊诉求，缺少普适性',
       '只有提出者认为重要，其他人都不需要'
@@ -218,7 +218,7 @@ export const SCORING_STANDARDS: ScoringStandard[] = [
   {
     score: 1,
     name: '探索性想法',
-    shortDescription: '价值不明确，需进一步验证',
+    shortDescription: '【1-4分档-局部】价值不明确，需进一步验证',
     businessConsequence: [
       '探索性的想法，价值不明确，需要进一步验证',
       '"也许可以试试"，没有明确的使用场景'
