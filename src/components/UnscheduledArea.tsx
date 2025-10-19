@@ -89,12 +89,19 @@ const UnscheduledArea = ({
 
   /**
    * 提取所有自定义业务域（用于动态显示筛选选项）
+   * v1.3.2：兼容旧数据，businessDomain可能包含任意值
    */
   const customBusinessDomains = useMemo(() => {
     const domains = new Set<string>();
+    const presetDomains = ['新零售', '渠道零售', '国际零售通用', '自定义', 'all'];
+
     unscheduled.forEach(req => {
       if (req.businessDomain === '自定义' && req.customBusinessDomain) {
+        // 新数据：自定义业务域
         domains.add(req.customBusinessDomain);
+      } else if (req.businessDomain && !presetDomains.includes(req.businessDomain)) {
+        // 旧数据：businessDomain直接包含具体值
+        domains.add(req.businessDomain);
       }
     });
     return Array.from(domains).sort();
@@ -163,20 +170,28 @@ const UnscheduledArea = ({
       }
     }
 
-    // 业务域匹配（国际零售通用 = 新零售 + 渠道零售）
+    // 业务域匹配（国际零售通用 = 新零售 + 渠道零售 + 空业务域）
+    // v1.3.2：兼容旧数据，businessDomain可能包含任意值或为空
     let matchesBusinessDomain = true;
     if (businessDomainFilter !== 'all') {
+      const reqDomain = req?.businessDomain || '';
+      const reqCustomDomain = req?.customBusinessDomain || '';
+
       if (businessDomainFilter === '国际零售通用') {
-        // 选择"国际零售通用"时，匹配"新零售"、"渠道零售"或"国际零售通用"
-        matchesBusinessDomain = req?.businessDomain === '新零售' ||
-                                req?.businessDomain === '渠道零售' ||
-                                req?.businessDomain === '国际零售通用';
+        // 选择"国际零售通用"时，匹配"新零售"、"渠道零售"、"国际零售通用"或空业务域（默认）
+        matchesBusinessDomain = reqDomain === '新零售' ||
+                                reqDomain === '渠道零售' ||
+                                reqDomain === '国际零售通用' ||
+                                (!reqDomain && !reqCustomDomain); // 空业务域默认归为"国际零售通用"
       } else if (['新零售', '渠道零售'].includes(businessDomainFilter)) {
         // 选择预设业务域时，精确匹配businessDomain字段
-        matchesBusinessDomain = req?.businessDomain === businessDomainFilter;
+        matchesBusinessDomain = reqDomain === businessDomainFilter;
       } else {
-        // 选择自定义业务域时，匹配customBusinessDomain字段
-        matchesBusinessDomain = req?.businessDomain === '自定义' && req?.customBusinessDomain === businessDomainFilter;
+        // 选择自定义业务域时：
+        // 1. 新数据：businessDomain='自定义' && customBusinessDomain匹配
+        // 2. 旧数据：businessDomain直接匹配（兼容性）
+        matchesBusinessDomain = (reqDomain === '自定义' && reqCustomDomain === businessDomainFilter) ||
+                                (reqDomain === businessDomainFilter);
       }
     }
 

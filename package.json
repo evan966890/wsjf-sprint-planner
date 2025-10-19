@@ -10,6 +10,8 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "check-file-size": "node scripts/check-file-size.js",
+    "pre-commit": "npm run check-file-size",
     "pre-deploy-check": "bash scripts/pre-deploy-check.sh",
     "deploy:tencent": "npm run pre-deploy-check && npm run build && cloudbase framework deploy",
     "deploy:vercel": "npm run pre-deploy-check && npm run build && vercel --prod"

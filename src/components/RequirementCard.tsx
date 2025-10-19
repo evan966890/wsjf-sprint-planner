@@ -51,6 +51,24 @@ const RequirementCard = ({
   const displayScore = requirement.displayScore || 60;
   const stars = requirement.stars || 2;
 
+  // 业务域显示逻辑（兼容旧数据）
+  const getBusinessDomainDisplay = () => {
+    const domain = requirement.businessDomain || '';
+    const customDomain = requirement.customBusinessDomain || '';
+
+    // 预设业务域
+    const presetDomains = ['新零售', '渠道零售', '国际零售通用'];
+
+    if (presetDomains.includes(domain)) {
+      return domain;
+    } else if (domain === '自定义') {
+      return customDomain || '-';
+    } else if (domain) {
+      return domain;
+    }
+    return '国际零售通用';
+  };
+
   /**
    * 计算卡片尺寸配置
    *
@@ -285,7 +303,7 @@ const RequirementCard = ({
             </div>
             <div className={`flex items-center justify-between ${textColor} opacity-75 mt-0.5 ${daySize}`}>
               <span>{requirement.effortDays > 0 ? `${roundNumber(requirement.effortDays, 1)}天` : '未评估'}</span>
-              <span className="ml-1 truncate">{requirement.businessDomain === '自定义' ? requirement.customBusinessDomain || '自定义' : requirement.businessDomain}</span>
+              <span className="ml-1 truncate">{getBusinessDomainDisplay()}</span>
             </div>
           </div>
         </div>
@@ -334,7 +352,7 @@ const RequirementCard = ({
         >
           <div className="space-y-1">
             <div className="font-semibold border-b border-white/20 pb-1 mb-1">{requirement.name}</div>
-            <div>业务域: <span className="font-semibold">{requirement.businessDomain === '自定义' ? requirement.customBusinessDomain || '自定义' : requirement.businessDomain}</span></div>
+            <div>业务域: <span className="font-semibold">{getBusinessDomainDisplay()}</span></div>
             <div>提交方: <span className="font-semibold">{requirement.submitter}</span></div>
             <div>业务影响度: <span className="font-semibold">{requirement.businessImpactScore || 5}分</span></div>
             {requirement.complexityScore && requirement.complexityScore > 0 && (

@@ -89,19 +89,44 @@ const EditRequirementModal = ({
   // TODO: 文件上传功能实现中，setUploadedFiles 将在后续使用
   void setUploadedFiles; // 临时忽略未使用警告
 
-  // 表单状态
-  const [form, setForm] = useState<Requirement>(requirement || {
-    id: `REQ-${Date.now()}`,
-    name: '',
-    description: '',
-    submitterName: '',
-    productManager: '',
-    developer: '',
-    submitDate: new Date().toISOString().split('T')[0],
-    submitter: '业务',
-    type: '功能开发',
-    businessDomain: '国际零售通用',
-    businessTeam: '',
+  // 表单状态 - 修复：保留原始业务域，不使用默认值覆盖
+  const [form, setForm] = useState<Requirement>(() => {
+    // 辅助函数：验证日期格式是否为 YYYY-MM-DD
+    const isValidDateFormat = (dateStr: string | undefined): boolean => {
+      if (!dateStr) return false;
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      return dateRegex.test(dateStr);
+    };
+
+    if (requirement) {
+      // 编辑现有需求：保留所有原始字段，但修复日期格式错误
+      const fixedSubmitDate = isValidDateFormat(requirement.submitDate)
+        ? requirement.submitDate
+        : new Date().toISOString().split('T')[0];
+
+      const fixedDeadlineDate = requirement.deadlineDate && isValidDateFormat(requirement.deadlineDate)
+        ? requirement.deadlineDate
+        : undefined;
+
+      return {
+        ...requirement,
+        submitDate: fixedSubmitDate,
+        deadlineDate: fixedDeadlineDate
+      };
+    }
+    // 新建需求：使用默认值
+    return {
+      id: `REQ-${Date.now()}`,
+      name: '',
+      description: '',
+      submitterName: '',
+      productManager: '',
+      developer: '',
+      submitDate: new Date().toISOString().split('T')[0],
+      submitter: '业务',
+      type: '功能开发',
+      businessDomain: '国际零售通用',
+      businessTeam: '',
     businessImpactScore: 5 as BusinessImpactScore,
     affectedMetrics: [] as AffectedMetric[],
     impactScope: {
@@ -121,6 +146,7 @@ const EditRequirementModal = ({
     isRMS: false,
     bv: '明显',
     tc: '随时'
+  };
   });
 
   // 根据业务域更新可选项
@@ -135,12 +161,13 @@ const EditRequirementModal = ({
   );
 
   // v1.3.1：仅获取总部角色（用于基础信息区域的业务团队选择）
-  const hqRolesOnly = useMemo(() =>
-    availableRoleConfigs
+  // 去重处理，避免不同业务域有相同角色导致React key警告
+  const hqRolesOnly = useMemo(() => {
+    const roles = availableRoleConfigs
       .filter(config => config.category.startsWith('hq-'))
-      .flatMap(config => config.roles),
-    [availableRoleConfigs]
-  );
+      .flatMap(config => config.roles);
+    return Array.from(new Set(roles)); // 去重
+  }, [availableRoleConfigs]);
 
   // 当业务域变化时，清理不合法的选项
   useEffect(() => {
@@ -717,7 +744,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">业务域</label>
                   <select
-                    value={form.businessDomain}
+                    value={form.businessDomain || '国际零售通用'}
                     onChange={(e) => setForm({
                       ...form,
                       businessDomain: e.target.value,
@@ -744,6 +771,20 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                     ))}
                   </select>
                 </div>
+
+                {/* 自定义业务域 - 紧贴业务域选择器下方 */}
+                {form.businessDomain === '自定义' && (
+                  <div className="col-span-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">自定义业务域名称</label>
+                    <input
+                      type="text"
+                      value={form.customBusinessDomain || ''}
+                      onChange={(e) => setForm({ ...form, customBusinessDomain: e.target.value })}
+                      placeholder="请输入自定义业务域名称"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -770,20 +811,6 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                   />
                 </div>
               </div>
-
-              {/* 自定义业务域 */}
-              {form.businessDomain === '自定义' && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">自定义业务域名称</label>
-                  <input
-                    type="text"
-                    value={form.customBusinessDomain || ''}
-                    onChange={(e) => setForm({ ...form, customBusinessDomain: e.target.value })}
-                    placeholder="请输入自定义业务域名称"
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
             </div>
 
             {/* 2. 业务影响度评分 */}
