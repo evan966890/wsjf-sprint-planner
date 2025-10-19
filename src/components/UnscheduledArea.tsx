@@ -374,7 +374,7 @@ const UnscheduledArea = ({
       <div
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        className={`flex-1 ${viewMode === 'bubble' ? 'overflow-y-auto' : 'overflow-hidden'} transition-all ${
+        className={`flex-1 overflow-y-auto transition-all ${
           isDragOver ? 'bg-teal-50' : ''
         }`}
       >
@@ -426,19 +426,20 @@ const UnscheduledArea = ({
         ) : (
           <>
             {/* 列表视图 - 可排期区 */}
-            <div className="p-3 h-full flex flex-col">
-              <div className="overflow-auto border border-gray-200 rounded-lg flex-1">
+            <div className="p-3">
+              <div className="border border-gray-200 rounded-lg">
                 <table className="text-xs border-collapse w-full">
-                  <thead className="bg-gray-100 sticky top-0">
+                  <thead className="bg-gray-100 sticky top-0 z-10">
                     <tr>
                       <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">需求名称</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">权重分</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">星级</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">业务价值</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">业务影响</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">复杂度</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">迫切程度</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">强制截止</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">工作量</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">提交人</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">提交方</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">RMS</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">技术评估</th>
                     </tr>
@@ -460,9 +461,10 @@ const UnscheduledArea = ({
                           <span className="font-semibold text-teal-700">{Math.round(req.displayScore || 0)}</span>
                         </td>
                         <td className="border border-gray-300 px-2 py-1.5 text-center">
-                          <span className="text-yellow-500">{req.stars}</span>
+                          <span className="text-yellow-500" style={{ letterSpacing: '0.1em' }}>{'★'.repeat(req.stars || 0)}</span>
                         </td>
-                        <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.bv}</td>
+                        <td className="border border-gray-300 px-2 py-1.5 text-center">{req.businessImpactScore || '-'}</td>
+                        <td className="border border-gray-300 px-2 py-1.5 text-center">{req.complexityScore || '-'}</td>
                         <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.tc}</td>
                         <td className="border border-gray-300 px-2 py-1.5 text-center">{req.hardDeadline ? '有' : '无'}</td>
                         <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">{roundNumber(req.effortDays, 1)}天</td>
@@ -491,16 +493,17 @@ const UnscheduledArea = ({
                 <div className="px-3 pb-3 bg-gray-100">
                   <div className="overflow-auto border border-gray-200 rounded-lg opacity-60" style={{ maxHeight: '300px' }}>
                     <table className="text-xs border-collapse w-full">
-                      <thead className="bg-gray-200">
+                      <thead className="bg-gray-200 sticky top-0 z-10">
                         <tr>
                           <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">需求名称</th>
                           <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">权重分</th>
                           <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">星级</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">业务价值</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">业务影响</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">复杂度</th>
                           <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">迫切程度</th>
                           <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">强制截止</th>
                           <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">工作量</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">提交人</th>
+                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">提交方</th>
                           <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">RMS</th>
                           <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">技术评估</th>
                         </tr>
@@ -514,15 +517,16 @@ const UnscheduledArea = ({
                           >
                             <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.name}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center">
-                              <span className="font-semibold text-teal-700">{Math.round(req.displayScore || 0)}</span>
+                              <span className="text-gray-400">-</span>
                             </td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center">
-                              <span className="text-yellow-500">{req.stars}</span>
+                              <span className="text-gray-400">-</span>
                             </td>
-                            <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.bv}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">{req.businessImpactScore || '-'}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">{req.complexityScore || '-'}</td>
                             <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.tc}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center">{req.hardDeadline ? '有' : '无'}</td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">{roundNumber(req.effortDays, 1)}天</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">未评估</td>
                             <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.submitter || '-'}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center">
                               {req.isRMS ? <span className="text-purple-600 font-semibold">✓</span> : '-'}

@@ -130,6 +130,11 @@ const generateSampleData = (): Requirement[] => {
 
     // 评分1分：最低优先级
     { name: '2C部分退款', owner: 'Jamie 吴静姗', pm: 'Nick Su 苏梦醒', days: 5, importance: 1, status: 'todo', category: '国际部新增' },
+
+    // 未评估工作量的需求（用于测试hover不显示工作量字段）
+    { name: '会员积分系统升级', owner: 'Jamie 吴静姗', pm: 'Nick Su 苏梦醒', days: 0, importance: 7, status: 'todo', category: '国际部新增' },
+    { name: '供应商协同平台', owner: 'Jaye 朴景雯', pm: 'Andy Wei魏有峰', days: 0, importance: 8, status: 'todo', category: '国际部新增' },
+    { name: '智能客服机器人', owner: 'Nick Su 苏梦醒', pm: 'Jamie 吴静姗', days: 0, importance: 6, status: 'todo', category: '国际部新增' },
   ];
 
   const bvMapping: Record<number, string> = {
@@ -184,6 +189,36 @@ const generateSampleData = (): Requirement[] => {
 
     const developer = item.owner;
 
+    // 生成复杂度评分：根据工作量和是否RMS项目智能推断
+    // 注意：复杂度可以在评估工作量之前就预估（基于需求描述和技术方案）
+    let complexityScore: number | undefined;
+    if (item.days > 0) {
+      // 已评估工作量的需求：根据工作量推断复杂度
+      if (isRMS || item.days > 50) {
+        complexityScore = 8 + Math.floor(Math.random() * 3); // 8-10分
+      } else if (item.days > 30) {
+        complexityScore = 6 + Math.floor(Math.random() * 3); // 6-8分
+      } else if (item.days > 15) {
+        complexityScore = 4 + Math.floor(Math.random() * 3); // 4-6分
+      } else if (item.days > 5) {
+        complexityScore = 2 + Math.floor(Math.random() * 3); // 2-4分
+      } else {
+        complexityScore = 1 + Math.floor(Math.random() * 2); // 1-2分
+      }
+    } else {
+      // 未评估工作量的需求：根据重要性预估复杂度
+      if (item.importance >= 8) {
+        complexityScore = 6 + Math.floor(Math.random() * 3); // 6-8分（高重要性通常较复杂）
+      } else if (item.importance >= 5) {
+        complexityScore = 4 + Math.floor(Math.random() * 3); // 4-6分
+      } else {
+        complexityScore = 2 + Math.floor(Math.random() * 3); // 2-4分
+      }
+    }
+
+    // 技术进度：如果工作量为0，表示未评估
+    const techProgress = item.days > 0 ? '已评估工作量' : '未评估';
+
     return {
       id: `ZM-${String(i + 1).padStart(3, '0')}`,
       name: item.name,
@@ -192,11 +227,13 @@ const generateSampleData = (): Requirement[] => {
       developer: developer,
       productProgress: item.status === 'doing' ? '已出PRD' : '已评估',
       effortDays: item.days,
+      businessImpactScore: item.importance as any, // 业务影响度评分（1-10）
+      complexityScore: complexityScore as any, // 添加复杂度评分
       bv: bvMapping[item.importance] || '明显',
       tc: isUrgent ? '一月硬窗口' : (hasDeadline ? '三月窗口' : '随时'),
       hardDeadline: isUrgent,
       deadlineDate: item.deadline,
-      techProgress: '已评估工作量',
+      techProgress: techProgress, // 根据工作量决定技术进度
       type: '功能开发',
       submitDate: submitDate.toISOString().split('T')[0],
       submitter,

@@ -261,24 +261,27 @@ const RequirementCard = ({
               {requirement.name}
             </div>
             <div className={`flex items-center justify-between ${textColor} opacity-75 mt-0.5 ${daySize}`}>
-              <span>{roundNumber(requirement.effortDays, 1)}天</span>
+              <span>{requirement.effortDays > 0 ? `${roundNumber(requirement.effortDays, 1)}天` : '未评估'}</span>
               <span className="ml-1 truncate">{requirement.businessDomain === '自定义' ? requirement.customBusinessDomain || '自定义' : requirement.businessDomain}</span>
             </div>
           </div>
         </div>
 
-        <div className={`${isLight ? 'bg-white/40' : 'bg-black/20'} backdrop-blur-sm p-1.5 rounded-b-lg`}>
-          <div className="flex items-center justify-between pointer-events-none">
-            <div className={`font-bold ${textColor} ${scoreSize}`}>
-              {displayScore}
-            </div>
-            <div className="flex gap-0.5">
-              {[...Array(stars)].map((_, i) => (
-                <Star key={i} size={starSize} className={`fill-current ${textColor}`} />
-              ))}
+        {/* 未评估工作量的需求不显示权重分和星级 */}
+        {requirement.techProgress !== '未评估' && (
+          <div className={`${isLight ? 'bg-white/40' : 'bg-black/20'} backdrop-blur-sm p-1.5 rounded-b-lg`}>
+            <div className="flex items-center justify-between pointer-events-none">
+              <div className={`font-bold ${textColor} ${scoreSize}`}>
+                {displayScore}
+              </div>
+              <div className="flex gap-0.5">
+                {[...Array(stars)].map((_, i) => (
+                  <Star key={i} size={starSize} className={`fill-current ${textColor}`} />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {requirement.hardDeadline && (
           <div
@@ -290,7 +293,11 @@ const RequirementCard = ({
 
         {requirement.isRMS && (
           <div
-            className={`absolute bg-purple-600 text-white rounded px-1.5 py-0.5 font-semibold ${compact ? 'text-[8px] -top-1 -left-1' : 'text-[9px] -top-1.5 -left-1.5'}`}
+            className={`absolute bg-purple-600 text-white rounded px-1.5 py-0.5 font-semibold ${
+              compact
+                ? `text-[8px] ${requirement.hardDeadline ? 'top-3 -right-1' : '-top-1 -right-1'}`
+                : `text-[9px] ${requirement.hardDeadline ? 'top-4 -right-1.5' : '-top-1.5 -right-1.5'}`
+            }`}
           >
             RMS
           </div>
@@ -307,8 +314,13 @@ const RequirementCard = ({
             <div>业务域: <span className="font-semibold">{requirement.businessDomain === '自定义' ? requirement.customBusinessDomain || '自定义' : requirement.businessDomain}</span></div>
             <div>提交方: <span className="font-semibold">{requirement.submitter}</span></div>
             <div>业务影响度: <span className="font-semibold">{requirement.businessImpactScore || 5}分</span></div>
+            {requirement.complexityScore && requirement.complexityScore > 0 && (
+              <div>复杂度: <span className="font-semibold">{requirement.complexityScore}分</span></div>
+            )}
             <div>迫切程度: <span className="font-semibold">{getTCLabel(requirement.tc || '随时')}</span></div>
-            <div>工作量: <span className="font-semibold">{roundNumber(requirement.effortDays, 1)}天</span></div>
+            {requirement.effortDays > 0 && (
+              <div>工作量: <span className="font-semibold">{roundNumber(requirement.effortDays, 1)}天</span></div>
+            )}
             {requirement.isRMS && (
               <div className="text-purple-400 font-semibold">🔧 RMS重构项目</div>
             )}
