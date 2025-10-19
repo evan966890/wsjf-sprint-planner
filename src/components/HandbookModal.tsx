@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { UI_TEXT, STAR_RATING_RULES } from '../constants';
 
 // ============================================================================
 // UI组件 - WSJF评分说明书弹窗 (Handbook Modal Component)
@@ -26,7 +27,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex-shrink-0 p-5 border-b border-gray-200 bg-gray-900 text-white rounded-t-xl flex items-center justify-between">
-          <h3 className="text-xl font-semibold">WSJF-Lite 排期评分说明书</h3>
+          <h3 className="text-xl font-semibold">{UI_TEXT.HANDBOOK_TITLE}</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-2 transition">
             <X size={20} />
           </button>
@@ -52,7 +53,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
 
           <h4 className="font-semibold mt-3 mb-2">迫切程度（TC, Time Criticality）—三选一</h4>
           <ul className="list-disc pl-6 space-y-1">
-            <li><strong>随时可做</strong>：任何时间完成的效果基本等同。</li>
+            <li><strong>{UI_TEXT.TIME_ANYTIME}可做</strong>：任何时间完成的效果基本等同。</li>
             <li><strong>需要在未来三个月内完成</strong>：存在明确业务窗口，越晚效果越差。</li>
             <li><strong>必须在未来一个月内完成</strong>：存在硬性时间限制（法规、合同、重大活动等），过期则价值显著衰减或失效。</li>
           </ul>
@@ -91,10 +92,10 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
 
           <h4 className="font-semibold mt-3 mb-2">星级与分档（用于标签与配色）</h4>
           <ul className="list-disc pl-6 space-y-1">
-            <li>85–100：★★★★★ "强窗口/立即投入"</li>
-            <li>70–84：★★★★ "优先执行"</li>
-            <li>55–69：★★★ "普通计划项"</li>
-            <li>≤54：★★ "择机安排/视容量安排"</li>
+            <li>≥{STAR_RATING_RULES[5].threshold}：{STAR_RATING_RULES[5].label} "{STAR_RATING_RULES[5].description}"</li>
+            <li>{STAR_RATING_RULES[4].threshold}–84：{STAR_RATING_RULES[4].label} "{STAR_RATING_RULES[4].description}"</li>
+            <li>{STAR_RATING_RULES[3].threshold}–69：{STAR_RATING_RULES[3].label} "{STAR_RATING_RULES[3].description}"</li>
+            <li>≤54：{STAR_RATING_RULES[2].label} "{STAR_RATING_RULES[2].description}/视容量安排"</li>
           </ul>
 
           <h3 className="text-lg font-semibold mt-4 mb-2">3. 排序与入池规则</h3>
@@ -170,7 +171,7 @@ const HandbookModal = ({ onClose }: { onClose: () => void }) => {
             onClick={onClose}
             className="px-5 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-medium"
           >
-            关闭
+            {UI_TEXT.BTN_CLOSE}
           </button>
         </div>
       </div>
