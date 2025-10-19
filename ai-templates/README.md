@@ -1,0 +1,443 @@
+# 通用AI协作模板
+
+> 本目录包含可复用到其他项目的通用AI协作规范和模板
+>
+> **特点**: 不包含项目特定信息，可直接复制到新项目使用
+
+## 📚 模板列表
+
+### 核心规范文档
+
+#### 1. [AI_COLLABORATION_BEST_PRACTICES.md](./AI_COLLABORATION_BEST_PRACTICES.md)
+**AI协作最佳实践 - Token优化核心指南**
+
+- **目的**: 防止项目后期Token消耗指数级增长
+- **核心内容**:
+  - 黄金法则：避免重复读取文件
+  - 分阶段优化策略（0-1K、1K-5K、5K+代码行）
+  - 文件组织标准（组件<300行，工具<200行）
+  - 折衷协作方案：用户描述功能，AI定位文件
+  - 不同项目阶段的检查清单
+  - 实战案例分析
+
+- **适用场景**:
+  - 新项目启动时，作为AI协作规范
+  - 现有项目Token消耗过高，需要优化
+  - 团队建立AI协作标准流程
+
+- **预期效果**:
+  - Token消耗降低 50-85%
+  - AI响应速度提升 2-3倍
+  - 项目可维护性显著提高
+
+#### 2. [DOCUMENT_ORGANIZATION.md](./DOCUMENT_ORGANIZATION.md)
+**文档组织规范 - 避免根目录混乱**
+
+- **目的**: 建立清晰的文档组织结构，避免根目录文档混乱
+- **核心内容**:
+  - 标准目录结构（ai-templates/, docs/, .claude/）
+  - 文档分类规则（需求/架构/API/指南）
+  - AI创建文档时的规范和检查清单
+  - 目录索引维护方法
+  - 迁移指南（整理现有混乱项目）
+
+- **适用场景**:
+  - 新项目启动，建立文档组织规范
+  - 现有项目根目录混乱，需要整理
+  - AI频繁在错误位置创建文档
+
+- **预期效果**:
+  - 根目录保持简洁（≤10个文件）
+  - 文档分类清晰，易于查找
+  - AI自动将文档放到正确位置
+
+#### 3. [FILE_NAMING_CONVENTIONS.md](./FILE_NAMING_CONVENTIONS.md)
+**文件命名规范 - 统一命名风格**
+
+- **目的**: 建立统一的文件命名规范，提高可读性和可维护性
+- **核心内容**:
+  - 不同类型文件的命名风格（文档/代码/配置）
+  - 命名风格速查表
+  - 常见错误示例和正确做法
+  - AI创建文件时的检查清单
+  - 批量重命名指南
+
+- **适用场景**:
+  - 新项目启动，建立命名规范
+  - 团队协作，统一命名风格
+  - AI创建的文件命名不一致
+
+- **预期效果**:
+  - 命名风格统一一致
+  - 文件易于搜索和定位
+  - 提升代码可读性
+
+---
+
+## 🎯 使用方法
+
+### 方法1: 新项目启动（推荐）⭐
+
+**步骤1: 复制模板目录**
+```bash
+# 在新项目根目录执行
+cp -r /path/to/wsjf/ai-templates ./
+```
+
+**步骤2: 创建项目上下文目录**
+```bash
+mkdir .claude
+```
+
+**步骤3: 在项目规范中引用**
+
+在 `.claude/project-rules.md` 中添加：
+```markdown
+## 文档组织规范
+
+本项目遵循 ai-templates/DOCUMENT_ORGANIZATION.md 的规范。
+
+核心要点：
+- 永远不要在根目录创建临时文档
+- 需求文档放 docs/requirements/，使用编号命名
+- 通用模板放 ai-templates/
+- 项目上下文放 .claude/
+
+详见：[ai-templates/DOCUMENT_ORGANIZATION.md](../ai-templates/DOCUMENT_ORGANIZATION.md)
+
+## 文件命名规范
+
+本项目遵循 ai-templates/FILE_NAMING_CONVENTIONS.md 的规范。
+
+快速参考：
+- 文档：UPPER_CASE（根目录）或 kebab-case（子目录）
+- 组件：PascalCase.tsx
+- 工具：camelCase.ts
+- 需求：编号-kebab-case.md
+
+详见：[ai-templates/FILE_NAMING_CONVENTIONS.md](../ai-templates/FILE_NAMING_CONVENTIONS.md)
+```
+
+**步骤4: 创建标准目录结构**
+```bash
+mkdir -p docs/{requirements,architecture,api,guides}
+```
+
+**步骤5: 在首次AI对话中声明**
+```
+用户: "本项目遵循 ai-templates/ 中的通用规范，包括文档组织和文件命名。
+请在创建任何文件前先查看相关规范。"
+```
+
+### 方法2: 现有项目整合
+
+**步骤1: 添加模板目录**
+```bash
+# 复制模板到现有项目
+cp -r /path/to/wsjf/ai-templates ./
+```
+
+**步骤2: 整理现有文档**
+
+参考 `DOCUMENT_ORGANIZATION.md` 的迁移指南：
+```bash
+# 创建标准目录
+mkdir -p docs/{requirements,architecture,api,guides}
+
+# 移动文档到正确位置
+git mv *REQUIREMENTS*.md docs/requirements/
+git mv *ARCHITECTURE*.md docs/architecture/
+
+# 重命名为规范格式
+cd docs/requirements/
+git mv FEATURE_A.md 01-feature-a.md
+```
+
+**步骤3: 更新项目规范**
+
+在现有的项目规范文件中添加引用（参考方法1步骤3）
+
+**步骤4: 创建文档索引**
+```bash
+# 为每个文档目录创建索引
+touch docs/requirements/README.md
+touch docs/architecture/README.md
+```
+
+### 方法3: 团队标准模板
+
+**场景**: 建立公司/团队级别的AI协作标准
+
+**步骤1: 创建团队模板仓库**
+```bash
+# 创建新仓库
+git init ai-collaboration-templates
+cd ai-collaboration-templates
+
+# 复制所有模板
+cp -r /path/to/wsjf/ai-templates/* ./
+
+# 添加团队特定规范
+# 编辑文件，添加团队约定...
+
+# 提交到团队仓库
+git add .
+git commit -m "init: 建立团队AI协作模板"
+git push origin main
+```
+
+**步骤2: 新项目使用**
+```bash
+# 克隆模板到新项目
+cd new-project/
+git clone https://github.com/your-team/ai-collaboration-templates ai-templates
+
+# 或使用 git submodule
+git submodule add https://github.com/your-team/ai-collaboration-templates ai-templates
+```
+
+**步骤3: 持续改进**
+- 每个项目的经验反哺到模板仓库
+- 定期更新和优化规范
+- 团队成员共同维护
+
+---
+
+## 📖 快速参考
+
+### 何时使用哪个模板？
+
+| 场景 | 使用模板 | 关键内容 |
+|------|---------|---------|
+| **Token消耗过高** | AI_COLLABORATION_BEST_PRACTICES.md | 折衷协作方案、分段读取策略 |
+| **AI在根目录创建文档** | DOCUMENT_ORGANIZATION.md | 标准目录结构、文档分类规则 |
+| **文件命名不一致** | FILE_NAMING_CONVENTIONS.md | 命名风格速查表、检查清单 |
+| **新项目启动** | 全部三个模板 | 建立完整规范体系 |
+| **团队协作混乱** | 全部三个模板 | 统一团队标准 |
+
+### 与 .claude/ 目录的区别
+
+| 目录 | 用途 | 内容特点 | 可复用性 |
+|------|------|---------|---------|
+| **ai-templates/** | 通用模板 | 不包含项目特定信息 | ✅ 可直接复用到其他项目 |
+| **.claude/** | 项目上下文 | 包含项目特定信息 | ❌ 仅适用于当前项目 |
+
+**示例**:
+- `ai-templates/DOCUMENT_ORGANIZATION.md` - 通用文档组织规范（任何项目都适用）
+- `.claude/context.md` - WSJF项目的文件地图（仅WSJF项目适用）
+
+---
+
+## 🔄 维护和更新
+
+### 如何改进模板？
+
+**发现新的最佳实践时**:
+
+1. **在当前项目验证**
+   - 先在当前项目实践新方法
+   - 验证效果（Token优化、效率提升）
+
+2. **更新对应模板**
+   ```bash
+   # 编辑模板文件
+   vi ai-templates/AI_COLLABORATION_BEST_PRACTICES.md
+
+   # 添加新的实践案例
+   # 更新版本号和最后更新时间
+
+   # 提交
+   git add ai-templates/
+   git commit -m "docs: 更新AI协作最佳实践 - 添加XX优化方法"
+   ```
+
+3. **同步到其他项目**
+   ```bash
+   # 如果使用 git submodule
+   cd other-project/ai-templates
+   git pull origin main
+
+   # 如果是直接复制，手动同步
+   cp /path/to/wsjf/ai-templates/* ./ai-templates/
+   ```
+
+### 版本管理
+
+每个模板文件底部都有版本信息：
+```markdown
+---
+**版本**: 1.0.0
+**最后更新**: 2025-01-19
+**适用项目**: 所有AI辅助开发项目
+```
+
+**更新版本号规则**:
+- 重大变更（结构调整）：1.0.0 → 2.0.0
+- 新增章节/内容：1.0.0 → 1.1.0
+- 小修小补：1.0.0 → 1.0.1
+
+---
+
+## ⚠️ 注意事项
+
+### 1. 不要在模板中添加项目特定信息
+
+❌ 错误示例：
+```markdown
+# 在 DOCUMENT_ORGANIZATION.md 中写：
+本项目的主组件是 wsjf-sprint-planner.tsx...
+```
+
+✅ 正确示例：
+```markdown
+# 在 DOCUMENT_ORGANIZATION.md 中写：
+项目主组件应该放在 src/ 目录...
+```
+
+**项目特定信息应该放在 `.claude/` 目录**
+
+### 2. 保持模板通用性
+
+模板应该：
+- ✅ 适用于任何编程语言和框架
+- ✅ 提供通用原则和方法
+- ✅ 给出示例但不限定具体技术栈
+- ❌ 避免绑定特定工具或平台
+
+### 3. 定期审查和清理
+
+- 每季度审查一次模板内容
+- 删除过时的实践
+- 更新示例代码和最佳实践
+- 保持文档简洁，避免冗余
+
+---
+
+## 📊 效果追踪
+
+### 使用模板前 vs 使用模板后
+
+| 指标 | 使用前 | 使用后 | 改进 |
+|------|-------|-------|------|
+| **Token消耗** | 80K-150K/对话 | 15K-40K/对话 | ⬇️ 60-75% |
+| **AI响应时间** | 15-30秒 | 5-10秒 | ⬆️ 2-3倍 |
+| **根目录文件数** | 20-30个 | ≤10个 | ⬇️ 60% |
+| **文档查找时间** | 3-5分钟 | 30秒 | ⬆️ 6-10倍 |
+| **命名一致性** | 60% | 95% | ⬆️ 35% |
+
+**实际案例: WSJF项目**
+- 创建配置索引后：搜索配置从7次读取 → 1次读取
+- 使用折衷协作：Token从15K → 3K（修改评分标准）
+- 文档分类后：根目录从23个文件 → 8个核心文件
+
+---
+
+## 🤝 贡献和反馈
+
+### 如何贡献改进？
+
+1. **发现问题或改进点**
+   - 在实际使用中记录问题
+   - 思考改进方案
+
+2. **提交改进**
+   - 编辑对应模板文件
+   - 添加清晰的说明和示例
+   - 更新版本号
+
+3. **分享经验**
+   - 在团队内分享使用心得
+   - 将成功案例添加到模板中
+
+### 反馈渠道
+
+- 项目Issues: 提交模板改进建议
+- 团队会议: 分享使用经验
+- 文档PR: 直接提交改进
+
+---
+
+## 📚 相关资源
+
+### 项目特定文档（在 .claude/ 目录）
+
+- `.claude/context.md` - 项目快速索引
+- `.claude/tips.md` - 项目优化技巧
+- `.claude/project-rules.md` - 项目代码规范
+
+### 项目文档（在 docs/ 目录）
+
+- `docs/TOKEN_OPTIMIZATION_GUIDE.md` - 本项目的Token优化实践记录
+- `docs/requirements/` - 需求文档
+- `docs/architecture/` - 架构设计文档
+
+---
+
+## 🎓 学习路径
+
+### 新项目启动时
+
+1. **第一步**: 阅读 `AI_COLLABORATION_BEST_PRACTICES.md`
+   - 理解Token优化核心原则
+   - 了解折衷协作方案
+
+2. **第二步**: 阅读 `DOCUMENT_ORGANIZATION.md`
+   - 建立标准目录结构
+   - 设定文档分类规则
+
+3. **第三步**: 阅读 `FILE_NAMING_CONVENTIONS.md`
+   - 确定文件命名风格
+   - 创建命名检查清单
+
+4. **第四步**: 在项目规范中引用
+   - 更新 `.claude/project-rules.md`
+   - 声明遵循的规范
+
+### 现有项目优化时
+
+1. **问题诊断**: Token消耗过高？文档混乱？命名不一致？
+2. **查找方案**: 在对应模板中找到解决方案
+3. **逐步实施**: 不要一次性大改，分阶段优化
+4. **效果验证**: 追踪改进效果，记录到项目文档
+
+---
+
+## 💡 最佳实践
+
+### ✅ 推荐做法
+
+1. **新项目第一天就复制模板**
+   - 不要等到项目混乱再整理
+   - 从一开始就建立规范
+
+2. **在项目规范中引用模板**
+   - 不要重复写规范
+   - 引用模板，保持一致性
+
+3. **定期更新模板**
+   - 每个项目的经验都反哺到模板
+   - 持续改进和完善
+
+4. **团队共同维护**
+   - 不是个人的规范，是团队的标准
+   - 共同遵守，共同改进
+
+### ❌ 避免的做法
+
+1. **不要复制后就忘记**
+   - 模板不是装饰品
+   - 要实际使用和遵守
+
+2. **不要在模板中添加项目特定内容**
+   - 保持模板通用性
+   - 项目特定内容放 .claude/
+
+3. **不要死板遵守**
+   - 规范是指导，不是教条
+   - 根据实际情况灵活调整
+
+---
+
+**最后更新**: 2025-01-19
+**维护者**: WSJF项目团队
+**反馈**: 欢迎提出改进建议

@@ -158,7 +158,34 @@ const CARD_VARIANTS = {
 
 ## 📁 文件组织规范
 
-### 目录结构
+### 项目整体目录结构
+
+```
+WSJF/
+├── .claude/                 # Claude Code 项目上下文（项目特定）
+│   ├── context.md           # 项目快速索引
+│   ├── tips.md              # 项目优化技巧
+│   └── project-rules.md     # 项目代码规范（本文件）
+│
+├── ai-templates/            # 通用AI协作模板（可复用）⭐
+│   ├── README.md
+│   ├── AI_COLLABORATION_BEST_PRACTICES.md
+│   ├── DOCUMENT_ORGANIZATION.md
+│   └── FILE_NAMING_CONVENTIONS.md
+│
+├── docs/                    # 项目文档（项目特定）
+│   ├── requirements/        # 需求文档
+│   ├── architecture/        # 架构设计文档
+│   ├── api/                 # API文档
+│   └── TOKEN_OPTIMIZATION_GUIDE.md
+│
+├── src/                     # 源代码（见下方详细结构）
+├── README.md                # 项目主文档
+├── CLAUDE.md                # Claude Code 项目说明
+└── ...其他根目录文件
+```
+
+### 源代码目录结构
 
 ```
 src/
@@ -181,15 +208,56 @@ src/
 └── wsjf-sprint-planner.tsx  # 主组件
 ```
 
+### 文档组织规则 ⭐
+
+**核心原则：永远不要在项目根目录创建临时文档或需求文档**
+
+本项目遵循 `ai-templates/DOCUMENT_ORGANIZATION.md` 中的通用文档组织规范。
+
+**快速参考：**
+
+| 文档类型 | 存放位置 | 命名格式 | 示例 |
+|---------|---------|---------|------|
+| 需求文档 | `docs/requirements/` | `{编号}-{功能名}.md` | `08-import-ai-smart-fill.md` |
+| 架构文档 | `docs/architecture/` | `{主题}.md` | `component-design.md` |
+| API文档 | `docs/api/` | `{模块}.md` | `endpoints.md` |
+| 通用模板 | `ai-templates/` | `UPPER_CASE.md` | `AI_COLLABORATION.md` |
+| 项目特定优化 | `docs/` | 描述性名称 | `TOKEN_OPTIMIZATION_GUIDE.md` |
+
+**AI创建文档时必须检查：**
+1. 确定文档类型（需求/架构/API/通用模板）
+2. 选择正确的目录
+3. 使用规范的命名格式
+4. 更新对应目录的 README.md 索引
+
+详细规范见：[ai-templates/DOCUMENT_ORGANIZATION.md](../ai-templates/DOCUMENT_ORGANIZATION.md)
+
 ### 文件命名规范
+
+**本项目遵循 `ai-templates/FILE_NAMING_CONVENTIONS.md` 中的通用文件命名规范。**
+
+**代码文件快速参考：**
 
 | 类型 | 命名规则 | 示例 |
 |------|---------|------|
 | 组件文件 | PascalCase.tsx | `EditRequirementModal.tsx` |
+| Hook文件 | use + camelCase.ts | `useStore.ts` |
 | 配置文件 | camelCase.ts | `aiPrompts.ts` |
 | 常量文件 | kebab-case.ts | `ui-text.ts` |
 | 工具文件 | kebab-case.ts | `date-utils.ts` |
 | 类型文件 | index.ts | `types/index.ts` |
+| 测试文件 | {源文件}.test.{ext} | `logger.test.ts` |
+
+**文档文件快速参考：**
+
+| 类型 | 命名规则 | 示例 |
+|------|---------|------|
+| 根目录文档 | UPPER_CASE | `README.md`, `CHANGELOG.md` |
+| 通用模板 | UPPER_CASE | `AI_COLLABORATION.md` |
+| 需求文档 | 编号-kebab-case | `01-feature-name.md` |
+| 其他文档 | kebab-case | `user-guide.md` |
+
+详细规范见：[ai-templates/FILE_NAMING_CONVENTIONS.md](../ai-templates/FILE_NAMING_CONVENTIONS.md)
 
 ### 导入顺序
 
