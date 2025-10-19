@@ -450,83 +450,89 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4 mb-2">
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 text-base mb-1">{req.name}</h3>
-                            {req.description && (
-                              <p className="text-sm text-gray-600 line-clamp-2 mb-2">{req.description}</p>
-                            )}
-
-                            {/* 基本信息（第一行） */}
-                            <div className="flex flex-wrap gap-3 text-xs text-gray-600 mb-2">
-                              <span className="flex items-center gap-1">
-                                <span className="font-medium">提交人:</span> {req.submitterName || '未填写'}
-                              </span>
-                              <span>•</span>
-                              <span className="flex items-center gap-1">
-                                <span className="font-medium">部门:</span> {req.submitter}
-                              </span>
-                              <span>•</span>
-                              <span className="flex items-center gap-1">
-                                <span className="font-medium">业务域:</span> {req.businessDomain === '自定义' ? req.customBusinessDomain : req.businessDomain}
-                              </span>
-                              <span>•</span>
-                              <span className="flex items-center gap-1">
-                                <span className="font-medium">工作量:</span> {req.effortDays}天
-                              </span>
-                              {req.businessImpactScore && (
-                                <>
-                                  <span>•</span>
-                                  <span className="font-semibold text-blue-600">
-                                    用户评分: {req.businessImpactScore}分
+                            {/* 第一行：标题 + 权重分 + 星级 + 业务域 */}
+                            <div className="flex items-center gap-3 mb-1.5">
+                              <h3 className="font-bold text-gray-900 text-base">{req.name}</h3>
+                              {req.displayScore && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-semibold text-blue-600">
+                                    权重 {req.displayScore}
                                   </span>
-                                </>
+                                  <span className="text-yellow-500 text-sm">
+                                    {'★'.repeat(req.stars || 0)}{'☆'.repeat(5 - (req.stars || 0))}
+                                  </span>
+                                </div>
                               )}
+                              <span className="text-sm bg-indigo-100 text-indigo-700 px-3 py-1 rounded font-semibold">
+                                {req.businessDomain === '自定义' ? req.customBusinessDomain : req.businessDomain}
+                              </span>
                             </div>
 
-                            {/* 关键信息（第二行） */}
-                            <div className="flex flex-wrap gap-3 text-xs text-gray-600">
-                              {req.businessTeam && (
-                                <>
-                                  <span className="flex items-center gap-1">
-                                    <span className="font-medium">业务团队:</span> {req.businessTeam}
-                                  </span>
-                                  <span>•</span>
-                                </>
-                              )}
-                              <span className="flex items-center gap-1">
-                                <span className="font-medium">时间窗口:</span> {req.timeCriticality || req.tc || '随时'}
-                              </span>
-                              {req.hardDeadline && (
-                                <>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-1 text-red-600 font-medium">
-                                    <span className="font-semibold">强制DDL:</span> {req.deadlineDate}
-                                  </span>
-                                </>
-                              )}
-                              {req.impactScope && req.impactScope.storeTypes.length > 0 && (
-                                <>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-1">
-                                    <span className="font-medium">门店类型:</span> {req.impactScope.storeTypes.join(', ')}
-                                  </span>
-                                </>
-                              )}
-                              {req.impactScope && req.impactScope.regions.length > 0 && (
-                                <>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-1">
-                                    <span className="font-medium">影响地区:</span> {req.impactScope.regions.join(', ')}
-                                  </span>
-                                </>
-                              )}
-                              {req.impactScope && req.impactScope.storeCountRange && (
-                                <>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-1">
-                                    <span className="font-medium">门店数:</span> {req.impactScope.storeCountRange}
-                                  </span>
-                                </>
-                              )}
+                            {/* 第二行：小字信息 */}
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600 mb-2">
+                              <span>提交人: {req.submitterName || '未填写'}</span>
+                              <span>•</span>
+                              <span>部门: {req.submitter}</span>
+                              <span>•</span>
+                              <span>产品经理: {req.productManager || '未分配'}</span>
+                              <span>•</span>
+                              <span>研发负责人: {req.developer || '未分配'}</span>
+                              <span>•</span>
+                              <span>技术进展: {req.techProgress}</span>
+                              <span>•</span>
+                              <span>提交日期: {req.submitDate}</span>
+                            </div>
+
+                            {/* 第三行：带底色的评分和关键信息版块 */}
+                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg px-4 py-2.5 border border-blue-200">
+                              <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs">
+                                {/* 业务影响度评分 */}
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-700">业务影响度:</span>
+                                  <span className="text-lg font-bold text-blue-600">{req.businessImpactScore || '-'}</span>
+                                  <span className="text-gray-500">/ 10分</span>
+                                </div>
+
+                                {/* 复杂度评分 */}
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-700">技术复杂度:</span>
+                                  <span className="text-lg font-bold text-orange-600">{req.complexityScore || '-'}</span>
+                                  <span className="text-gray-500">/ 10分</span>
+                                </div>
+
+                                {/* 工作量 */}
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-700">工作量:</span>
+                                  <span className="text-lg font-bold text-gray-900">{req.effortDays || '-'}</span>
+                                  <span className="text-gray-500">天</span>
+                                </div>
+
+                                {/* 时间窗口 */}
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-700">时间窗口:</span>
+                                  <span className="font-semibold text-gray-900">{req.timeCriticality || req.tc || '随时'}</span>
+                                </div>
+
+                                {/* 强制DDL */}
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-700">强制DDL:</span>
+                                  {req.hardDeadline ? (
+                                    <span className="font-semibold text-red-600">{req.deadlineDate || '是'}</span>
+                                  ) : (
+                                    <span className="text-gray-500">无</span>
+                                  )}
+                                </div>
+
+                                {/* RMS重构 */}
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-700">RMS重构:</span>
+                                  {req.isRMS ? (
+                                    <span className="bg-indigo-600 text-white px-2 py-0.5 rounded font-medium">是</span>
+                                  ) : (
+                                    <span className="text-gray-500">否</span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
 
@@ -628,46 +634,113 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
                           )}
                         </button>
 
-                        {/* 详细信息（展开时显示更细节的内容） */}
+                        {/* 详细信息（展开时显示需求相关性和影响指标） */}
                         {isExpanded && (
-                          <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm space-y-3">
-                            {/* 项目信息 */}
+                          <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm space-y-4">
+                            {/* 需求相关性 */}
                             <div>
-                              <div className="font-medium mb-2 text-gray-700">项目信息</div>
-                              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
-                                <div><span className="font-medium">提交日期:</span> {req.submitDate}</div>
-                                <div><span className="font-medium">需求类型:</span> {req.type}</div>
-                                <div><span className="font-medium">产品经理:</span> {req.productManager || '未分配'}</div>
-                                <div><span className="font-medium">研发负责人:</span> {req.developer || '未分配'}</div>
-                                <div><span className="font-medium">产品进展:</span> {req.productProgress}</div>
-                                <div><span className="font-medium">技术进展:</span> {req.techProgress}</div>
-                                <div><span className="font-medium">RMS重构:</span> {req.isRMS ? '是' : '否'}</div>
+                              <div className="font-medium mb-3 text-gray-700 flex items-center gap-2">
+                                <span>🎯 需求相关性</span>
+                              </div>
+                              <div className="bg-blue-50 rounded-lg px-4 py-3 border border-blue-200">
+                                <div className="grid grid-cols-2 gap-4 text-xs">
+                                  {/* 业务团队 */}
+                                  <div>
+                                    <div className="font-medium text-gray-700 mb-1.5">业务团队</div>
+                                    <div className="text-gray-900">
+                                      {req.businessTeam || <span className="text-gray-400">未填写</span>}
+                                    </div>
+                                  </div>
+
+                                  {/* 门店类型 */}
+                                  <div>
+                                    <div className="font-medium text-gray-700 mb-1.5">门店类型</div>
+                                    {req.impactScope && req.impactScope.storeTypes.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1">
+                                        {req.impactScope.storeTypes.map((type, idx) => (
+                                          <span key={idx} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                            {type}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-400">未填写</span>
+                                    )}
+                                  </div>
+
+                                  {/* 门店数量 */}
+                                  <div>
+                                    <div className="font-medium text-gray-700 mb-1.5">门店数量</div>
+                                    <div className="text-blue-900 font-semibold">
+                                      {req.impactScope?.storeCountRange || <span className="text-gray-400 font-normal">未填写</span>}
+                                    </div>
+                                  </div>
+
+                                  {/* 影响地区 */}
+                                  <div>
+                                    <div className="font-medium text-gray-700 mb-1.5">影响地区</div>
+                                    {req.impactScope && req.impactScope.regions.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1">
+                                        {req.impactScope.regions.map((region, idx) => (
+                                          <span key={idx} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                            {region}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-400">未填写</span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
 
-                            {/* 涉及角色 */}
-                            {req.impactScope?.keyRoles && req.impactScope.keyRoles.length > 0 && (
-                              <div className="pt-2 border-t border-gray-200">
-                                <div className="font-medium mb-1 text-gray-700">涉及角色</div>
-                                <div className="text-xs text-gray-600 ml-2">
-                                  {req.impactScope.keyRoles.map(r => r.roleName).join(', ')}
-                                </div>
+                            {/* 影响的指标 */}
+                            <div>
+                              <div className="font-medium mb-3 text-gray-700 flex items-center gap-2">
+                                <span>📊 影响的指标</span>
+                                {req.affectedMetrics && req.affectedMetrics.length > 0 && (
+                                  <span className="text-xs font-normal text-gray-500">（{req.affectedMetrics.length}个指标）</span>
+                                )}
                               </div>
-                            )}
-
-                            {/* 用户填写的影响指标 */}
-                            {req.affectedMetrics && req.affectedMetrics.length > 0 && (
-                              <div className="pt-2 border-t border-gray-200">
-                                <div className="font-medium mb-1 text-gray-700">用户填写的影响指标</div>
-                                <div className="space-y-1">
-                                  {req.affectedMetrics.map((metric, idx) => (
-                                    <div key={idx} className="text-xs text-gray-600 ml-2">
-                                      • {metric.displayName}: {metric.estimatedImpact}
+                              {req.affectedMetrics && req.affectedMetrics.length > 0 ? (
+                                <div className="space-y-3">
+                                  {/* 核心OKR指标 */}
+                                  {req.affectedMetrics.filter(m => m.category === 'okr').length > 0 && (
+                                    <div>
+                                      <div className="text-xs font-semibold text-purple-800 mb-2">核心OKR指标</div>
+                                      <div className="grid grid-cols-2 gap-3">
+                                        {req.affectedMetrics.filter(m => m.category === 'okr').map((metric, idx) => (
+                                          <div key={idx} className="text-xs bg-purple-50 rounded px-3 py-2 border border-purple-200">
+                                            <div className="font-medium text-gray-900">{metric.displayName}</div>
+                                            <div className="text-purple-700 mt-0.5 font-semibold">预估影响: {metric.estimatedImpact}</div>
+                                          </div>
+                                        ))}
+                                      </div>
                                     </div>
-                                  ))}
+                                  )}
+
+                                  {/* 过程指标 */}
+                                  {req.affectedMetrics.filter(m => m.category === 'process').length > 0 && (
+                                    <div>
+                                      <div className="text-xs font-semibold text-blue-800 mb-2">过程指标</div>
+                                      <div className="grid grid-cols-2 gap-3">
+                                        {req.affectedMetrics.filter(m => m.category === 'process').map((metric, idx) => (
+                                          <div key={idx} className="text-xs bg-blue-50 rounded px-3 py-2 border border-blue-200">
+                                            <div className="font-medium text-gray-900">{metric.displayName}</div>
+                                            <div className="text-blue-700 mt-0.5 font-semibold">预估影响: {metric.estimatedImpact}</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            )}
+                              ) : (
+                                <div className="text-xs text-gray-400 bg-white rounded px-4 py-3 border border-gray-200">
+                                  未填写影响的指标
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
