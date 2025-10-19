@@ -14,7 +14,7 @@
 
 import React, { useState } from 'react';
 import { X, CheckSquare, Square, Sparkles, AlertCircle, Check, ChevronDown, ChevronUp } from 'lucide-react';
-import type { Requirement, BusinessImpactScore, AIModelType } from '../types';
+import type { Requirement, BusinessImpactScore, AIModelType, AIRequestBody } from '../types';
 import { OPENAI_API_KEY, DEEPSEEK_API_KEY } from '../config/api';
 
 interface Props {
@@ -164,7 +164,7 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
 
     // 根据模型构建API请求
     let apiUrl: string;
-    let requestBody: any;
+    let requestBody: AIRequestBody;
 
     if (selectedAIModel === 'openai') {
       apiUrl = 'https://api.openai.com/v1/chat/completions';

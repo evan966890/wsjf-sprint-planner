@@ -1,14 +1,16 @@
 // 数据存储工具函数
 
+import type { Requirement, SprintPool } from './types';
+
 export interface User {
   name: string;
   email: string;
 }
 
 export interface StorageData {
-  requirements: any[];
-  sprintPools: any[];
-  unscheduled: any[];
+  requirements: Requirement[];
+  sprintPools: SprintPool[];
+  unscheduled: Requirement[];
 }
 
 const STORAGE_PREFIX = 'wsjf_';

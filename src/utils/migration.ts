@@ -10,6 +10,7 @@
  */
 
 import type { Requirement, BusinessImpactScore } from '../types';
+import { logger } from './logger';
 
 /**
  * 业务价值映射表
@@ -89,12 +90,12 @@ export const migrateAllRequirements = (requirements: Requirement[]): Requirement
     return [];
   }
 
-  console.log('[数据迁移] 开始迁移需求数据...');
+  logger.log('[数据迁移] 开始迁移需求数据...');
 
   const migrated = requirements.map(migrateRequirement);
 
   const migratedCount = migrated.filter(r => r.businessImpactScore).length;
-  console.log(`[数据迁移] 成功迁移 ${migratedCount} 条需求`);
+  logger.log(`[数据迁移] 成功迁移 ${migratedCount} 条需求`);
 
   return migrated;
 };

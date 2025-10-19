@@ -10,7 +10,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { X, Save, Info, Link as LinkIcon, Users, Store, Target, Sparkles, Loader, AlertCircle, CheckCircle, Settings } from 'lucide-react';
-import type { Requirement, BusinessImpactScore, ComplexityScore, AffectedMetric, Document, AIModelType, AIAnalysisResult } from '../types';
+import type { Requirement, BusinessImpactScore, ComplexityScore, AffectedMetric, Document, AIModelType, AIAnalysisResult, AIRequestBody } from '../types';
 import { useStore } from '../store/useStore';
 import BusinessImpactScoreSelector from './BusinessImpactScoreSelector';
 import MetricSelector from './MetricSelector';
@@ -372,7 +372,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
       const prompt = formatAIPrompt(documentUrl, fullContent, form.name || '未填写');
 
       let apiUrl: string;
-      let requestBody: any;
+      let requestBody: AIRequestBody;
 
       if (selectedAIModel === 'openai') {
         apiUrl = 'https://api.openai.com/v1/chat/completions';

@@ -12,6 +12,13 @@ import { calculateScores } from '../utils/scoring';
 import { SCORING_STANDARDS } from '../config/scoringStandards';
 import { OKR_METRICS, PROCESS_METRICS } from '../config/metrics';
 import { migrateAllRequirements, needsMigration } from '../utils/migration';
+import { logger } from '../utils/logger';
+
+/**
+ * Excel导入数据行类型
+ * 表示从Excel导入的原始数据
+ */
+export type ImportDataRow = Record<string, string | number | boolean | null>;
 
 /**
  * Store State Interface
@@ -37,7 +44,7 @@ interface StoreState {
   showHandbook: boolean;
   showExportMenu: boolean;
   showImportModal: boolean;
-  importData: any[];
+  importData: ImportDataRow[];
   importMapping: Record<string, string>;
   isAIMappingLoading: boolean;
   clearBeforeImport: boolean;
@@ -98,7 +105,7 @@ interface StoreState {
   setShowHandbook: (show: boolean) => void;
   setShowExportMenu: (show: boolean) => void;
   setShowImportModal: (show: boolean) => void;
-  setImportData: (data: any[]) => void;
+  setImportData: (data: ImportDataRow[]) => void;
   setImportMapping: (mapping: Record<string, string>) => void;
   setIsAIMappingLoading: (loading: boolean) => void;
   setClearBeforeImport: (clear: boolean) => void;
@@ -433,30 +440,30 @@ export const useStore = create<StoreState>()(
         }),
         // 数据迁移逻辑
         migrate: (persistedState: any, version: number) => {
-          console.log(`[Store] 检测到存储版本: ${version}，当前版本: 3`);
+          logger.log(`[Store] 检测到存储版本: ${version}，当前版本: 3`);
 
           const state = persistedState;
 
           if (version < 2) {
             // 从版本1升级到版本2：迁移需求数据
-            console.log('[Store] 开始执行v1→v2数据迁移...');
+            logger.log('[Store] 开始执行v1→v2数据迁移...');
 
             // 检查是否需要迁移requirements
             if (state.requirements && needsMigration(state.requirements)) {
-              console.log('[Store] 迁移requirements...');
+              logger.log('[Store] 迁移requirements...');
               state.requirements = migrateAllRequirements(state.requirements);
             }
 
             // 迁移unscheduled
             if (state.unscheduled && needsMigration(state.unscheduled)) {
-              console.log('[Store] 迁移unscheduled...');
+              logger.log('[Store] 迁移unscheduled...');
               state.unscheduled = migrateAllRequirements(state.unscheduled);
             }
 
             // 迁移sprintPools中的requirements
             if (state.sprintPools && Array.isArray(state.sprintPools)) {
-              console.log('[Store] 迁移sprintPools中的requirements...');
-              state.sprintPools = state.sprintPools.map((pool: any) => {
+              logger.log('[Store] 迁移sprintPools中的requirements...');
+              state.sprintPools = state.sprintPools.map((pool: SprintPool) => {
                 if (pool.requirements && needsMigration(pool.requirements)) {
                   return {
                     ...pool,
@@ -467,7 +474,7 @@ export const useStore = create<StoreState>()(
               });
             }
 
-            console.log('[Store] v1→v2数据迁移完成！');
+            logger.log('[Store] v1→v2数据迁移完成！');
           }
 
           // v1.3.2：移除旧版本持久化的配置数据

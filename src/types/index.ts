@@ -221,3 +221,23 @@ export interface AIAnalysisResult {
   // 分析的置信度（0-1）
   confidence?: number;
 }
+
+/**
+ * AI API消息类型
+ */
+export interface AIMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+/**
+ * AI API请求体类型
+ * 兼容OpenAI和DeepSeek API格式
+ */
+export interface AIRequestBody {
+  model: string;
+  messages: AIMessage[];
+  temperature?: number;
+  max_tokens?: number;
+  [key: string]: unknown;
+}

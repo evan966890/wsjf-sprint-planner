@@ -14,6 +14,15 @@ import * as XLSX from 'xlsx';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 /**
+ * PDF文本项类型
+ * 兼容pdfjs-dist的TextItem类型
+ */
+interface PDFTextItem {
+  str?: string;
+  [key: string]: unknown;
+}
+
+/**
  * 解析PDF文件为文本
  */
 export async function parsePDF(file: File): Promise<string> {
@@ -28,7 +37,7 @@ export async function parsePDF(file: File): Promise<string> {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
       const pageText = textContent.items
-        .map((item: any) => item.str)
+        .map((item: unknown) => (item as PDFTextItem).str || '')
         .join(' ');
 
       fullText += `\n--- 第${pageNum}页 ---\n${pageText}\n`;
@@ -59,7 +68,7 @@ export async function parseExcel(file: File): Promise<string> {
       fullText += `\n=== Sheet: ${sheetName} ===\n`;
 
       // 将每行数据转换为文本
-      sheetData.forEach((row: any, index) => {
+      sheetData.forEach((row: unknown, index) => {
         if (Array.isArray(row) && row.length > 0) {
           const rowText = row.filter(cell => cell !== null && cell !== undefined).join(' | ');
           if (rowText.trim()) {

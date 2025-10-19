@@ -24,7 +24,13 @@
       "WebFetch(domain:reactbits.dev)",
       "Bash(npx tsc:*)",
       "Bash(git push:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(npm run dev)",
+      "Bash(cat .claude/project-rules.md)",
+      "Bash(npm run deploy:vercel)",
+      "Bash(bash scripts/pre-deploy-check.sh)",
+      "Bash(cat .gitignore)",
+      "Bash(rm src/components/*.backup*)"
     ],
     "deny": [],
     "ask": []
