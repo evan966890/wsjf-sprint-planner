@@ -22,6 +22,17 @@
 
 **永远不要在现代Web应用中使用原生的 alert、confirm、prompt**
 
+**包括但不限于**：
+```typescript
+// ❌ 所有这些都禁止使用
+alert('...')
+confirm('...')
+prompt('...')
+window.alert('...')
+window.confirm('...')
+window.prompt('...')
+```
+
 **原因**：
 1. **破坏用户体验** - 强制阻塞页面，无法进行其他操作
 2. **样式无法定制** - 无法匹配应用设计风格
@@ -728,11 +739,156 @@ toast.error('保存失败：权重分必须在1-100之间');
 
 ---
 
+## 🔍 代码检测和修复
+
+### 检测现有代码中的违规使用
+
+**使用 grep 搜索**：
+```bash
+# 搜索所有 alert/confirm/prompt 使用
+grep -rn "window\.confirm\|window\.alert\|window\.prompt\|^alert(\|^confirm(\|^prompt(" src/ --include="*.tsx" --include="*.ts"
+```
+
+**常见违规模式**：
+```typescript
+// ❌ 这些都需要修复
+const confirmed = window.confirm('确定删除吗？');
+if (window.confirm('确定继续？')) { ... }
+window.alert('操作成功');
+const name = window.prompt('请输入名称');
+```
+
+### 修复指南
+
+#### 修复 window.confirm
+
+**修复前**：
+```typescript
+// ❌ EditRequirementModal.tsx:278
+const confirmed = window.confirm(
+  '检测到未保存的更改，是否保存？\n\n' +
+  '点击"确定"保存更改\n' +
+  '点击"取消"放弃更改'
+);
+if (confirmed) {
+  handleSave();
+}
+```
+
+**修复后**：
+```typescript
+// ✅ 使用自定义 Modal
+const [showConfirm, setShowConfirm] = useState(false);
+
+// 触发确认
+const handleClose = () => {
+  if (hasUnsavedChanges) {
+    setShowConfirm(true);
+  } else {
+    onClose();
+  }
+};
+
+// 渲染 Modal
+{showConfirm && (
+  <ConfirmModal
+    title="未保存的更改"
+    message="检测到未保存的更改，是否保存？"
+    confirmText="保存"
+    cancelText="放弃"
+    onConfirm={() => {
+      setShowConfirm(false);
+      handleSave();
+    }}
+    onCancel={() => {
+      setShowConfirm(false);
+      onClose();
+    }}
+  />
+)}
+```
+
+#### 修复 window.alert
+
+**修复前**：
+```typescript
+// ❌ 使用 alert
+window.alert('保存成功！');
+```
+
+**修复后**：
+```typescript
+// ✅ 使用 Toast
+import toast from 'react-hot-toast';
+
+toast.success('保存成功！');
+```
+
+#### 修复 window.prompt
+
+**修复前**：
+```typescript
+// ❌ 使用 prompt
+const newName = window.prompt('请输入新名称');
+if (newName) {
+  rename(newName);
+}
+```
+
+**修复后**：
+```typescript
+// ✅ 使用 Input Modal
+const [showInput, setShowInput] = useState(false);
+
+{showInput && (
+  <InputModal
+    title="重命名"
+    placeholder="请输入新名称"
+    onConfirm={(value) => {
+      setShowInput(false);
+      rename(value);
+    }}
+    onCancel={() => setShowInput(false)}
+  />
+)}
+```
+
+### ESLint 规则（可选）
+
+**禁止使用 alert/confirm/prompt**：
+
+```javascript
+// .eslintrc.js
+module.exports = {
+  rules: {
+    'no-alert': 'error', // 禁止使用 alert/confirm/prompt
+    'no-restricted-globals': [
+      'error',
+      {
+        name: 'alert',
+        message: '请使用 Toast 替代 alert',
+      },
+      {
+        name: 'confirm',
+        message: '请使用 Modal 对话框替代 confirm',
+      },
+      {
+        name: 'prompt',
+        message: '请使用 Input Modal 替代 prompt',
+      },
+    ],
+  },
+};
+```
+
+---
+
 ## 🎓 检查清单
 
 ### 新功能开发时
 
-- [ ] 是否使用了alert/confirm/prompt？（禁止）
+- [ ] 是否使用了 alert/confirm/prompt？（禁止）
+- [ ] 是否使用了 window.alert/confirm/prompt？（禁止）
 - [ ] 操作成功/失败是否有Toast提示？
 - [ ] 重要操作是否有确认Modal？
 - [ ] 表单是否有内联验证提示？
@@ -742,10 +898,19 @@ toast.error('保存失败：权重分必须在1-100之间');
 
 ### 代码审查时
 
-- [ ] 检查是否有alert/confirm/prompt
+- [ ] 检查是否有 alert/confirm/prompt
+- [ ] 检查是否有 window.alert/confirm/prompt
 - [ ] 检查提示方式是否合适
 - [ ] 检查提示信息是否有帮助
 - [ ] 检查是否有过多的提示
+
+### 代码迁移/重构时
+
+- [ ] 搜索所有 window.confirm 使用
+- [ ] 搜索所有 window.alert 使用
+- [ ] 搜索所有 window.prompt 使用
+- [ ] 逐一替换为现代化方案
+- [ ] 测试替换后的用户体验
 
 ---
 

@@ -592,15 +592,27 @@ font-medium text-gray-700    // 标签/字段名
 **永远不要在本项目中使用原生的 alert、confirm、prompt**
 
 ```typescript
-// ❌ 严禁：使用 alert
+// ❌ 严禁：所有这些都不允许使用
 alert('保存成功');
 confirm('确定删除？');
 prompt('请输入名称');
+window.alert('保存成功');
+window.confirm('确定删除？');
+window.prompt('请输入名称');
 
 // ✅ 必须：使用 Toast 或 Modal
 import toast from 'react-hot-toast';
 toast.success('保存成功');
 ```
+
+**⚠️ 当前项目中需要修复的违规代码**：
+```
+src/components/EditRequirementModal.tsx:278  - window.confirm
+src/components/EditRequirementModal.tsx:617 - window.confirm
+src/components/EditRequirementModal.tsx:628 - window.confirm
+```
+
+**修复优先级**：⭐⭐⭐⭐（影响用户体验）
 
 **原因**：
 - 破坏用户体验（强制阻塞页面）
