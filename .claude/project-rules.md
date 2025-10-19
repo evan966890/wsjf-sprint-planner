@@ -834,26 +834,142 @@ echo "✅ 所有检查通过，可以发布！"
 
 ---
 
-## 🔧 配置文件管理
+## 🔐 敏感信息安全管理 ⭐
 
-### 敏感信息处理
+**本项目遵循 `ai-templates/SENSITIVE_DATA_SECURITY.md` 中的通用安全规范。**
 
-```typescript
-// ✅ 推荐：配置文件中使用常量，不提交密钥
-// src/config/api-keys.ts
-export const GEMINI_API_KEY = ''; // 请在此填入您的 API Key
+### ⚠️ 核心安全原则
 
-// .gitignore 中忽略包含密钥的文件
-# API Keys
-src/config/api-keys.local.ts
+**黄金法则：永远不要在代码中提交明文密钥**
+
+- ❌ **严禁**：在 `src/config/api.ts` 等配置文件中写入明文API Key
+- ❌ **严禁**：将包含密钥的配置文件提交到 Git
+- ❌ **严禁**：在代码注释中写入真实密钥（即使注释掉）
+- ✅ **必须**：使用环境变量管理所有API密钥
+- ✅ **必须**：将敏感配置文件加入 `.gitignore`
+
+### 正确的密钥配置方式
+
+#### 1. 使用环境变量（必须）⭐⭐⭐
+
+```bash
+# 1. 创建 .env 文件（不提交到 Git）
+VITE_OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxx
+VITE_DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxx
 ```
 
-### 可配置项
+```typescript
+// 2. 代码中读取环境变量
+// src/config/api.ts
+
+/**
+ * API 配置
+ *
+ * ⚠️ 安全警告：不要在此文件中直接写入密钥！
+ *
+ * 配置方式：
+ * 1. 复制 .env.example 为 .env
+ * 2. 在 .env 中填入真实的 API Key
+ * 3. 密钥会自动从环境变量加载
+ *
+ * 详见：ai-templates/SENSITIVE_DATA_SECURITY.md
+ */
+
+export const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
+export const DEEPSEEK_API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY || '';
+
+// 开发环境下检查配置
+if (import.meta.env.DEV && !OPENAI_API_KEY) {
+  console.warn('⚠️ OPENAI_API_KEY 未配置，请检查 .env 文件');
+}
+```
+
+```bash
+# 3. 确保 .gitignore 包含敏感文件
+# .gitignore
+.env
+.env.local
+.env.*.local
+src/config/api.local.ts
+```
+
+#### 2. .env.example 模板（必须提供）
+
+```bash
+# .env.example（提交到 Git）
+# 复制此文件为 .env 并填入真实密钥
+
+# OpenAI API Key
+# 获取：https://platform.openai.com/api-keys
+VITE_OPENAI_API_KEY=
+
+# DeepSeek API Key
+# 获取：https://platform.deepseek.com
+VITE_DEEPSEEK_API_KEY=
+```
+
+### AI协作时的安全规范 🤖
+
+#### AI不应该做的事 ❌
+
+1. **不应该建议在代码中写入明文密钥**
+   ```
+   ❌ 错误: "请在 src/config/api.ts 中填入你的 API Key：
+            export const OPENAI_API_KEY = 'sk-xxx';"
+   ```
+
+2. **不应该要求用户提供真实密钥**
+   ```
+   ❌ 错误: "请提供你的 OpenAI API Key，我来帮你配置"
+   ```
+
+#### AI应该做的事 ✅
+
+1. **应该引导使用环境变量**
+   ```
+   ✅ 正确: "我来帮你配置环境变量方式：
+            1. 创建 .env 文件
+            2. 添加 VITE_OPENAI_API_KEY=你的密钥
+            3. 确保 .env 在 .gitignore 中"
+   ```
+
+2. **应该检查 .gitignore**
+   ```
+   ✅ 正确: "我检查了 .gitignore，已经包含 .env，
+            你可以安全地在 .env 中配置密钥"
+   ```
+
+3. **应该提供安全指引**
+   ```
+   ✅ 正确: "配置 API Key 时请注意：
+            - 使用环境变量而非硬编码
+            - 确保敏感文件在 .gitignore 中
+            - 不要在 Git 中提交真实密钥"
+   ```
+
+### 本项目配置文件
 
 - ✅ AI 提示词 → `src/config/aiPrompts.ts`
 - ✅ 评分标准 → `src/config/complexityStandards.ts`
 - ✅ UI 文案 → `src/constants/ui-text.ts`
-- ✅ API Keys → `src/config/api-keys.ts`（不提交到 Git）
+- ✅ API Keys → 使用环境变量（`.env` 文件，不提交到 Git）
+
+### 检查清单
+
+**创建配置文件时**：
+- [ ] 是否使用环境变量读取密钥？
+- [ ] 是否创建了 .env.example 模板？
+- [ ] 是否在 .gitignore 中排除了敏感文件？
+- [ ] 是否添加了配置说明文档？
+- [ ] 代码注释中是否有密钥安全提示？
+
+**发布前检查**：
+- [ ] 确认没有硬编码密钥
+- [ ] 确认 .env 文件未被提交
+- [ ] 确认 .gitignore 配置正确
+- [ ] 确认 README 中有配置说明
+
+详细规范见：[ai-templates/SENSITIVE_DATA_SECURITY.md](../ai-templates/SENSITIVE_DATA_SECURITY.md)
 
 ---
 
