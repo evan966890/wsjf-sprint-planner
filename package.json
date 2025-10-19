@@ -1,7 +1,7 @@
 {
   "name": "wsjf-sprint-planner",
-  "version": "1.2.0",
-  "description": "WSJF Sprint Planner - 基于WSJF方法的加权优先级排期可视化工具 (v1.2.0: 10分制业务影响度评分系统)",
+  "version": "1.2.1",
+  "description": "WSJF Sprint Planner - 基于WSJF方法的加权优先级排期可视化工具 (v1.2.1: AI批量评估界面优化)",
   "type": "module",
   "scripts": {
     "dev": "vite",

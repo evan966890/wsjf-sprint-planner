@@ -450,25 +450,29 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4 mb-2">
                           <div className="flex-1">
-                            {/* 第一行：标题 + 权重分 + 星级 + 业务域 */}
-                            <div className="flex items-center gap-3 mb-1.5">
+                            {/* 第一行：标题 + 业务域标签 */}
+                            <div className="flex items-center gap-2 mb-1.5">
                               <h3 className="font-bold text-gray-900 text-base">{req.name}</h3>
-                              {req.displayScore && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-semibold text-blue-600">
-                                    权重 {req.displayScore}
-                                  </span>
-                                  <span className="text-yellow-500 text-sm">
-                                    {'★'.repeat(req.stars || 0)}{'☆'.repeat(5 - (req.stars || 0))}
-                                  </span>
-                                </div>
-                              )}
-                              <span className="text-sm bg-indigo-100 text-indigo-700 px-3 py-1 rounded font-semibold">
-                                {req.businessDomain === '自定义' ? req.customBusinessDomain : req.businessDomain}
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                {req.businessDomain === '自定义'
+                                  ? (req.customBusinessDomain || '自定义业务域')
+                                  : (req.businessDomain || '国际零售通用')}
                               </span>
                             </div>
 
-                            {/* 第二行：小字信息 */}
+                            {/* 第二行：权重分 + 星级 */}
+                            {req.displayScore && (
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="text-sm font-semibold text-blue-600">
+                                  权重分 {req.displayScore}
+                                </span>
+                                <span className="text-yellow-500 text-base">
+                                  {'★'.repeat(req.stars || 0)}{'☆'.repeat(5 - (req.stars || 0))}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* 第三行：小字信息 */}
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600 mb-2">
                               <span>提交人: {req.submitterName || '未填写'}</span>
                               <span>•</span>
@@ -483,7 +487,7 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
                               <span>提交日期: {req.submitDate}</span>
                             </div>
 
-                            {/* 第三行：带底色的评分和关键信息版块 */}
+                            {/* 第四行：带底色的评分和关键信息版块 */}
                             <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg px-4 py-2.5 border border-blue-200">
                               <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs">
                                 {/* 业务影响度评分 */}
