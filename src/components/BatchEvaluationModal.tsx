@@ -35,6 +35,13 @@ interface EvaluationResult {
     businessDomain?: string;
     timeCriticality?: string;
     hardDeadline?: boolean;
+    storeTypes?: string[];
+    regions?: string[];
+    storeCountRange?: string;
+    affectedMetrics?: Array<{
+      metricName: string;
+      estimatedImpact: string;
+    }>;
   };
 }
 
@@ -101,7 +108,7 @@ const BatchEvaluationModal: React.FC<Props> = ({
    */
   const evaluateRequirement = async (req: Requirement): Promise<EvaluationResult> => {
     // 构建评估提示词
-    const prompt = `你是小米国际零售业务的需求评估专家。请基于WSJF-Lite方法论，为以下需求评估业务影响度分数（1-10分）。
+    const prompt = `你是小米国际零售业务的需求评估专家。请基于WSJF-Lite方法论，为以下需求评估业务影响度分数（1-10分），并分析影响范围和关键指标。
 
 需求信息：
 - 需求名称：${req.name}
@@ -115,12 +122,12 @@ const BatchEvaluationModal: React.FC<Props> = ({
 - 时间临界性：${req.timeCriticality || req.tc || '随时'}
 - 强制DDL：${req.hardDeadline ? '是' : '否'}${req.deadlineDate ? ` (${req.deadlineDate})` : ''}
 - RMS重构项目：${req.isRMS ? '是' : '否'}
-${req.impactScope ? `- 影响范围：
+${req.impactScope ? `- 用户已填写影响范围：
   * 门店类型：${req.impactScope.storeTypes?.join(', ') || '未指定'}
   * 区域：${req.impactScope.regions?.join(', ') || '未指定'}
   * 门店数量：${req.impactScope.storeCountRange || '未指定'}
   * 涉及角色：${req.impactScope.keyRoles?.map(r => r.roleName).join(', ') || '未指定'}` : ''}
-${req.affectedMetrics && req.affectedMetrics.length > 0 ? `- 影响的指标：
+${req.affectedMetrics && req.affectedMetrics.length > 0 ? `- 用户已填写影响指标：
 ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).join('\n')}` : ''}
 
 评分标准（1-10分）：
@@ -135,13 +142,25 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
 2分 - 微小优化：微小改进，影响极少数场景
 1分 - 可选优化：可有可无的优化
 
-请返回JSON格式：{"score": 数字1-10, "reasoning": "评分理由（50字以内）"}
+请返回JSON格式：
+{
+  "score": 数字1-10,
+  "reasoning": "评分理由（50字以内）",
+  "storeTypes": ["门店类型1", "门店类型2"],
+  "regions": ["地区1", "地区2"],
+  "storeCountRange": "门店数量范围（如：50-100家）",
+  "affectedMetrics": [
+    {"metricName": "指标名称", "estimatedImpact": "预估影响"}
+  ]
+}
 
-注意：
-1. 综合考虑业务后果和影响范围
-2. 影响范围越大（全球>多国>单国，全渠道>多渠道>单渠道），分数越高
-3. 业务后果越严重（系统故障>流程阻塞>指标下降>体验不佳），分数越高
-4. 只返回JSON，不要其他解释`;
+说明：
+1. storeTypes: 从以下选择适用的门店类型：新零售-直营店、新零售-授权店、传统零售-授权店、电商、其他。如果用户已填写，可参考但需基于需求描述独立判断。
+2. regions: 从以下选择适用的地区：东南亚、南亚、中东非洲、拉美、欧洲、全球。如果用户已填写，可参考但需基于需求描述独立判断。
+3. storeCountRange: 预估影响的门店数量范围，如"10-20家"、"50-100家"、"100+家"等
+4. affectedMetrics: 列出最多3个关键影响指标，从OKR指标（GMV、门店数、NPS等）或过程指标（转化率、效率等）中选择
+5. 综合考虑业务后果和影响范围，影响范围越大、业务后果越严重，分数越高
+6. 只返回JSON，不要其他解释`;
 
     // 根据模型构建API请求
     let apiUrl: string;
@@ -154,7 +173,7 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
         messages: [
           {
             role: 'system',
-            content: '你是小米国际零售业务的专业需求评估专家，擅长基于WSJF方法评估需求优先级。'
+            content: '你是小米国际零售业务的专业需求评估专家，擅长基于WSJF方法评估需求优先级和影响范围分析。'
           },
           {
             role: 'user',
@@ -162,7 +181,7 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
           }
         ],
         temperature: 0.3,
-        max_tokens: 500
+        max_tokens: 800
       };
     } else {
       apiUrl = 'https://api.deepseek.com/v1/chat/completions';
@@ -171,7 +190,7 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
         messages: [
           {
             role: 'system',
-            content: '你是小米国际零售业务的专业需求评估专家，擅长基于WSJF方法评估需求优先级。'
+            content: '你是小米国际零售业务的专业需求评估专家，擅长基于WSJF方法评估需求优先级和影响范围分析。'
           },
           {
             role: 'user',
@@ -179,7 +198,7 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
           }
         ],
         temperature: 0.3,
-        max_tokens: 500
+        max_tokens: 800
       };
     }
 
@@ -214,7 +233,13 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
       reqId: req.id,
       aiScore: score,
       userScore: req.businessImpactScore,
-      reasoning: aiResult.reasoning || 'AI评估完成'
+      reasoning: aiResult.reasoning || 'AI评估完成',
+      aiSuggestions: {
+        storeTypes: aiResult.storeTypes || [],
+        regions: aiResult.regions || [],
+        storeCountRange: aiResult.storeCountRange || '',
+        affectedMetrics: aiResult.affectedMetrics || []
+      }
     };
   };
 
@@ -429,7 +454,9 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
                             {req.description && (
                               <p className="text-sm text-gray-600 line-clamp-2 mb-2">{req.description}</p>
                             )}
-                            <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+
+                            {/* 基本信息（第一行） */}
+                            <div className="flex flex-wrap gap-3 text-xs text-gray-600 mb-2">
                               <span className="flex items-center gap-1">
                                 <span className="font-medium">提交人:</span> {req.submitterName || '未填写'}
                               </span>
@@ -454,6 +481,53 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
                                 </>
                               )}
                             </div>
+
+                            {/* 关键信息（第二行） */}
+                            <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+                              {req.businessTeam && (
+                                <>
+                                  <span className="flex items-center gap-1">
+                                    <span className="font-medium">业务团队:</span> {req.businessTeam}
+                                  </span>
+                                  <span>•</span>
+                                </>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <span className="font-medium">时间窗口:</span> {req.timeCriticality || req.tc || '随时'}
+                              </span>
+                              {req.hardDeadline && (
+                                <>
+                                  <span>•</span>
+                                  <span className="flex items-center gap-1 text-red-600 font-medium">
+                                    <span className="font-semibold">强制DDL:</span> {req.deadlineDate}
+                                  </span>
+                                </>
+                              )}
+                              {req.impactScope && req.impactScope.storeTypes.length > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span className="flex items-center gap-1">
+                                    <span className="font-medium">门店类型:</span> {req.impactScope.storeTypes.join(', ')}
+                                  </span>
+                                </>
+                              )}
+                              {req.impactScope && req.impactScope.regions.length > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span className="flex items-center gap-1">
+                                    <span className="font-medium">影响地区:</span> {req.impactScope.regions.join(', ')}
+                                  </span>
+                                </>
+                              )}
+                              {req.impactScope && req.impactScope.storeCountRange && (
+                                <>
+                                  <span>•</span>
+                                  <span className="flex items-center gap-1">
+                                    <span className="font-medium">门店数:</span> {req.impactScope.storeCountRange}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
 
                           {/* AI评分结果 */}
@@ -471,12 +545,12 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
                                   )}
                                 </button>
                               )}
-                              <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 min-w-[200px]">
+                              <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 min-w-[280px] max-w-[400px]">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Check size={14} className="text-green-600" />
                                   <span className="text-xs font-semibold text-green-700">AI评分结果</span>
                                 </div>
-                                <div className="flex items-baseline gap-2">
+                                <div className="flex items-baseline gap-2 mb-2">
                                   <span className="text-2xl font-bold text-green-600">{result.aiScore}</span>
                                   <span className="text-xs text-gray-600">分</span>
                                   {hasDifference && (
@@ -485,7 +559,46 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-gray-600 mt-1">{result.reasoning}</p>
+
+                                {/* AI评估理由 */}
+                                <p className="text-xs text-gray-600 mb-2 leading-relaxed">{result.reasoning}</p>
+
+                                {/* AI建议的影响范围 */}
+                                {result.aiSuggestions && (
+                                  <div className="space-y-1 mb-2 pt-2 border-t border-green-300">
+                                    {result.aiSuggestions.storeTypes && result.aiSuggestions.storeTypes.length > 0 && (
+                                      <div className="text-xs text-gray-700">
+                                        <span className="font-medium">AI建议门店类型：</span>
+                                        <span className="text-gray-600">{result.aiSuggestions.storeTypes.join(', ')}</span>
+                                      </div>
+                                    )}
+                                    {result.aiSuggestions.regions && result.aiSuggestions.regions.length > 0 && (
+                                      <div className="text-xs text-gray-700">
+                                        <span className="font-medium">AI建议影响地区：</span>
+                                        <span className="text-gray-600">{result.aiSuggestions.regions.join(', ')}</span>
+                                      </div>
+                                    )}
+                                    {result.aiSuggestions.storeCountRange && (
+                                      <div className="text-xs text-gray-700">
+                                        <span className="font-medium">AI预估门店数：</span>
+                                        <span className="text-gray-600">{result.aiSuggestions.storeCountRange}</span>
+                                      </div>
+                                    )}
+                                    {result.aiSuggestions.affectedMetrics && result.aiSuggestions.affectedMetrics.length > 0 && (
+                                      <div className="text-xs text-gray-700 mt-1">
+                                        <div className="font-medium mb-1">AI预估影响指标：</div>
+                                        <div className="ml-2 space-y-0.5">
+                                          {result.aiSuggestions.affectedMetrics.map((metric, idx) => (
+                                            <div key={idx} className="text-gray-600">
+                                              • {metric.metricName}: {metric.estimatedImpact}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
                                 <button
                                   onClick={() => handleApplySingleScore(req.id)}
                                   className="mt-2 w-full px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition"
@@ -515,48 +628,44 @@ ${req.affectedMetrics.map(m => `  * ${m.displayName}: ${m.estimatedImpact}`).joi
                           )}
                         </button>
 
-                        {/* 详细信息（展开时显示） */}
+                        {/* 详细信息（展开时显示更细节的内容） */}
                         {isExpanded && (
-                          <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm space-y-2">
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                              <div><span className="font-medium">提交日期:</span> {req.submitDate}</div>
-                              <div><span className="font-medium">业务团队:</span> {req.businessTeam || '未填写'}</div>
-                              <div><span className="font-medium">时间窗口:</span> {req.timeCriticality || req.tc || '随时'}</div>
-                              <div><span className="font-medium">强制DDL:</span> {req.hardDeadline ? `是 (${req.deadlineDate})` : '否'}</div>
-                              <div><span className="font-medium">RMS重构:</span> {req.isRMS ? '是' : '否'}</div>
-                              <div><span className="font-medium">需求类型:</span> {req.type}</div>
-                              <div><span className="font-medium">产品经理:</span> {req.productManager || '未分配'}</div>
-                              <div><span className="font-medium">研发负责人:</span> {req.developer || '未分配'}</div>
-                              <div><span className="font-medium">产品进展:</span> {req.productProgress}</div>
-                              <div><span className="font-medium">技术进展:</span> {req.techProgress}</div>
+                          <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm space-y-3">
+                            {/* 项目信息 */}
+                            <div>
+                              <div className="font-medium mb-2 text-gray-700">项目信息</div>
+                              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                                <div><span className="font-medium">提交日期:</span> {req.submitDate}</div>
+                                <div><span className="font-medium">需求类型:</span> {req.type}</div>
+                                <div><span className="font-medium">产品经理:</span> {req.productManager || '未分配'}</div>
+                                <div><span className="font-medium">研发负责人:</span> {req.developer || '未分配'}</div>
+                                <div><span className="font-medium">产品进展:</span> {req.productProgress}</div>
+                                <div><span className="font-medium">技术进展:</span> {req.techProgress}</div>
+                                <div><span className="font-medium">RMS重构:</span> {req.isRMS ? '是' : '否'}</div>
+                              </div>
                             </div>
 
-                            {req.impactScope && (req.impactScope.storeTypes.length > 0 || req.impactScope.regions.length > 0) && (
-                              <div className="pt-2 border-t border-gray-300">
-                                <div className="font-medium mb-1">需求相关性:</div>
-                                {req.impactScope.storeTypes.length > 0 && (
-                                  <div className="text-xs text-gray-600 ml-2">• 门店类型: {req.impactScope.storeTypes.join(', ')}</div>
-                                )}
-                                {req.impactScope.regions.length > 0 && (
-                                  <div className="text-xs text-gray-600 ml-2">• 影响地区: {req.impactScope.regions.join(', ')}</div>
-                                )}
-                                {req.impactScope.storeCountRange && (
-                                  <div className="text-xs text-gray-600 ml-2">• 门店数量: {req.impactScope.storeCountRange}</div>
-                                )}
-                                {req.impactScope.keyRoles && req.impactScope.keyRoles.length > 0 && (
-                                  <div className="text-xs text-gray-600 ml-2">• 涉及角色: {req.impactScope.keyRoles.map(r => r.roleName).join(', ')}</div>
-                                )}
+                            {/* 涉及角色 */}
+                            {req.impactScope?.keyRoles && req.impactScope.keyRoles.length > 0 && (
+                              <div className="pt-2 border-t border-gray-200">
+                                <div className="font-medium mb-1 text-gray-700">涉及角色</div>
+                                <div className="text-xs text-gray-600 ml-2">
+                                  {req.impactScope.keyRoles.map(r => r.roleName).join(', ')}
+                                </div>
                               </div>
                             )}
 
+                            {/* 用户填写的影响指标 */}
                             {req.affectedMetrics && req.affectedMetrics.length > 0 && (
-                              <div className="pt-2 border-t border-gray-300">
-                                <div className="font-medium mb-1">影响的指标:</div>
-                                {req.affectedMetrics.map((metric, idx) => (
-                                  <div key={idx} className="text-xs text-gray-600 ml-2">
-                                    • {metric.displayName}: {metric.estimatedImpact}
-                                  </div>
-                                ))}
+                              <div className="pt-2 border-t border-gray-200">
+                                <div className="font-medium mb-1 text-gray-700">用户填写的影响指标</div>
+                                <div className="space-y-1">
+                                  {req.affectedMetrics.map((metric, idx) => (
+                                    <div key={idx} className="text-xs text-gray-600 ml-2">
+                                      • {metric.displayName}: {metric.estimatedImpact}
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
