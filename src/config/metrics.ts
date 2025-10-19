@@ -1,10 +1,10 @@
 /**
  * WSJF Sprint Planner - 指标定义配置
  *
- * v1.2.0: 定义核心OKR指标和过程指标
+ * v1.3.2: 优化指标分类和命名
  *
  * 指标分类：
- * - 核心OKR指标：16个（收入相关、规模相关、效率相关、合作相关、体验相关）
+ * - 核心OKR指标：20个（收入相关、规模相关、效率相关、合作相关、消费者体验、小米人满意度）
  * - 过程指标：20个（运营效率类、数据质量类、协作效率类、合规与风险类）
  */
 
@@ -106,63 +106,106 @@ export const EFFICIENCY_METRICS: MetricDefinition[] = [
 export const PARTNERSHIP_METRICS: MetricDefinition[] = [
   {
     key: 'dealer_satisfaction_nps',
-    defaultName: '经销商满意度/NPS',
+    defaultName: '授权商满意度/NPS',
     category: '合作相关',
     type: 'okr',
-    description: '经销商净推荐值，反映合作伙伴满意度'
+    description: '授权商净推荐值，反映合作伙伴满意度'
   },
   {
     key: 'dealer_retention',
-    defaultName: '经销商留存率',
+    defaultName: '授权商留存率',
     category: '合作相关',
     type: 'okr',
-    description: '经销商持续合作比例'
+    description: '授权商持续合作比例'
   },
   {
     key: 'stores_per_dealer',
-    defaultName: '单个经销商平均开店数',
+    defaultName: '单个授权商平均开店数',
     category: '合作相关',
     type: 'okr',
-    description: '经销商积极性和成功率指标'
+    description: '授权商积极性和成功率指标'
   }
 ];
 
 /**
- * 体验相关指标（3个）
+ * 消费者体验相关指标（3个）
  */
-export const EXPERIENCE_METRICS: MetricDefinition[] = [
+export const CONSUMER_EXPERIENCE_METRICS: MetricDefinition[] = [
   {
     key: 'customer_nps',
     defaultName: '消费者NPS/满意度',
-    category: '体验相关',
+    category: '消费者体验',
     type: 'okr',
     description: '消费者净推荐值，反映用户满意度'
   },
   {
     key: 'complaint_rate',
     defaultName: '客诉率/客诉处理时长',
-    category: '体验相关',
+    category: '消费者体验',
     type: 'okr',
     description: '客户投诉频率和处理效率'
   },
   {
     key: 'repurchase_rate',
     defaultName: '复购率',
-    category: '体验相关',
+    category: '消费者体验',
     type: 'okr',
     description: '客户复购比例，反映客户忠诚度'
   }
 ];
 
 /**
- * 所有核心OKR指标（16个）
+ * 小米人满意度指标（4个）
+ */
+export const FRONTLINE_SATISFACTION_METRICS: MetricDefinition[] = [
+  {
+    key: 'store_manager_satisfaction',
+    defaultName: '店长满意度',
+    category: '小米人满意度',
+    type: 'okr',
+    description: '门店店长对系统和工作的满意度'
+  },
+  {
+    key: 'store_staff_satisfaction',
+    defaultName: '店员满意度',
+    category: '小米人满意度',
+    type: 'okr',
+    description: '门店店员对系统和工作的满意度'
+  },
+  {
+    key: 'supervisor_satisfaction',
+    defaultName: '督导满意度',
+    category: '小米人满意度',
+    type: 'okr',
+    description: '区域督导对系统和工作的满意度'
+  },
+  {
+    key: 'hq_staff_satisfaction',
+    defaultName: '总部小米人满意度',
+    category: '小米人满意度',
+    type: 'okr',
+    description: '总部员工对系统和工作的满意度'
+  }
+];
+
+/**
+ * 所有体验相关指标（7个）
+ */
+export const EXPERIENCE_METRICS: MetricDefinition[] = [
+  ...CONSUMER_EXPERIENCE_METRICS,
+  ...FRONTLINE_SATISFACTION_METRICS
+];
+
+/**
+ * 所有核心OKR指标（20个）
  */
 export const OKR_METRICS: MetricDefinition[] = [
   ...REVENUE_METRICS,
   ...SCALE_METRICS,
   ...EFFICIENCY_METRICS,
   ...PARTNERSHIP_METRICS,
-  ...EXPERIENCE_METRICS
+  ...CONSUMER_EXPERIENCE_METRICS,
+  ...FRONTLINE_SATISFACTION_METRICS
 ];
 
 // ========== 过程指标（20个）==========
@@ -276,10 +319,10 @@ export const DATA_QUALITY_METRICS: MetricDefinition[] = [
 export const COLLABORATION_EFFICIENCY_METRICS: MetricDefinition[] = [
   {
     key: 'dealer_response_time',
-    defaultName: '经销商响应时长',
+    defaultName: '授权商响应时长',
     category: '协作效率类',
     type: 'process',
-    description: '经销商响应请求所需的时间'
+    description: '授权商响应请求所需的时间'
   },
   {
     key: 'cross_system_steps',
@@ -361,7 +404,7 @@ export const getMetricsByCategory = (category: string): MetricDefinition[] => {
  * 获取所有OKR指标分类
  */
 export const getOKRCategories = (): string[] => {
-  return ['收入相关', '规模相关', '效率相关', '合作相关', '体验相关'];
+  return ['收入相关', '规模相关', '效率相关', '合作相关', '消费者体验', '小米人满意度'];
 };
 
 /**

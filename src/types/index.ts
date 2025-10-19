@@ -149,11 +149,19 @@ export interface Requirement {
   complexityScore?: ComplexityScore;  // v1.3.0新增：技术复杂度评分（1-10分制）
   type: string;                  // 需求类型
   productManager: string;        // 产品经理
-  developer: string;             // 研发负责人
+  developer: string;             // 研发负责人（保留用于向后兼容）
   productProgress: string;       // 产品进度状态
   techProgress: string;          // 技术进度状态
   dependencies?: string[];       // 依赖的其他需求ID列表（可选）
   isRMS: boolean;                // 是否为RMS重构项目
+
+  // === v1.3.2新增：产研填写扩展字段 ===
+  project?: string;              // 项目名称
+  productArea?: string;          // 产品领域（枚举值）
+  backendDeveloper?: string;     // 后端研发
+  frontendDeveloper?: string;    // 前端研发
+  tester?: string;               // 测试
+  rdNotes?: string;              // 产研备注/进展说明
 
   // === 旧字段（保留用于数据迁移和向后兼容）===
   bv?: string;                   // 旧：Business Value 业务影响度(旧字段)（局部/明显/撬动核心/战略平台）

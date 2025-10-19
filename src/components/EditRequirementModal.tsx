@@ -786,7 +786,22 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
               )}
             </div>
 
-            {/* 2. AI智能打分（默认折叠） */}
+            {/* 2. 业务影响度评分 */}
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Target size={18} className="text-blue-600" />
+                业务影响度评分
+                <span className="text-xs text-gray-500">(v1.2.0)</span>
+              </h4>
+              <BusinessImpactScoreSelector
+                value={form.businessImpactScore || 5}
+                onChange={(score) => setForm({ ...form, businessImpactScore: score })}
+                scoringStandards={scoringStandards}
+                onViewHandbook={() => setIsHandbookOpen(true)}
+              />
+            </div>
+
+            {/* 3. AI智能打分 */}
             <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg">
               {/* 折叠标题栏 */}
               <div
@@ -795,7 +810,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
               >
                 <div className="flex items-center gap-2">
                   <Sparkles size={18} className="text-purple-600" />
-                  <h4 className="font-semibold text-gray-900">AI智能打分及填写需求明细</h4>
+                  <h4 className="font-semibold text-gray-900">AI智能打分</h4>
                   <span className="text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">可选</span>
                 </div>
                 <span className="text-sm text-gray-500">
@@ -1244,21 +1259,6 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
               )}
             </div>
 
-            {/* 3. 业务影响度评分 */}
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Target size={18} className="text-blue-600" />
-                业务影响度评分
-                <span className="text-xs text-gray-500">(v1.2.0)</span>
-              </h4>
-              <BusinessImpactScoreSelector
-                value={form.businessImpactScore || 5}
-                onChange={(score) => setForm({ ...form, businessImpactScore: score })}
-                scoringStandards={scoringStandards}
-                onViewHandbook={() => setIsHandbookOpen(true)}
-              />
-            </div>
-
             {/* 4. 上线时间窗口 */}
             <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -1608,90 +1608,141 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                 产研填写
               </h4>
 
-              <div className="grid grid-cols-2 gap-4">
-                {/* 需求类型 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">需求类型</label>
-                  <select
-                    value={form.type}
-                    onChange={(e) => setForm({ ...form, type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="功能开发">功能开发</option>
-                    <option value="技术债">技术债</option>
-                    <option value="Bug修复">Bug修复</option>
-                  </select>
-                </div>
-
-                {/* RMS重构项目（移动到产研区域） */}
-                <div className="flex items-center">
-                  <label className="flex items-center gap-2 cursor-pointer mt-6">
+              <div className="space-y-4">
+                {/* 第一行：项目、产品领域、需求类型、RMS */}
+                <div className="grid grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">项目</label>
                     <input
-                      type="checkbox"
-                      checked={form.isRMS}
-                      onChange={(e) => setForm({ ...form, isRMS: e.target.checked })}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      type="text"
+                      value={form.project || ''}
+                      onChange={(e) => setForm({ ...form, project: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="项目名称"
                     />
-                    <span className="text-sm font-medium text-gray-700">RMS重构项目</span>
-                  </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">产品领域</label>
+                    <select
+                      value={form.productArea || ''}
+                      onChange={(e) => setForm({ ...form, productArea: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">请选择</option>
+                      <option value="管店/固资/物 @张普">管店/固资/物 @张普</option>
+                      <option value="toC卖货/导购/AI/培训/营销 @杜玥">toC卖货/导购/AI/培训/营销 @杜玥</option>
+                      <option value="管人/SO上报/考勤 @胡馨然">管人/SO上报/考勤 @胡馨然</option>
+                      <option value="toB进货/交易/返利 @李建国">toB进货/交易/返利 @李建国</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">需求类型</label>
+                    <select
+                      value={form.type}
+                      onChange={(e) => setForm({ ...form, type: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="功能开发">功能开发</option>
+                      <option value="技术债">技术债</option>
+                      <option value="Bug修复">Bug修复</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center">
+                    <label className="flex items-center gap-2 cursor-pointer mt-6">
+                      <input
+                        type="checkbox"
+                        checked={form.isRMS}
+                        onChange={(e) => setForm({ ...form, isRMS: e.target.checked })}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">RMS重构</span>
+                    </label>
+                  </div>
                 </div>
 
-                {/* 产品经理 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">产品经理</label>
-                  <input
-                    type="text"
-                    value={form.productManager}
-                    onChange={(e) => setForm({ ...form, productManager: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="产品经理姓名"
-                  />
+                {/* 第二行：产品经理、后端、前端、测试 */}
+                <div className="grid grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">产品经理</label>
+                    <input
+                      type="text"
+                      value={form.productManager}
+                      onChange={(e) => setForm({ ...form, productManager: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="产品经理"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">后端研发</label>
+                    <input
+                      type="text"
+                      value={form.backendDeveloper || ''}
+                      onChange={(e) => setForm({ ...form, backendDeveloper: e.target.value, developer: e.target.value || form.frontendDeveloper || form.tester || '' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="后端"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">前端研发</label>
+                    <input
+                      type="text"
+                      value={form.frontendDeveloper || ''}
+                      onChange={(e) => setForm({ ...form, frontendDeveloper: e.target.value, developer: form.backendDeveloper || e.target.value || form.tester || '' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="前端"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">测试</label>
+                    <input
+                      type="text"
+                      value={form.tester || ''}
+                      onChange={(e) => setForm({ ...form, tester: e.target.value, developer: form.backendDeveloper || form.frontendDeveloper || e.target.value || '' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="测试"
+                    />
+                  </div>
                 </div>
 
-                {/* 研发同学 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">研发同学</label>
-                  <input
-                    type="text"
-                    value={form.developer}
-                    onChange={(e) => setForm({ ...form, developer: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="研发同学姓名"
-                  />
-                </div>
+                {/* 第三行：产品进展、技术进展 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">产品进展</label>
+                    <select
+                      value={form.productProgress}
+                      onChange={(e) => setForm({ ...form, productProgress: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="待评估">待评估</option>
+                      <option value="需求分析中">需求分析中</option>
+                      <option value="设计中">设计中</option>
+                      <option value="待评审">待评审</option>
+                      <option value="已完成设计">已完成设计</option>
+                      <option value="开发中">开发中</option>
+                    </select>
+                  </div>
 
-                {/* 产品进展 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">产品进展</label>
-                  <select
-                    value={form.productProgress}
-                    onChange={(e) => setForm({ ...form, productProgress: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="待评估">待评估</option>
-                    <option value="需求分析中">需求分析中</option>
-                    <option value="设计中">设计中</option>
-                    <option value="待评审">待评审</option>
-                    <option value="已完成设计">已完成设计</option>
-                    <option value="开发中">开发中</option>
-                  </select>
-                </div>
-
-                {/* 技术进展 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">技术进展</label>
-                  <select
-                    value={form.techProgress}
-                    onChange={(e) => setForm({ ...form, techProgress: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="待评估">待评估</option>
-                    <option value="已评估工作量">已评估工作量</option>
-                    <option value="技术方案设计中">技术方案设计中</option>
-                    <option value="开发中">开发中</option>
-                    <option value="联调测试中">联调测试中</option>
-                    <option value="已上线">已上线</option>
-                  </select>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">技术进展</label>
+                    <select
+                      value={form.techProgress}
+                      onChange={(e) => setForm({ ...form, techProgress: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="待评估">待评估</option>
+                      <option value="已评估工作量">已评估工作量</option>
+                      <option value="技术方案设计中">技术方案设计中</option>
+                      <option value="开发中">开发中</option>
+                      <option value="联调测试中">联调测试中</option>
+                      <option value="已上线">已上线</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* 开发工作量 */}
@@ -1758,6 +1809,18 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                       );
                     })()}
                   </div>
+                </div>
+
+                {/* 产研备注/进展说明 */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">产研备注/进展说明</label>
+                  <textarea
+                    value={form.rdNotes || ''}
+                    onChange={(e) => setForm({ ...form, rdNotes: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+                    placeholder="填写产研进展、技术方案要点、风险提示等..."
+                  />
                 </div>
               </div>
             </div>

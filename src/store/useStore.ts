@@ -417,8 +417,10 @@ export const useStore = create<StoreState>()(
       }),
       {
         name: 'wsjf-storage',
-        version: 2, // v1.2.0: 升级版本号，触发数据迁移
+        version: 3, // v1.3.2: 升级版本号，更新指标配置
         // 只持久化部分数据，避免存储过多临时状态
+        // 注意：scoringStandards/okrMetrics/processMetrics 不再持久化
+        // 原因：这些是代码配置而非用户数据，应始终从代码读取最新版本
         partialize: (state) => ({
           requirements: state.requirements,
           sprintPools: state.sprintPools,
@@ -428,19 +430,16 @@ export const useStore = create<StoreState>()(
           leftPanelWidth: state.leftPanelWidth,
           poolWidths: state.poolWidths,
           selectedAIModel: state.selectedAIModel,
-          scoringStandards: state.scoringStandards,
-          okrMetrics: state.okrMetrics,
-          processMetrics: state.processMetrics,
         }),
         // 数据迁移逻辑
         migrate: (persistedState: any, version: number) => {
-          console.log(`[Store] 检测到存储版本: ${version}，当前版本: 2`);
+          console.log(`[Store] 检测到存储版本: ${version}，当前版本: 3`);
+
+          const state = persistedState;
 
           if (version < 2) {
             // 从版本1升级到版本2：迁移需求数据
             console.log('[Store] 开始执行v1→v2数据迁移...');
-
-            const state = persistedState;
 
             // 检查是否需要迁移requirements
             if (state.requirements && needsMigration(state.requirements)) {
@@ -468,21 +467,22 @@ export const useStore = create<StoreState>()(
               });
             }
 
-            // 添加新的配置数据（如果不存在）
-            if (!state.scoringStandards) {
-              state.scoringStandards = SCORING_STANDARDS;
-            }
-            if (!state.okrMetrics) {
-              state.okrMetrics = OKR_METRICS;
-            }
-            if (!state.processMetrics) {
-              state.processMetrics = PROCESS_METRICS;
-            }
-
-            console.log('[Store] 数据迁移完成！');
+            console.log('[Store] v1→v2数据迁移完成！');
           }
 
-          return persistedState;
+          // v1.3.2：移除旧版本持久化的配置数据
+          // 这些配置现在始终从代码读取，不再持久化
+          if (state.scoringStandards) {
+            delete state.scoringStandards;
+          }
+          if (state.okrMetrics) {
+            delete state.okrMetrics;
+          }
+          if (state.processMetrics) {
+            delete state.processMetrics;
+          }
+
+          return state;
         },
       }
     ),
