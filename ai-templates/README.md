@@ -101,6 +101,37 @@
   - 数据库密码泄露可能导致数据被窃取/删除
   - 一旦泄露到公开仓库很难彻底删除
 
+#### 5. [UI_UX_BEST_PRACTICES.md](./UI_UX_BEST_PRACTICES.md) 🎨
+**UI/UX 最佳实践规范 - 现代化用户体验**
+
+- **目的**: 建立现代化、用户友好的UI/UX设计标准
+- **核心内容**:
+  - 黄金法则：永远不要使用 alert/confirm/prompt
+  - Toast提示（轻量级通知）⭐⭐⭐
+  - Modal对话框（需要确认）
+  - 内联提示（表单验证）
+  - 提示方式选择指南
+  - UI组件库推荐（react-hot-toast、sonner等）
+  - AI协作时的UI/UX规范
+
+- **适用场景**:
+  - 新项目启动，建立UI/UX标准
+  - AI建议使用 alert 弹窗（必须拒绝）
+  - 需要实现用户提示和反馈
+  - 优化现有项目的用户体验
+
+- **预期效果**:
+  - 零 alert/confirm/prompt 在代码中
+  - 统一使用 Toast 等现代化提示方式
+  - AI自动引导正确的UI/UX实现
+  - 提升用户体验和产品专业度
+
+- **替代方案**:
+  - alert → Toast（成功/错误提示）
+  - confirm → Modal对话框
+  - prompt → Input Modal
+  - 表单错误 → 内联提示
+
 ---
 
 ## 🎯 使用方法

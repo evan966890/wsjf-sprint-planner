@@ -583,6 +583,116 @@ font-medium text-gray-700    // 标签/字段名
 )}
 ```
 
+### 用户提示和反馈规范 ⭐
+
+**本项目遵循 `ai-templates/UI_UX_BEST_PRACTICES.md` 中的通用UI/UX规范。**
+
+#### ⚠️ 核心规则：禁止使用 alert/confirm/prompt
+
+**永远不要在本项目中使用原生的 alert、confirm、prompt**
+
+```typescript
+// ❌ 严禁：使用 alert
+alert('保存成功');
+confirm('确定删除？');
+prompt('请输入名称');
+
+// ✅ 必须：使用 Toast 或 Modal
+import toast from 'react-hot-toast';
+toast.success('保存成功');
+```
+
+**原因**：
+- 破坏用户体验（强制阻塞页面）
+- 样式无法定制（无法匹配应用设计）
+- 缺乏可访问性
+- 显得不专业
+
+#### 推荐的提示方式
+
+**1. Toast 提示（轻量级通知）** - 推荐 ⭐⭐⭐
+
+```typescript
+import toast from 'react-hot-toast';
+
+// 成功提示
+toast.success('需求已保存');
+
+// 错误提示
+toast.error('保存失败，请重试');
+
+// 加载提示
+toast.loading('保存中...');
+
+// Promise提示
+toast.promise(
+  saveData(),
+  {
+    loading: '保存中...',
+    success: '保存成功！',
+    error: '保存失败',
+  }
+);
+```
+
+**适用场景**：
+- ✅ 操作成功/失败提示
+- ✅ 系统通知
+- ✅ 非阻塞性消息
+- ✅ 加载状态
+
+**2. Modal 对话框（需要确认）**
+
+```typescript
+// 用于需要用户明确确认的重要操作
+const [showConfirm, setShowConfirm] = useState(false);
+
+<button onClick={() => setShowConfirm(true)}>删除</button>
+
+{showConfirm && (
+  <ConfirmModal
+    title="确认删除"
+    message="删除后无法恢复，确定要删除吗？"
+    onConfirm={handleDelete}
+    onCancel={() => setShowConfirm(false)}
+  />
+)}
+```
+
+**适用场景**：
+- ✅ 删除确认
+- ✅ 重要操作确认
+- ✅ 需要用户输入额外信息
+
+**3. 内联提示（表单验证）**
+
+```typescript
+// 表单字段错误提示
+{error && (
+  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+    <AlertCircle size={14} />
+    {error}
+  </p>
+)}
+```
+
+**适用场景**：
+- ✅ 表单验证错误
+- ✅ 实时反馈
+- ✅ 上下文相关提示
+
+#### 提示方式选择指南
+
+| 场景 | 使用方式 | 示例 |
+|------|---------|------|
+| 操作成功 | Toast | `toast.success('保存成功')` |
+| 操作失败 | Toast（错误） | `toast.error('保存失败')` |
+| 需要确认删除 | Modal | 确认对话框 |
+| 表单验证错误 | 内联提示 | 字段下方红色文字 |
+| 加载状态 | Toast（loading） | `toast.loading('加载中...')` |
+
+详细规范见：[ai-templates/UI_UX_BEST_PRACTICES.md](../ai-templates/UI_UX_BEST_PRACTICES.md)
+
 ---
 
 ## 🧪 代码质量保障
