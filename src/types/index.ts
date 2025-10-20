@@ -239,6 +239,9 @@ export interface AIAnalysisResult {
 
   // 分析的置信度（0-1）
   confidence?: number;
+
+  // AI建议的需求标题（从文档中提取或AI生成）
+  suggestedTitle?: string;
 }
 
 /**

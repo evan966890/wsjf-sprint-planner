@@ -589,6 +589,21 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
 
       const parsedData = JSON.parse(jsonMatch[0]);
 
+      // 提取AI建议的标题（优先从basicInfo，否则从文件名或生成简要标题）
+      let suggestedTitle = '';
+      if (parsedData.basicInfo?.name && parsedData.basicInfo.name !== '未填写') {
+        suggestedTitle = parsedData.basicInfo.name;
+      } else if (uploadedFiles.length > 0) {
+        // 使用第一个文件名（去掉扩展名）
+        const firstFile = uploadedFiles[0];
+        suggestedTitle = firstFile.name.replace(/\.(pdf|xlsx|xls|txt)$/i, '');
+      } else if (parsedData.reasoning && parsedData.reasoning.length > 0) {
+        // 从分析理由中提取关键词作为标题
+        const firstReason = parsedData.reasoning[0];
+        const match = firstReason.match(/(.{10,30})/);
+        suggestedTitle = match ? match[1].trim() : '需求标题（待补充）';
+      }
+
       // 构建AI分析结果
       const analysis: AIAnalysisResult = {
         suggestedScore: parsedData.suggestedScore || 5,
@@ -602,7 +617,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
           displayName: m.metricName
         })),
         currentScore: form.businessImpactScore,
-        confidence: 0.8
+        confidence: 0.8,
+        suggestedTitle: suggestedTitle || undefined
       };
 
       // 如果使用的是新输入的URL且未保存，先保存它
@@ -642,24 +658,46 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
   /**
    * 采纳AI建议 - 全部采纳（v1.3.1升级）
    * v1.3.1改进：保留AI建议，更新状态，自动折叠
+   * v1.3.2：自动填充标题（如果标题为空）
    */
   const handleAdoptAll = () => {
     if (!aiAnalysisResult) return;
 
-    setForm(prev => ({
-      ...prev,
-      businessImpactScore: aiAnalysisResult.suggestedScore,
-      affectedMetrics: [
-        ...aiAnalysisResult.suggestedOKRMetrics,
-        ...aiAnalysisResult.suggestedProcessMetrics
-      ]
-    }));
+    setForm(prev => {
+      const updates: Partial<Requirement> = {
+        businessImpactScore: aiAnalysisResult.suggestedScore,
+        affectedMetrics: [
+          ...aiAnalysisResult.suggestedOKRMetrics,
+          ...aiAnalysisResult.suggestedProcessMetrics
+        ]
+      };
+
+      // 如果当前标题为空且AI有建议标题，自动填充
+      if (!prev.name.trim() && aiAnalysisResult.suggestedTitle) {
+        updates.name = aiAnalysisResult.suggestedTitle;
+      }
+
+      return { ...prev, ...updates };
+    });
 
     // v1.3.1：更新状态，不清空AI结果
     setAIAdoptionStatus('adopted');
     setAIAdoptedItems({ score: true, okrMetrics: true, processMetrics: true });
     setAIAdoptedAt(new Date().toISOString());
     setIsAIPanelCollapsed(true); // 自动折叠
+
+    // v1.3.2：滚动到顶部显示标题（如果自动填充了）
+    if (!form.name.trim() && aiAnalysisResult.suggestedTitle) {
+      setTimeout(() => {
+        const titleInput = document.querySelector('input[placeholder*="需求名称"]') as HTMLInputElement;
+        if (titleInput) {
+          titleInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          titleInput.focus();
+          // 2秒后失焦
+          setTimeout(() => titleInput.blur(), 2000);
+        }
+      }, 800);
+    }
   };
 
   /**
@@ -1297,6 +1335,24 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
 
                       {/* 展开的详细内容 */}
                       {!isAIPanelCollapsed && (<>
+                        {/* 建议标题（如果有） */}
+                        {aiAnalysisResult.suggestedTitle && (
+                          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                            <div className="text-sm font-medium text-gray-700 mb-2">建议标题</div>
+                            <div className="flex items-start gap-2">
+                              <span className="text-blue-600 mt-0.5">📝</span>
+                              <div className="flex-1">
+                                <div className="text-sm text-gray-900 font-medium">{aiAnalysisResult.suggestedTitle}</div>
+                                {!form.name.trim() && (
+                                  <div className="text-xs text-blue-600 mt-1">
+                                    💡 标题为空时，采纳建议将自动填充此标题
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         {/* 建议评分 */}
                         <div className="bg-white p-3 rounded-lg border border-green-200">
                           <div className="text-sm font-medium text-gray-700 mb-2">建议评分</div>
