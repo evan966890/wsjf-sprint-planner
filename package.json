@@ -1,7 +1,7 @@
 {
   "name": "wsjf-sprint-planner",
-  "version": "1.4.0",
-  "description": "WSJF Sprint Planner - 基于WSJF方法的加权优先级排期可视化工具 (v1.4.0: 架构规范体系建立)",
+  "version": "1.5.0",
+  "description": "WSJF Sprint Planner - 基于WSJF方法的加权优先级排期可视化工具 (v1.5.0: 类型安全体系和调试方法论)",
   "type": "module",
   "scripts": {
     "dev": "vite",
