@@ -10,8 +10,9 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import * as XLSX from 'xlsx';
 
-// 配置 PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// 配置 PDF.js worker（使用国内可访问的CDN）
+// 优先使用 unpkg.com（国内速度快），失败则自动降级到 jsdelivr
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 /**
  * PDF文本项类型
@@ -24,30 +25,52 @@ interface PDFTextItem {
 
 /**
  * 解析PDF文件为文本
+ * 支持多个CDN fallback机制
  */
 export async function parsePDF(file: File): Promise<string> {
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const cdnList = [
+    `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`,
+    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`,
+  ];
 
-    let fullText = '';
+  let lastError: Error | null = null;
 
-    // 逐页提取文本
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: unknown) => (item as PDFTextItem).str || '')
-        .join(' ');
+  // 尝试不同的CDN
+  for (let i = 0; i < cdnList.length; i++) {
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = cdnList[i];
 
-      fullText += `\n--- 第${pageNum}页 ---\n${pageText}\n`;
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+      let fullText = '';
+
+      // 逐页提取文本
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: unknown) => (item as PDFTextItem).str || '')
+          .join(' ');
+
+        fullText += `\n--- 第${pageNum}页 ---\n${pageText}\n`;
+      }
+
+      return fullText.trim();
+    } catch (error) {
+      console.warn(`CDN ${i + 1} 失败，尝试下一个:`, cdnList[i], error);
+      lastError = error instanceof Error ? error : new Error('未知错误');
+
+      // 如果不是最后一个CDN，继续尝试
+      if (i < cdnList.length - 1) {
+        continue;
+      }
     }
-
-    return fullText.trim();
-  } catch (error) {
-    console.error('PDF解析失败:', error);
-    throw new Error(`PDF解析失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
+
+  // 所有CDN都失败
+  console.error('PDF解析失败，所有CDN都无法访问:', lastError);
+  throw new Error(`PDF解析失败: ${lastError?.message || '网络连接失败，请检查网络设置'}`);
 }
 
 /**
