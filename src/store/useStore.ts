@@ -368,8 +368,9 @@ export const useStore = create<StoreState>()(
 
           if (!requirement) return;
 
-          // 检查技术评估状态
-          if (targetPoolId !== 'unscheduled' && requirement.techProgress === '未评估') {
+          // 检查技术评估状态（同时处理 '待评估' 和 '未评估'）
+          const notReadyStatuses = ['待评估', '未评估'];
+          if (targetPoolId !== 'unscheduled' && (!requirement.techProgress || notReadyStatuses.includes(requirement.techProgress))) {
             alert('此需求未完成技术评估，无法排期！');
             return;
           }

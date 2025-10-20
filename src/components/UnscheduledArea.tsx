@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Search, Filter, Trash2, ArrowUpDown, Sparkles } from 'lucide-react';
 import type { Requirement } from '../types';
 import { roundNumber } from '../utils/scoring';
@@ -86,6 +86,41 @@ const UnscheduledArea = ({
   const [sortBy, setSortBy] = useState<'score' | 'bv' | 'submitDate' | 'effort'>('score'); // 排序字段
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');                // 排序方向（默认降序）
   const [viewMode, setViewMode] = useState<'bubble' | 'list'>('bubble');             // 视图模式：气泡或列表
+  const [clearConfirmStep, setClearConfirmStep] = useState<0 | 1>(0);                // 清空确认步骤：0=初始，1=等待二次确认
+  const clearTimeoutRef = useRef<number | null>(null);                              // 清空确认倒计时
+
+
+  /**
+   * 组件卸载时清理倒计时
+   */
+  useEffect(() => {
+    return () => {
+      if (clearTimeoutRef.current) {
+        clearTimeout(clearTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  /**
+   * 处理清空按钮点击
+   */
+  const handleClearClick = () => {
+    if (clearConfirmStep === 0) {
+      // 第一次点击：进入确认状态
+      setClearConfirmStep(1);
+      // 5秒后自动恢复
+      clearTimeoutRef.current = setTimeout(() => {
+        setClearConfirmStep(0);
+      }, 5000);
+    } else {
+      // 第二次点击：执行清空
+      if (clearTimeoutRef.current) {
+        clearTimeout(clearTimeoutRef.current);
+      }
+      setClearConfirmStep(0);
+      onClearAll();
+    }
+  };
 
   /**
    * 提取所有自定义业务域（用于动态显示筛选选项）
@@ -230,8 +265,12 @@ const UnscheduledArea = ({
     return sortOrder === 'desc' ? comparison : -comparison;
   });
 
-  const readyReqs = sortedReqs.filter(r => r.techProgress === '已评估工作量' || r.techProgress === '已完成技术方案');
-  const notReadyReqs = sortedReqs.filter(r => r.techProgress === '未评估');
+  // 分类：已完成技术评估的可排期需求 vs 未评估的不可排期需求
+  // 已评估：'已评估工作量', '已完成技术方案', '技术方案设计中', '开发中', '联调测试中', '已上线'
+  // 未评估：'待评估', '未评估', 或其他未识别值
+  const notReadyStatuses = ['待评估', '未评估'];
+  const readyReqs = sortedReqs.filter(r => r.techProgress && !notReadyStatuses.includes(r.techProgress));
+  const notReadyReqs = sortedReqs.filter(r => !r.techProgress || notReadyStatuses.includes(r.techProgress));
 
   return (
     <div style={{ width: `${leftPanelWidth}px` }} className="bg-white border-r border-gray-200 flex flex-col h-full">
@@ -586,15 +625,15 @@ const UnscheduledArea = ({
       {/* 底部清空按钮 */}
       <div className="flex-shrink-0 border-t border-gray-200 p-3 bg-gray-50">
         <button
-          onClick={() => {
-            if (confirm('确定要清空所有需求吗？此操作不可撤销！')) {
-              onClearAll();
-            }
-          }}
-          className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition text-sm font-medium flex items-center justify-center gap-2"
+          onClick={handleClearClick}
+          className={`w-full px-4 py-2 rounded-lg transition text-sm font-medium flex items-center justify-center gap-2 ${
+            clearConfirmStep === 0
+              ? 'bg-red-500 hover:bg-red-600 text-white'
+              : 'bg-yellow-500 hover:bg-yellow-600 text-white animate-pulse'
+          }`}
         >
           <Trash2 size={16} />
-          清空需求池
+          {clearConfirmStep === 0 ? '清空需求池' : '⚠️ 再次点击确认清空（5秒后恢复）'}
         </button>
       </div>
     </div>

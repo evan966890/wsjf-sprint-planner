@@ -153,10 +153,92 @@ npm run check-file-size
    - 拆分为子组件或 Section
    - 示例：将大 Modal 拆分为多个 Section 组件
 
+5. **类型安全（⭐新增 v1.5.0）**
+   - **禁止使用宽泛的 `string` 类型表示枚举**
+     ```typescript
+     // ❌ 错误
+     techProgress: string;
+
+     // ✅ 正确
+     techProgress: TechProgressStatus; // 联合类型
+     ```
+
+   - **所有枚举值必须定义为联合类型**
+     ```typescript
+     // src/types/techProgress.ts
+     export type TechProgressStatus =
+       | '待评估'
+       | '未评估'
+       | '已评估工作量'
+       | '已完成技术方案';
+     ```
+
+   - **所有枚举值必须在常量文件中定义**
+     ```typescript
+     // src/constants/techProgress.ts
+     export const TECH_PROGRESS = {
+       PENDING: '待评估' as const,
+       NOT_EVALUATED: '未评估' as const,
+       EFFORT_EVALUATED: '已评估工作量' as const,
+     } as const;
+     ```
+
+   - **禁止硬编码字符串，必须使用常量**
+     ```typescript
+     // ❌ 错误
+     if (req.techProgress === '待评估') { ... }
+
+     // ✅ 正确
+     import { TECH_PROGRESS } from '@/constants/techProgress';
+     if (req.techProgress === TECH_PROGRESS.PENDING) { ... }
+     ```
+
+   - **分组/筛选逻辑必须穷举所有可能值**
+     ```typescript
+     // ❌ 错误：遗漏 '待评估'
+     const ready = items.filter(r => r.status === '已评估');
+     const notReady = items.filter(r => r.status === '未评估');
+
+     // ✅ 正确：使用分组常量
+     import { NOT_READY_STATUSES } from '@/constants/techProgress';
+     const ready = items.filter(r => r.status && !NOT_READY_STATUSES.includes(r.status));
+     const notReady = items.filter(r => !r.status || NOT_READY_STATUSES.includes(r.status));
+
+     // ✅ 必须验证分组完整性
+     debugAssert(
+       items.length === ready.length + notReady.length,
+       '分组逻辑有遗漏'
+     );
+     ```
+
+   - **开发环境必须添加运行时验证**
+     ```typescript
+     import { validateTechProgress } from '@/utils/validation';
+
+     if (import.meta.env.DEV) {
+       validateTechProgress(requirement.techProgress, '需求保存');
+     }
+     ```
+
 ### 违规处理
 **发现文件超过 500 行时，必须立即停止开发并重构。**
 
 详见 [架构指导原则](docs/architecture-guide.md) 和 [新功能开发流程](docs/new-feature-workflow.md)
+
+### 类型安全违规处理（v1.5.0新增）
+**新增/修改枚举类型时的强制检查清单**：
+
+1. ✅ 在 `src/types/*.ts` 中定义联合类型
+2. ✅ 在 `src/constants/*.ts` 中定义常量
+3. ✅ 全局搜索使用处，确保所有分支处理新值
+4. ✅ 添加运行时验证（开发环境）
+5. ✅ 更新单元测试
+6. ✅ 更新相关文档
+
+**参考文档**：
+- [调试决策树](docs/debugging-decision-tree.md) - 系统化排查问题
+- [代码审查检查清单](docs/code-review-checklist.md) - PR审查标准
+- [调试经验教训](ai-templates/DEBUGGING_LESSONS_LEARNED.md) - 案例学习
 
 ---
 

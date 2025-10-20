@@ -193,20 +193,7 @@ export default function WSJFPlanner() {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
-  // 全局滚动监听（诊断用）- 检查是否是整个页面在跳动
-  React.useEffect(() => {
-    const handleWindowScroll = () => {
-      if (window.pageYOffset > 0 || window.scrollY > 0) {
-        console.log('⚠️ [Window滚动] pageYOffset:', window.pageYOffset, 'scrollY:', window.scrollY);
-      }
-    };
-
-    window.addEventListener('scroll', handleWindowScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener('scroll', handleWindowScroll);
-    };
-  }, []);
+  // 全局滚动监听已移除 - 用于诊断页面跳动问题
 
   // ========== 数据初始化和持久化 ==========
 
@@ -226,7 +213,7 @@ export default function WSJFPlanner() {
     const withScores = calculateScores(sampleReqs);
     setRequirements(withScores);
     setSprintPools(samplePools);
-    
+
     const sorted = [...withScores].sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0));
     setUnscheduled(sorted);
   };
@@ -234,14 +221,14 @@ export default function WSJFPlanner() {
   // 初始化：检查用户登录状态
   useEffect(() => {
     const user = storage.getCurrentUser();
+
     if (user) {
+      // 只设置当前用户，数据由 Zustand persist 自动加载
       setCurrentUser(user);
-      const savedData = storage.loadUserData(user);
-      if (savedData) {
-        setRequirements(savedData.requirements);
-        setSprintPools(savedData.sprintPools);
-        setUnscheduled(savedData.unscheduled);
-      } else {
+
+      // 如果 Zustand persist 中没有数据（首次使用），加载示例数据
+      const storeState = useStore.getState();
+      if (storeState.requirements.length === 0 && storeState.sprintPools.length === 0) {
         loadSampleData();
       }
     } else {
@@ -302,12 +289,12 @@ export default function WSJFPlanner() {
   const handleLogin = (user: storage.User) => {
     setCurrentUser(user);
     setShowLogin(false);
-    const savedData = storage.loadUserData(user);
-    if (savedData) {
-      setRequirements(savedData.requirements);
-      setSprintPools(savedData.sprintPools);
-      setUnscheduled(savedData.unscheduled);
-    } else {
+
+    // 数据由 Zustand persist 自动加载，无需手动加载
+    // 如果 store 中没有数据（首次登录），加载示例数据
+    const storeState = useStore.getState();
+
+    if (storeState.requirements.length === 0 && storeState.sprintPools.length === 0) {
       loadSampleData();
     }
   };
@@ -1385,7 +1372,19 @@ ${rawDataStr}
           // 追加模式：添加到现有数据
           const updatedRequirements = [...requirements, ...scoredRequirements];
           setRequirements(updatedRequirements);
-          setUnscheduled([...unscheduled, ...scoredRequirements]);
+
+          const updatedUnscheduled = [...unscheduled, ...scoredRequirements];
+          setUnscheduled(updatedUnscheduled);
+
+          // 重置所有筛选器，确保导入的需求可见（追加模式也需要重置筛选器！）
+          setSearchTerm('');
+          setFilterType('all');
+          setScoreFilter('all');
+          setEffortFilter('all');
+          setBVFilter('all');
+          setBusinessDomainFilter('all');
+          setRMSFilter(false);
+
           showToast(`成功导入 ${scoredRequirements.length} 条需求！新增需求已添加到待排期区，分数已自动计算完成。`, 'success');
         }
 
@@ -1545,6 +1544,17 @@ ${rawDataStr}
       const sorted = combined.sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0));
       setUnscheduled(sorted);
 
+      // 追加模式：也需要重置筛选器，确保导入的需求可见
+      if (!clearBeforeImport) {
+        setSearchTerm('');
+        setFilterType('all');
+        setScoreFilter('all');
+        setEffortFilter('all');
+        setBVFilter('all');
+        setBusinessDomainFilter('all');
+        setRMSFilter(false);
+      }
+
       setShowImportModal(false);
       setImportData([]);
       setImportMapping({});
@@ -1670,7 +1680,7 @@ ${rawDataStr}
   const hardDeadlineReqs = unscheduled.filter(r => r.hardDeadline);
   const totalResourceUsed = sprintPools.reduce((sum, p) => sum + p.requirements.reduce((s, r) => s + r.effortDays, 0), 0);
   const totalResourceAvailable = sprintPools.reduce((sum, p) => sum + p.totalDays * (1 - (p.bugReserve + p.refactorReserve + p.otherReserve) / 100), 0);
-  const notEvaluatedCount = unscheduled.filter(r => r.techProgress === '未评估').length;
+  const notEvaluatedCount = unscheduled.filter(r => !r.techProgress || r.techProgress === '待评估' || r.techProgress === '未评估').length;
 
   /**
    * 导入预览Modal组件
