@@ -265,7 +265,22 @@ export const useStore = create<StoreState>()(
               unscheduled: newUnscheduled.sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0))
             });
           } else {
-            set({ requirements: updated });
+            // 容错处理：即使calculateScores后找不到需求，也要添加到列表
+            // 这通常不应该发生，但确保数据一致性
+            console.warn('[Store] addRequirement: 未在calculateScores结果中找到新需求，使用原始需求对象', req.id);
+            const unscheduled = get().unscheduled;
+            // 手动添加必要的分数字段
+            const reqWithScores = {
+              ...req,
+              rawScore: req.rawScore || 10,
+              displayScore: req.displayScore || 50,
+              stars: req.stars || 3
+            };
+            const newUnscheduled = [...unscheduled, reqWithScores];
+            set({
+              requirements: updated,
+              unscheduled: newUnscheduled.sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0))
+            });
           }
         },
 
