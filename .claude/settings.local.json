@@ -33,7 +33,9 @@
       "Bash(rm src/components/*.backup*)",
       "Bash(git mv AI_COLLABORATION_BEST_PRACTICES.md ai-templates/)",
       "Bash(git mv TOKEN_OPTIMIZATION_GUIDE.md docs/)",
-      "Bash(git mv IMPORT_AI_SMART_FILL_REQUIREMENTS.md docs/features/)"
+      "Bash(git mv IMPORT_AI_SMART_FILL_REQUIREMENTS.md docs/features/)",
+      "Bash(git checkout src/wsjf-sprint-planner.tsx)",
+      "Bash(npm run check-file-size)"
     ],
     "deny": [],
     "ask": []

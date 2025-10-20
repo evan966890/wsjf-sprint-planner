@@ -9,7 +9,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { X, Save, Info, Link as LinkIcon, Users, Store, Target, Sparkles, Loader, AlertCircle, CheckCircle, Settings } from 'lucide-react';
+import { X, Save, Info, Link as LinkIcon, Users, Store, Target, Sparkles, Loader, AlertCircle, CheckCircle, Settings, Upload, FileText, Trash2 } from 'lucide-react';
 import type { Requirement, BusinessImpactScore, ComplexityScore, AffectedMetric, Document, AIModelType, AIAnalysisResult, AIRequestBody } from '../types';
 import { useStore } from '../store/useStore';
 import BusinessImpactScoreSelector from './BusinessImpactScoreSelector';
@@ -25,6 +25,7 @@ import {
   TIME_CRITICALITY_DESCRIPTIONS
 } from '../config/businessFields';
 import { COMPLEXITY_STANDARDS } from '../config/complexityStandards';
+import { parseFile, isSupportedFile, formatFileSize } from '../utils/fileParser';
 
 interface EditRequirementModalProps {
   requirement: Requirement | null;
@@ -86,8 +87,6 @@ const EditRequirementModal = ({
     errorMessage?: string;
   }
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileInfo[]>([]);
-  // TODO: 文件上传功能实现中，setUploadedFiles 将在后续使用
-  void setUploadedFiles; // 临时忽略未使用警告
 
   // 表单状态 - 修复：保留原始业务域，不使用默认值覆盖
   const [form, setForm] = useState<Requirement>(() => {
@@ -293,6 +292,83 @@ const EditRequirementModal = ({
       ...form,
       documents: (form.documents || []).filter((_, i) => i !== index)
     });
+  };
+
+  /**
+   * 处理文件上传
+   * v1.3.1新增：支持PDF和Excel文件上传
+   */
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0]; // 目前只支持单文件上传
+
+    // 检查文件类型
+    if (!isSupportedFile(file)) {
+      alert('不支持的文件类型。请上传 PDF 或 Excel 文件（.pdf, .xlsx, .xls）');
+      return;
+    }
+
+    // 检查文件大小（限制10MB）
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      alert('文件过大。请上传小于 10MB 的文件');
+      return;
+    }
+
+    // 创建文件信息对象
+    const fileInfo: UploadedFileInfo = {
+      id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'excel',
+      uploadedAt: new Date().toISOString(),
+      parseStatus: 'parsing'
+    };
+
+    // 添加到列表（设置为解析中）
+    setUploadedFiles(prev => [...prev, fileInfo]);
+
+    // 异步解析文件
+    try {
+      const parsedContent = await parseFile(file);
+      const wordCount = parsedContent.length;
+
+      // 更新为成功状态
+      setUploadedFiles(prev => prev.map(f =>
+        f.id === fileInfo.id
+          ? {
+              ...f,
+              parseStatus: 'success' as const,
+              parsedContent,
+              parsedWordCount: wordCount
+            }
+          : f
+      ));
+    } catch (error) {
+      // 更新为错误状态
+      setUploadedFiles(prev => prev.map(f =>
+        f.id === fileInfo.id
+          ? {
+              ...f,
+              parseStatus: 'error' as const,
+              errorMessage: error instanceof Error ? error.message : '解析失败'
+            }
+          : f
+      ));
+    }
+
+    // 清空input，允许重复上传同一文件
+    event.target.value = '';
+  };
+
+  /**
+   * 删除已上传的文件
+   */
+  const handleRemoveFile = (fileId: string) => {
+    setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
   /**
@@ -913,6 +989,98 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                       ))}
                     </div>
                   )}
+
+                  {/* 文件上传区域（v1.3.1新增） */}
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-700">上传文档（PDF、Excel）：</div>
+
+                    {/* 文件上传按钮 */}
+                    <div>
+                      <input
+                        type="file"
+                        id="ai-file-upload"
+                        accept=".pdf,.xlsx,.xls"
+                        onChange={handleFileUpload}
+                        disabled={isAIAnalyzing}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="ai-file-upload"
+                        className={`
+                          flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed rounded-lg cursor-pointer transition
+                          ${isAIAnalyzing
+                            ? 'border-gray-300 bg-gray-100 cursor-not-allowed'
+                            : 'border-purple-300 bg-purple-50 hover:bg-purple-100 hover:border-purple-400'
+                          }
+                        `}
+                      >
+                        <Upload size={16} className={isAIAnalyzing ? 'text-gray-400' : 'text-purple-600'} />
+                        <span className={`text-sm ${isAIAnalyzing ? 'text-gray-400' : 'text-purple-700'}`}>
+                          点击上传 PDF 或 Excel 文件
+                        </span>
+                      </label>
+                      <div className="text-xs text-gray-500 mt-1 ml-1">
+                        支持 .pdf, .xlsx, .xls 格式，最大 10MB
+                      </div>
+                    </div>
+
+                    {/* 已上传文件列表 */}
+                    {uploadedFiles.length > 0 && (
+                      <div className="space-y-2">
+                        {uploadedFiles.map((file) => (
+                          <div
+                            key={file.id}
+                            className={`
+                              flex items-center gap-2 p-2 rounded border
+                              ${file.parseStatus === 'success' ? 'bg-green-50 border-green-200' : ''}
+                              ${file.parseStatus === 'parsing' ? 'bg-blue-50 border-blue-200' : ''}
+                              ${file.parseStatus === 'error' ? 'bg-red-50 border-red-200' : ''}
+                            `}
+                          >
+                            <FileText
+                              size={16}
+                              className={`flex-shrink-0 ${
+                                file.parseStatus === 'success' ? 'text-green-600' :
+                                file.parseStatus === 'parsing' ? 'text-blue-600' :
+                                'text-red-600'
+                              }`}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">
+                                {file.name}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                {file.parseStatus === 'success' && (
+                                  <>
+                                    {formatFileSize(file.size)} · 已解析 {file.parsedWordCount?.toLocaleString()} 字符
+                                  </>
+                                )}
+                                {file.parseStatus === 'parsing' && (
+                                  <span className="text-blue-600">解析中...</span>
+                                )}
+                                {file.parseStatus === 'error' && (
+                                  <span className="text-red-600">{file.errorMessage || '解析失败'}</span>
+                                )}
+                              </div>
+                            </div>
+                            {file.parseStatus !== 'parsing' && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFile(file.id)}
+                                className="text-gray-400 hover:text-red-600 flex-shrink-0 transition"
+                                title="删除文件"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                            {file.parseStatus === 'parsing' && (
+                              <Loader size={16} className="text-blue-600 animate-spin flex-shrink-0" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {/* 添加新文档 */}
                   <div className="space-y-2">
