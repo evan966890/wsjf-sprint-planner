@@ -9,7 +9,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { X, Save, Info, Link as LinkIcon, Users, Store, Target, Sparkles, Loader, AlertCircle, CheckCircle, Settings, Upload, FileText, Trash2 } from 'lucide-react';
+import { X, Save, Info, Link as LinkIcon, Users, Store, Target, Sparkles, Loader, AlertCircle, CheckCircle, Settings, Upload, FileText, Trash2, Eye } from 'lucide-react';
 import type { Requirement, BusinessImpactScore, ComplexityScore, AffectedMetric, Document, AIModelType, AIAnalysisResult, AIRequestBody } from '../types';
 import { useStore } from '../store/useStore';
 import BusinessImpactScoreSelector from './BusinessImpactScoreSelector';
@@ -87,6 +87,7 @@ const EditRequirementModal = ({
     errorMessage?: string;
   }
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileInfo[]>([]);
+  const [previewFileId, setPreviewFileId] = useState<string | null>(null); // 预览文档内容的文件ID
 
   // 表单状态 - 修复：保留原始业务域，不使用默认值覆盖
   const [form, setForm] = useState<Requirement>(() => {
@@ -334,7 +335,15 @@ const EditRequirementModal = ({
     // 异步解析文件
     try {
       const parsedContent = await parseFile(file);
-      const wordCount = parsedContent.length;
+      const wordCount = parsedContent.trim().length;
+
+      // 检查解析内容是否为空或太少
+      let statusMessage = '';
+      if (wordCount === 0) {
+        statusMessage = '⚠️ 未提取到文本内容（可能是扫描版PDF或图片）';
+      } else if (wordCount < 50) {
+        statusMessage = `⚠️ 提取内容较少（${wordCount}字），可能影响AI分析效果`;
+      }
 
       // 更新为成功状态
       setUploadedFiles(prev => prev.map(f =>
@@ -343,10 +352,18 @@ const EditRequirementModal = ({
               ...f,
               parseStatus: 'success' as const,
               parsedContent,
-              parsedWordCount: wordCount
+              parsedWordCount: wordCount,
+              errorMessage: statusMessage || undefined // 使用errorMessage字段显示警告
             }
           : f
       ));
+
+      // 如果内容为空，弹出提示
+      if (wordCount === 0) {
+        setTimeout(() => {
+          alert('文件上传成功，但未能提取到文本内容。\n\n可能原因：\n1. 扫描版PDF（图片格式）\n2. PDF文件已加密\n3. 文件格式不支持\n\n建议：使用可复制文本的PDF文件，或手动输入需求描述。');
+        }, 100);
+      }
     } catch (error) {
       // 更新为错误状态
       setUploadedFiles(prev => prev.map(f =>
@@ -395,11 +412,14 @@ const EditRequirementModal = ({
 
   /**
    * v1.3.1新增：内容充足性检查
-   * 规则：描述≥50字 OR 已上传文件 OR 有文档链接
+   * 规则：描述≥50字 OR 已上传文件（且有内容）OR 有文档链接
    */
   const checkContentSufficiency = () => {
     const descLength = (form.description || '').trim().length;
-    const hasUploadedFiles = uploadedFiles.filter(f => f.parseStatus === 'success').length > 0;
+    // 修改：只有解析成功且有实际内容（>0字符）的文件才算有效
+    const hasUploadedFiles = uploadedFiles.filter(f =>
+      f.parseStatus === 'success' && (f.parsedWordCount || 0) > 0
+    ).length > 0;
     const hasDocLinks = (form.documents || []).length > 0 || newDocUrl.trim().length > 0;
     const hasFiles = hasUploadedFiles || hasDocLinks;
 
@@ -431,8 +451,9 @@ const EditRequirementModal = ({
     const reqDescription = form.description?.trim() || '';
 
     // 准备分析内容（包含上传文件的解析结果）
+    // v1.3.1修改：只包含有实际内容的文件（字符数 > 0）
     const filesText = uploadedFiles
-      .filter(f => f.parseStatus === 'success')
+      .filter(f => f.parseStatus === 'success' && (f.parsedWordCount || 0) > 0)
       .map(f => `文件名：${f.name}\n内容：${f.parsedContent}`)
       .join('\n\n');
 
@@ -1027,57 +1048,82 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                     {/* 已上传文件列表 */}
                     {uploadedFiles.length > 0 && (
                       <div className="space-y-2">
-                        {uploadedFiles.map((file) => (
-                          <div
-                            key={file.id}
-                            className={`
-                              flex items-center gap-2 p-2 rounded border
-                              ${file.parseStatus === 'success' ? 'bg-green-50 border-green-200' : ''}
-                              ${file.parseStatus === 'parsing' ? 'bg-blue-50 border-blue-200' : ''}
-                              ${file.parseStatus === 'error' ? 'bg-red-50 border-red-200' : ''}
-                            `}
-                          >
-                            <FileText
-                              size={16}
-                              className={`flex-shrink-0 ${
-                                file.parseStatus === 'success' ? 'text-green-600' :
-                                file.parseStatus === 'parsing' ? 'text-blue-600' :
-                                'text-red-600'
-                              }`}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 truncate">
-                                {file.name}
+                        {uploadedFiles.map((file) => {
+                          const hasWarning = file.parseStatus === 'success' && file.errorMessage;
+                          const hasContent = file.parseStatus === 'success' && (file.parsedWordCount || 0) > 0;
+
+                          return (
+                            <div
+                              key={file.id}
+                              className={`
+                                flex items-center gap-2 p-2 rounded border
+                                ${file.parseStatus === 'success' && !hasWarning ? 'bg-green-50 border-green-200' : ''}
+                                ${file.parseStatus === 'success' && hasWarning ? 'bg-yellow-50 border-yellow-300' : ''}
+                                ${file.parseStatus === 'parsing' ? 'bg-blue-50 border-blue-200' : ''}
+                                ${file.parseStatus === 'error' ? 'bg-red-50 border-red-200' : ''}
+                              `}
+                            >
+                              <FileText
+                                size={16}
+                                className={`flex-shrink-0 ${
+                                  file.parseStatus === 'success' && !hasWarning ? 'text-green-600' :
+                                  file.parseStatus === 'success' && hasWarning ? 'text-yellow-600' :
+                                  file.parseStatus === 'parsing' ? 'text-blue-600' :
+                                  'text-red-600'
+                                }`}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">
+                                  {file.name}
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                  {file.parseStatus === 'success' && (
+                                    <>
+                                      <div>{formatFileSize(file.size)} · 已解析 {file.parsedWordCount?.toLocaleString()} 字符</div>
+                                      {hasWarning && (
+                                        <div className="text-yellow-700 mt-0.5">{file.errorMessage}</div>
+                                      )}
+                                    </>
+                                  )}
+                                  {file.parseStatus === 'parsing' && (
+                                    <span className="text-blue-600">解析中...</span>
+                                  )}
+                                  {file.parseStatus === 'error' && (
+                                    <span className="text-red-600">{file.errorMessage || '解析失败'}</span>
+                                  )}
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-600">
-                                {file.parseStatus === 'success' && (
-                                  <>
-                                    {formatFileSize(file.size)} · 已解析 {file.parsedWordCount?.toLocaleString()} 字符
-                                  </>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                {/* 查看内容按钮 */}
+                                {hasContent && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewFileId(file.id)}
+                                    className="text-blue-500 hover:text-blue-700 transition p-1"
+                                    title="查看解析内容"
+                                  >
+                                    <Eye size={16} />
+                                  </button>
                                 )}
+                                {/* 删除按钮 */}
+                                {file.parseStatus !== 'parsing' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveFile(file.id)}
+                                    className="text-gray-400 hover:text-red-600 transition p-1"
+                                    title="删除文件"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                                {/* 加载动画 */}
                                 {file.parseStatus === 'parsing' && (
-                                  <span className="text-blue-600">解析中...</span>
-                                )}
-                                {file.parseStatus === 'error' && (
-                                  <span className="text-red-600">{file.errorMessage || '解析失败'}</span>
+                                  <Loader size={16} className="text-blue-600 animate-spin" />
                                 )}
                               </div>
                             </div>
-                            {file.parseStatus !== 'parsing' && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveFile(file.id)}
-                                className="text-gray-400 hover:text-red-600 flex-shrink-0 transition"
-                                title="删除文件"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            )}
-                            {file.parseStatus === 'parsing' && (
-                              <Loader size={16} className="text-blue-600 animate-spin flex-shrink-0" />
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -2058,6 +2104,68 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
         onClose={() => setIsHandbookOpen(false)}
         scoringStandards={scoringStandards}
       />
+
+      {/* File Content Preview Modal */}
+      {previewFileId && (() => {
+        const previewFile = uploadedFiles.find(f => f.id === previewFileId);
+        if (!previewFile) return null;
+
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[80vh] flex flex-col shadow-2xl">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">文档内容预览</h3>
+                  <p className="text-sm text-gray-600 mt-0.5">{previewFile.name}</p>
+                </div>
+                <button
+                  onClick={() => setPreviewFileId(null)}
+                  className="text-gray-400 hover:text-gray-600 transition"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-auto px-6 py-4">
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-300">
+                    <div className="text-sm text-gray-600">
+                      解析字符数：<span className="font-semibold text-gray-900">{previewFile.parsedWordCount?.toLocaleString()}</span>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      文件大小：<span className="font-semibold text-gray-900">{formatFileSize(previewFile.size)}</span>
+                    </div>
+                  </div>
+
+                  {previewFile.parsedContent && previewFile.parsedContent.trim() ? (
+                    <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono leading-relaxed">
+                      {previewFile.parsedContent}
+                    </pre>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText size={48} className="mx-auto mb-3 text-gray-400" />
+                      <p>未提取到文本内容</p>
+                      <p className="text-xs mt-1">可能是扫描版PDF或图片格式</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+                <button
+                  onClick={() => setPreviewFileId(null)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  关闭
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 };
