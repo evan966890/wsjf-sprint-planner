@@ -3,6 +3,7 @@ import { Plus, Search, Filter, Trash2, ArrowUpDown, Sparkles } from 'lucide-reac
 import type { Requirement } from '../types';
 import { roundNumber } from '../utils/scoring';
 import RequirementCard from './RequirementCard';
+import { NOT_READY_STATUSES } from '../constants/techProgress';
 
 // ============================================================================
 // UI组件 - 待排期区 (Unscheduled Area Component)
@@ -268,9 +269,9 @@ const UnscheduledArea = ({
   // 分类：已完成技术评估的可排期需求 vs 未评估的不可排期需求
   // 已评估：'已评估工作量', '已完成技术方案', '技术方案设计中', '开发中', '联调测试中', '已上线'
   // 未评估：'待评估', '未评估', 或其他未识别值
-  const notReadyStatuses = ['待评估', '未评估'];
-  const readyReqs = sortedReqs.filter(r => r.techProgress && !notReadyStatuses.includes(r.techProgress));
-  const notReadyReqs = sortedReqs.filter(r => !r.techProgress || notReadyStatuses.includes(r.techProgress));
+  // 使用常量定义，避免硬编码和拼写错误
+  const readyReqs = sortedReqs.filter(r => r.techProgress && !(NOT_READY_STATUSES as readonly string[]).includes(r.techProgress));
+  const notReadyReqs = sortedReqs.filter(r => !r.techProgress || (NOT_READY_STATUSES as readonly string[]).includes(r.techProgress));
 
   return (
     <div style={{ width: `${leftPanelWidth}px` }} className="bg-white border-r border-gray-200 flex flex-col h-full">

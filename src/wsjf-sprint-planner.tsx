@@ -55,6 +55,7 @@ import { useStore } from './store/useStore';
 
 // 导入常量
 import { FIELD_NAME_MAP } from './constants/fieldNames';
+import { TECH_PROGRESS, NOT_READY_STATUSES } from './constants/techProgress';
 
 // 导入数据生成函数
 import { generateSampleData } from './data/sampleData';
@@ -1277,7 +1278,7 @@ ${rawDataStr}
             productManager: '',
             developer: '',
             productProgress: '待评估',
-            techProgress: '未评估',
+            techProgress: TECH_PROGRESS.NOT_EVALUATED,
             hardDeadline: false,
             isRMS: false,
             _aiAnalysisStatus: 'failed',
@@ -1451,14 +1452,19 @@ ${rawDataStr}
         // 如果映射的值不在有效枚举中，使用智能默认值或标准默认值
 
         // 验证并智能设置技术进展
-        const validTechProgress = ['未评估', '已评估工作量', '已完成技术方案'];
+        // AI映射时只处理常见的3种状态
+        const validTechProgress = [
+          TECH_PROGRESS.NOT_EVALUATED,
+          TECH_PROGRESS.EFFORT_EVALUATED,
+          TECH_PROGRESS.DESIGN_COMPLETED
+        ];
         let finalTechProgress = validTechProgress.includes(mapped.techProgress)
           ? mapped.techProgress
-          : (effortDays > 0 ? '已评估工作量' : '未评估');
+          : (effortDays > 0 ? TECH_PROGRESS.EFFORT_EVALUATED : TECH_PROGRESS.NOT_EVALUATED);
 
         // 如果映射的是有效的"未评估"但有工作量数据，自动升级
-        if (effortDays > 0 && finalTechProgress === '未评估') {
-          finalTechProgress = '已评估工作量';
+        if (effortDays > 0 && finalTechProgress === TECH_PROGRESS.NOT_EVALUATED) {
+          finalTechProgress = TECH_PROGRESS.EFFORT_EVALUATED;
         }
 
         // 验证业务影响度
@@ -1680,7 +1686,7 @@ ${rawDataStr}
   const hardDeadlineReqs = unscheduled.filter(r => r.hardDeadline);
   const totalResourceUsed = sprintPools.reduce((sum, p) => sum + p.requirements.reduce((s, r) => s + r.effortDays, 0), 0);
   const totalResourceAvailable = sprintPools.reduce((sum, p) => sum + p.totalDays * (1 - (p.bugReserve + p.refactorReserve + p.otherReserve) / 100), 0);
-  const notEvaluatedCount = unscheduled.filter(r => !r.techProgress || r.techProgress === '待评估' || r.techProgress === '未评估').length;
+  const notEvaluatedCount = unscheduled.filter(r => !r.techProgress || (NOT_READY_STATUSES as readonly string[]).includes(r.techProgress)).length;
 
   /**
    * 导入预览Modal组件
