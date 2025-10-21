@@ -2,23 +2,37 @@
  * 应用头部组件
  *
  * 功能：
- * - 应用标题和说明书
+ * - 应用标题和图例
+ * - 说明书按钮
  * - 用户信息显示
- * - 导出菜单（Excel、PDF、PNG）
+ * - 紧凑模式切换
  * - 导入按钮
- * - 添加迭代池按钮
+ * - 导出菜单（Excel、PDF、PNG）
+ * - 退出登录
  */
 
-import { HelpCircle, Download, User as UserIcon, LogOut, Plus, FileSpreadsheet, FileText, Image as ImageIcon, Upload } from 'lucide-react';
+import {
+  HelpCircle,
+  Download,
+  User as UserIcon,
+  LogOut,
+  FileSpreadsheet,
+  FileText,
+  Image as ImageIcon,
+  Upload,
+  Star
+} from 'lucide-react';
+import type { User } from '../storage';
 
 interface HeaderProps {
-  currentUser: { username: string } | null;
-  onOpenHandbook: () => void;
-  onOpenImport: () => void;
+  currentUser: User | null;
+  compact: boolean;
+  onToggleCompact: () => void;
+  onShowHandbook: () => void;
+  onImport: () => void;
   onExportExcel: () => void;
   onExportPDF: () => void;
   onExportPNG: () => void;
-  onAddSprintPool: () => void;
   onLogout: () => void;
   showExportMenu: boolean;
   onToggleExportMenu: () => void;
@@ -26,104 +40,132 @@ interface HeaderProps {
 
 export function Header({
   currentUser,
-  onOpenHandbook,
-  onOpenImport,
+  compact,
+  onToggleCompact,
+  onShowHandbook,
+  onImport,
   onExportExcel,
   onExportPDF,
   onExportPNG,
-  onAddSprintPool,
   onLogout,
   showExportMenu,
   onToggleExportMenu,
 }: HeaderProps) {
   return (
-    <header className="bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-lg sticky top-0 z-20">
-      <div className="px-6 py-4 flex items-center justify-between">
-        {/* 左侧：标题 */}
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">WSJF 加权优先级排期工具</h1>
+    <div className="bg-gray-900 border-b border-gray-800 px-6 py-3 shadow-sm flex-shrink-0">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          {/* 标题区域 - 两行显示 */}
+          <div>
+            <h1 className="text-lg font-bold text-white leading-tight">小米国际 WSJF-Lite Tools</h1>
+            <p className="text-xs text-gray-400 mt-0.5">by Evan (tianyuan8@xiaomi.com)</p>
+          </div>
+
+          {/* 图例 - 左对齐 */}
+          <div className="flex items-center gap-3 text-xs text-gray-300">
+            {/* BV颜色图例 */}
+            <div className="flex items-center gap-1.5">
+              <div className="flex gap-0.5">
+                <div className="w-3 h-3 rounded-sm bg-gradient-to-br from-blue-100 to-blue-200" title="局部"></div>
+                <div className="w-3 h-3 rounded-sm bg-gradient-to-br from-blue-400 to-blue-500" title="明显"></div>
+                <div className="w-3 h-3 rounded-sm bg-gradient-to-br from-blue-600 to-blue-700" title="撬动核心"></div>
+                <div className="w-3 h-3 rounded-sm bg-gradient-to-br from-blue-800 to-blue-900" title="战略平台"></div>
+              </div>
+              <span>业务影响度</span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-gradient-to-br from-red-600 to-red-900 rounded-sm"></div>
+              <span>强DDL</span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Star size={12} className="fill-yellow-400 text-yellow-400" />
+              <span>权重</span>
+            </div>
+          </div>
+
           <button
-            onClick={onOpenHandbook}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition text-sm"
+            onClick={onShowHandbook}
+            className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition"
           >
-            <HelpCircle size={18} />
-            说明书
+            <HelpCircle size={14} />
+            <span>说明书</span>
           </button>
         </div>
 
-        {/* 右侧：操作按钮 */}
         <div className="flex items-center gap-3">
+          {currentUser && (
+            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
+              <UserIcon size={16} className="text-blue-400" />
+              <span className="text-sm text-white">{currentUser.name}</span>
+              <span className="text-xs text-gray-400">({currentUser.email})</span>
+            </div>
+          )}
+
+          <button
+            onClick={onToggleCompact}
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition text-sm font-medium"
+          >
+            {compact ? '宽松视图' : '紧凑视图'}
+          </button>
+
           {/* 导入按钮 */}
           <button
-            onClick={onOpenImport}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition"
+            onClick={onImport}
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
           >
-            <Upload size={18} />
+            <Upload size={16} />
             导入
           </button>
 
-          {/* 导出下拉菜单 */}
           <div className="relative">
             <button
               onClick={onToggleExportMenu}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition"
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
             >
-              <Download size={18} />
+              <Download size={16} />
               导出
             </button>
 
             {showExportMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-10">
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
                 <button
                   onClick={onExportExcel}
-                  className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700 transition"
                 >
-                  <FileSpreadsheet size={16} />
+                  <FileSpreadsheet size={18} className="text-green-600" />
                   导出为 Excel
                 </button>
                 <button
                   onClick={onExportPDF}
-                  className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700 transition"
                 >
-                  <FileText size={16} />
+                  <FileText size={18} className="text-red-600" />
                   导出为 PDF
                 </button>
                 <button
                   onClick={onExportPNG}
-                  className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700 transition"
                 >
-                  <ImageIcon size={16} />
+                  <ImageIcon size={18} className="text-blue-600" />
                   导出为图片
                 </button>
               </div>
             )}
           </div>
 
-          {/* 添加迭代池 */}
-          <button
-            onClick={onAddSprintPool}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-500 hover:bg-teal-600 rounded-lg transition font-medium"
-          >
-            <Plus size={18} />
-            添加迭代池
-          </button>
-
-          {/* 用户信息 */}
           {currentUser && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg">
-              <UserIcon size={18} />
-              <span className="font-medium">{currentUser.username}</span>
-              <button
-                onClick={onLogout}
-                className="ml-2 p-1 hover:bg-white/20 rounded transition"
-                title="退出登录"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
+            <button
+              onClick={onLogout}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
+            >
+              <LogOut size={16} />
+              退出
+            </button>
           )}
         </div>
       </div>
-    </header>
+    </div>
   );
 }
