@@ -174,7 +174,7 @@ const EditRequirementModal = ({ requirement, onSave, onClose, isNew = false }: E
                 </div>
                 <BusinessImpactScoreSelector value={form.businessImpactScore || 5} onChange={(score) => updateField('businessImpactScore', score)} scoringStandards={scoringStandards} />
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">业务价值 (BV)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">业务影响度 (BV)</label>
                   <select value={form.bv || '明显'} onChange={(e) => updateField('bv', e.target.value as '局部' | '明显' | '撬动核心' | '战略平台')} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     <option value="局部">局部 (3分)</option>
                     <option value="明显">明显 (6分)</option>
@@ -183,7 +183,7 @@ const EditRequirementModal = ({ requirement, onSave, onClose, isNew = false }: E
                   </select>
                 </div>
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">时间临界性 (TC)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">时间窗口 (TC)</label>
                   <select value={form.tc || '随时'} onChange={(e) => updateField('tc', e.target.value as '随时' | '三月窗口' | '一月硬窗口')} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     <option value="随时">随时 (0分) - {TIME_CRITICALITY_DESCRIPTIONS['随时']}</option>
                     <option value="三月窗口">三月窗口 (3分) - {TIME_CRITICALITY_DESCRIPTIONS['三月窗口']}</option>
@@ -432,7 +432,7 @@ const EditRequirementModal = ({ requirement, onSave, onClose, isNew = false }: E
                   </div>
                 </div>
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="text-sm font-medium text-gray-700 mb-2">热度分预览</div>
+                  <div className="text-sm font-medium text-gray-700 mb-2">权重分预览</div>
                   <div className="flex items-center gap-4">
                     <div><span className="text-xs text-gray-600">原始分：</span><span className="ml-1 font-bold text-lg">{previewScore.raw}</span></div>
                     <div><span className="text-xs text-gray-600">展示分：</span><span className="ml-1 font-bold text-lg text-blue-600">{previewScore.display}</span></div>
