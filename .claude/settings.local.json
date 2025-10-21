@@ -35,7 +35,8 @@
       "Bash(git mv TOKEN_OPTIMIZATION_GUIDE.md docs/)",
       "Bash(git mv IMPORT_AI_SMART_FILL_REQUIREMENTS.md docs/features/)",
       "Bash(git checkout src/wsjf-sprint-planner.tsx)",
-      "Bash(npm run check-file-size)"
+      "Bash(npm run check-file-size)",
+      "Bash(mkdir -p src/hooks src/components/header src/components/import src/components/export src/utils/toast)"
     ],
     "deny": [],
     "ask": []
