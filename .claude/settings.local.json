@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "Bash(timeout 15 npm run dev)",
+      "Bash(cat:*)",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(powershell -Command \"(Get-Content ''src/wsjf-sprint-planner.tsx'' | Measure-Object -Line).Lines\")",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []
