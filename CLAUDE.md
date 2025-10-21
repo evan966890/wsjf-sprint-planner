@@ -27,6 +27,7 @@ npm run preview  # 预览生产构建
 ⚠️ **重要：开发前必读**
 - 📖 [架构指导原则](docs/architecture-guide.md) - 文件大小限制和代码组织规范
 - 📋 [新功能开发流程](docs/new-feature-workflow.md) - 标准开发检查清单
+- 🔧 [文件大小重构计划](docs/refactoring-plan.md) - 当前重构任务和执行指南
 - 🔍 运行 `npm run check-file-size` 检查文件大小
 
 ### 项目结构
@@ -46,7 +47,17 @@ WSJF/
 │   └── wsjf-sprint-planner.tsx # 主应用组件
 ├── docs/                      # 📚 项目文档
 │   ├── architecture-guide.md  # 架构指导原则
-│   └── new-feature-workflow.md # 新功能开发流程
+│   ├── new-feature-workflow.md # 新功能开发流程
+│   ├── refactoring-plan.md    # 重构计划（当前任务）
+│   ├── refactoring-guides/    # 详细重构指南
+│   │   ├── unscheduled-area-refactoring.md
+│   │   ├── batch-evaluation-refactoring.md
+│   │   ├── edit-requirement-modal-refactoring.md
+│   │   └── main-app-refactoring.md
+│   └── templates/             # 代码模板
+│       ├── hook-template.ts
+│       ├── component-template.tsx
+│       └── util-template.ts
 ├── scripts/                   # 自动化脚本
 │   └── check-file-size.js     # 文件大小检查
 ├── index.html                 # HTML 模板
@@ -223,7 +234,10 @@ npm run check-file-size
 ### 违规处理
 **发现文件超过 500 行时，必须立即停止开发并重构。**
 
-详见 [架构指导原则](docs/architecture-guide.md) 和 [新功能开发流程](docs/new-feature-workflow.md)
+详见：
+- [架构指导原则](docs/architecture-guide.md) - 规范说明
+- [新功能开发流程](docs/new-feature-workflow.md) - 开发流程
+- [文件大小重构计划](docs/refactoring-plan.md) - 重构执行方案 ⭐ **当前任务**
 
 ### 类型安全违规处理（v1.5.0新增）
 **新增/修改枚举类型时的强制检查清单**：
@@ -268,3 +282,19 @@ npm run check-file-size
 
 ### 调整迭代池容量计算
 修改 `SprintPoolComponent` 中的资源计算逻辑（`netAvailable`, `percentage` 等）
+
+### 重构超大文件
+**⚠️ 当前有 4 个文件超过 500 行，必须重构**
+
+参考：[文件大小重构计划](docs/refactoring-plan.md)
+
+**详细重构指南**：
+- [UnscheduledArea 重构指南](docs/refactoring-guides/unscheduled-area-refactoring.md) (608 → 480行)
+- [BatchEvaluationModal 重构指南](docs/refactoring-guides/batch-evaluation-refactoring.md) (744 → 480行)
+- [EditRequirementModal 重构指南](docs/refactoring-guides/edit-requirement-modal-refactoring.md) (2044 → 480行)
+- [主应用重构指南](docs/refactoring-guides/main-app-refactoring.md) (3102 → 480行)
+
+**代码模板**：
+- [Hook 模板](docs/templates/hook-template.ts)
+- [组件模板](docs/templates/component-template.tsx)
+- [工具函数模板](docs/templates/util-template.ts)
