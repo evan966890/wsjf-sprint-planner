@@ -1,14 +1,3 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Search, Filter, Trash2, ArrowUpDown, Sparkles } from 'lucide-react';
-import type { Requirement } from '../types';
-import { roundNumber } from '../utils/scoring';
-import RequirementCard from './RequirementCard';
-import { NOT_READY_STATUSES } from '../constants/techProgress';
-
-// ============================================================================
-// UI组件 - 待排期区 (Unscheduled Area Component)
-// ============================================================================
-
 /**
  * 待排期区组件
  *
@@ -19,20 +8,47 @@ import { NOT_READY_STATUSES } from '../constants/techProgress';
  * - 支持拖拽需求到迭代池
  * - 支持气泡和列表两种视图模式
  *
- * 筛选维度：
- * - 搜索：需求名称、提交人、产品经理、研发负责人
- * - 需求类型：功能开发、Bug修复、技术债务等
- * - 权重分：高(≥70)、中(40-69)、低(<40)
- * - 工作量：微小(≤3)、小(4-10)、中(11-30)、大(31-60)、超大(61-100)、巨大(>100)
- * - 业务影响度：高(8-10分)、中(5-7分)、低(1-4分) [v1.2.0升级为10分制]
- * - RMS重构：是/否
- *
- * 排序方式：
- * - 权重分（默认降序）
- * - 业务影响度
- * - 提交日期
- * - 工作量
+ * 架构说明：
+ * - 使用 useRequirementFilter Hook 处理筛选、排序、分组逻辑
+ * - 使用 FilterBar 组件处理筛选UI
+ * - 使用 ReadyRequirementsSection 显示已评估需求
+ * - 使用 NotReadyRequirementsSection 显示未评估需求
  */
+
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Plus, Sparkles, Trash2 } from 'lucide-react';
+import type { Requirement } from '../types';
+import { useRequirementFilter } from './unscheduled/hooks/useRequirementFilter';
+import { FilterBar } from './unscheduled/FilterBar';
+import { ReadyRequirementsSection } from './unscheduled/ReadyRequirementsSection';
+import { NotReadyRequirementsSection } from './unscheduled/NotReadyRequirementsSection';
+
+interface UnscheduledAreaProps {
+  unscheduled: Requirement[];
+  onRequirementClick: (req: Requirement) => void;
+  onDrop: () => void;
+  isDragOver: boolean;
+  onAddNew: () => void;
+  onBatchEvaluate: () => void;
+  compact: boolean;
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  filterType: string;
+  onFilterChange: (type: string) => void;
+  scoreFilter: string;
+  onScoreFilterChange: (filter: string) => void;
+  effortFilter: string;
+  onEffortFilterChange: (filter: string) => void;
+  bvFilter: string;
+  onBVFilterChange: (filter: string) => void;
+  businessDomainFilter: string;
+  onBusinessDomainFilterChange: (filter: string) => void;
+  rmsFilter: boolean;
+  onRMSFilterChange: (filter: boolean) => void;
+  leftPanelWidth: number;
+  onClearAll: () => void;
+}
+
 const UnscheduledArea = ({
   unscheduled,
   onRequirementClick,
@@ -57,39 +73,54 @@ const UnscheduledArea = ({
   onRMSFilterChange,
   leftPanelWidth,
   onClearAll
-}: {
-  unscheduled: Requirement[];
-  onRequirementClick: (req: Requirement) => void;
-  onDrop: () => void;
-  isDragOver: boolean;
-  onAddNew: () => void;
-  onBatchEvaluate: () => void;
-  compact: boolean;
-  searchTerm: string;
-  onSearchChange: (term: string) => void;
-  filterType: string;
-  onFilterChange: (type: string) => void;
-  scoreFilter: string;
-  onScoreFilterChange: (filter: string) => void;
-  effortFilter: string;
-  onEffortFilterChange: (filter: string) => void;
-  bvFilter: string;
-  onBVFilterChange: (filter: string) => void;
-  businessDomainFilter: string;
-  onBusinessDomainFilterChange: (filter: string) => void;
-  rmsFilter: boolean;
-  onRMSFilterChange: (filter: boolean) => void;
-  leftPanelWidth: number;
-  onClearAll: () => void;
-}) => {
+}: UnscheduledAreaProps) => {
+  // ============================================================================
   // 组件状态
-  const [showFilters, setShowFilters] = useState(false);                              // 是否展开筛选器
-  const [sortBy, setSortBy] = useState<'score' | 'bv' | 'submitDate' | 'effort'>('score'); // 排序字段
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');                // 排序方向（默认降序）
-  const [viewMode, setViewMode] = useState<'bubble' | 'list'>('bubble');             // 视图模式：气泡或列表
-  const [clearConfirmStep, setClearConfirmStep] = useState<0 | 1>(0);                // 清空确认步骤：0=初始，1=等待二次确认
-  const clearTimeoutRef = useRef<number | null>(null);                              // 清空确认倒计时
+  // ============================================================================
 
+  const [sortBy, setSortBy] = useState<'score' | 'bv' | 'submitDate' | 'effort'>('score');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [viewMode, setViewMode] = useState<'bubble' | 'list'>('bubble');
+  const [clearConfirmStep, setClearConfirmStep] = useState<0 | 1>(0);
+  const clearTimeoutRef = useRef<number | null>(null);
+
+  // ============================================================================
+  // 筛选和排序逻辑（使用自定义Hook）
+  // ============================================================================
+
+  const { readyReqs, notReadyReqs } = useRequirementFilter(unscheduled, {
+    searchTerm,
+    filterType,
+    scoreFilter,
+    effortFilter,
+    bvFilter,
+    businessDomainFilter,
+    rmsFilter,
+    sortBy,
+    sortOrder,
+  });
+
+  // ============================================================================
+  // 自定义业务域提取
+  // ============================================================================
+
+  const customBusinessDomains = useMemo(() => {
+    const domains = new Set<string>();
+    const presetDomains = ['新零售', '渠道零售', '国际零售通用', '自定义', 'all'];
+
+    unscheduled.forEach(req => {
+      if (req.businessDomain === '自定义' && req.customBusinessDomain) {
+        domains.add(req.customBusinessDomain);
+      } else if (req.businessDomain && !presetDomains.includes(req.businessDomain)) {
+        domains.add(req.businessDomain);
+      }
+    });
+    return Array.from(domains).sort();
+  }, [unscheduled]);
+
+  // ============================================================================
+  // 事件处理
+  // ============================================================================
 
   /**
    * 组件卸载时清理倒计时
@@ -103,18 +134,15 @@ const UnscheduledArea = ({
   }, []);
 
   /**
-   * 处理清空按钮点击
+   * 处理清空按钮点击（二次确认机制）
    */
   const handleClearClick = () => {
     if (clearConfirmStep === 0) {
-      // 第一次点击：进入确认状态
       setClearConfirmStep(1);
-      // 5秒后自动恢复
       clearTimeoutRef.current = setTimeout(() => {
         setClearConfirmStep(0);
       }, 5000);
     } else {
-      // 第二次点击：执行清空
       if (clearTimeoutRef.current) {
         clearTimeout(clearTimeoutRef.current);
       }
@@ -124,158 +152,29 @@ const UnscheduledArea = ({
   };
 
   /**
-   * 提取所有自定义业务域（用于动态显示筛选选项）
-   * v1.3.2：兼容旧数据，businessDomain可能包含任意值
-   */
-  const customBusinessDomains = useMemo(() => {
-    const domains = new Set<string>();
-    const presetDomains = ['新零售', '渠道零售', '国际零售通用', '自定义', 'all'];
-
-    unscheduled.forEach(req => {
-      if (req.businessDomain === '自定义' && req.customBusinessDomain) {
-        // 新数据：自定义业务域
-        domains.add(req.customBusinessDomain);
-      } else if (req.businessDomain && !presetDomains.includes(req.businessDomain)) {
-        // 旧数据：businessDomain直接包含具体值
-        domains.add(req.businessDomain);
-      }
-    });
-    return Array.from(domains).sort();
-  }, [unscheduled]);
-
-  /**
-   * 处理拖拽悬停事件
+   * 处理拖拽悬停
    */
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
 
   /**
-   * 处理拖拽放置事件
+   * 处理拖拽放置
    */
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     onDrop();
   };
 
-  /**
-   * 多维度筛选逻辑
-   * 健壮性：使用可选链和默认值确保不会因为空值报错
-   */
-  const filteredReqs = (Array.isArray(unscheduled) ? unscheduled : []).filter(req => {
-    // 搜索匹配：需求名称、提交人、产品经理、研发负责人
-    const matchesSearch = (req?.name || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
-                         (req?.submitterName || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
-                         (req?.productManager || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
-                         (req?.developer || '').toLowerCase().includes((searchTerm || '').toLowerCase());
-
-    // 类型匹配（v1.2.0：增强健壮性，处理空格和undefined，默认为功能开发）
-    const reqType = req?.type?.trim() || '功能开发'; // 如果type为空，默认为功能开发
-    const matchesType = filterType === 'all' || reqType === filterType;
-
-    // 权重分匹配
-    let matchesScore = true;
-    const displayScore = Number(req?.displayScore) || 0;
-    if (scoreFilter === 'high') matchesScore = displayScore >= 70;
-    else if (scoreFilter === 'medium') matchesScore = displayScore >= 40 && displayScore < 70;
-    else if (scoreFilter === 'low') matchesScore = displayScore < 40;
-
-    // 工作量匹配
-    let matchesEffort = true;
-    const effortDays = Number(req?.effortDays) || 0;
-    if (effortFilter === 'tiny') matchesEffort = effortDays <= 3;
-    else if (effortFilter === 'small') matchesEffort = effortDays >= 4 && effortDays <= 10;
-    else if (effortFilter === 'medium') matchesEffort = effortDays >= 11 && effortDays <= 30;
-    else if (effortFilter === 'large') matchesEffort = effortDays >= 31 && effortDays <= 60;
-    else if (effortFilter === 'xlarge') matchesEffort = effortDays >= 61 && effortDays <= 100;
-    else if (effortFilter === 'huge') matchesEffort = effortDays > 100;
-
-    // 业务影响度匹配（v1.2.0升级：支持10分制映射到4档）
-    let matchesBV = true;
-    if (bvFilter !== 'all') {
-      const score = req?.businessImpactScore;
-      if (score) {
-        // 10分制映射到4档：战略平台(10)、撬动核心(8-9)、明显(5-7)、局部(1-4)
-        if (bvFilter === '战略平台') matchesBV = score === 10;
-        else if (bvFilter === '撬动核心') matchesBV = score >= 8 && score <= 9;
-        else if (bvFilter === '明显') matchesBV = score >= 5 && score <= 7;
-        else if (bvFilter === '局部') matchesBV = score >= 1 && score <= 4;
-      } else {
-        // 如果没有新的businessImpactScore，尝试使用旧的bv字段（向后兼容）
-        matchesBV = req?.bv === bvFilter;
-      }
-    }
-
-    // 业务域匹配（国际零售通用 = 新零售 + 渠道零售 + 空业务域）
-    // v1.3.2：兼容旧数据，businessDomain可能包含任意值或为空
-    let matchesBusinessDomain = true;
-    if (businessDomainFilter !== 'all') {
-      const reqDomain = req?.businessDomain || '';
-      const reqCustomDomain = req?.customBusinessDomain || '';
-
-      if (businessDomainFilter === '国际零售通用') {
-        // 选择"国际零售通用"时，匹配"新零售"、"渠道零售"、"国际零售通用"或空业务域（默认）
-        matchesBusinessDomain = reqDomain === '新零售' ||
-                                reqDomain === '渠道零售' ||
-                                reqDomain === '国际零售通用' ||
-                                (!reqDomain && !reqCustomDomain); // 空业务域默认归为"国际零售通用"
-      } else if (['新零售', '渠道零售'].includes(businessDomainFilter)) {
-        // 选择预设业务域时，精确匹配businessDomain字段
-        matchesBusinessDomain = reqDomain === businessDomainFilter;
-      } else {
-        // 选择自定义业务域时：
-        // 1. 新数据：businessDomain='自定义' && customBusinessDomain匹配
-        // 2. 旧数据：businessDomain直接匹配（兼容性）
-        matchesBusinessDomain = (reqDomain === '自定义' && reqCustomDomain === businessDomainFilter) ||
-                                (reqDomain === businessDomainFilter);
-      }
-    }
-
-    // RMS筛选匹配（如果rmsFilter为true，只显示RMS项目）
-    const matchesRMS = !rmsFilter || req?.isRMS;
-
-    return matchesSearch && matchesType && matchesScore && matchesEffort && matchesBV && matchesBusinessDomain && matchesRMS;
-  });
-
-  // 应用排序
-  const sortedReqs = [...filteredReqs].sort((a, b) => {
-    let comparison = 0;
-
-    if (sortBy === 'score') {
-      comparison = (b.displayScore || 0) - (a.displayScore || 0);
-    } else if (sortBy === 'bv') {
-      // v1.2.0升级：优先使用10分制businessImpactScore，向后兼容旧的bv字段
-      const scoreB = b.businessImpactScore || 0;
-      const scoreA = a.businessImpactScore || 0;
-
-      if (scoreB > 0 || scoreA > 0) {
-        // 至少有一个有新评分，使用新评分排序
-        comparison = scoreB - scoreA;
-      } else {
-        // 都没有新评分，使用旧的bv字段排序
-        const bvOrder: Record<string, number> = { '战略平台': 4, '撬动核心': 3, '明显': 2, '局部': 1 };
-        comparison = (bvOrder[b.bv || '明显'] || 0) - (bvOrder[a.bv || '明显'] || 0);
-      }
-    } else if (sortBy === 'submitDate') {
-      comparison = new Date(b.submitDate).getTime() - new Date(a.submitDate).getTime();
-    } else if (sortBy === 'effort') {
-      comparison = b.effortDays - a.effortDays;
-    }
-
-    // 根据 sortOrder 决定是否反转结果
-    return sortOrder === 'desc' ? comparison : -comparison;
-  });
-
-  // 分类：已完成技术评估的可排期需求 vs 未评估的不可排期需求
-  // 已评估：'已评估工作量', '已完成技术方案', '技术方案设计中', '开发中', '联调测试中', '已上线'
-  // 未评估：'待评估', '未评估', 或其他未识别值
-  // 使用常量定义，避免硬编码和拼写错误
-  const readyReqs = sortedReqs.filter(r => r.techProgress && !(NOT_READY_STATUSES as readonly string[]).includes(r.techProgress));
-  const notReadyReqs = sortedReqs.filter(r => !r.techProgress || (NOT_READY_STATUSES as readonly string[]).includes(r.techProgress));
+  // ============================================================================
+  // 渲染
+  // ============================================================================
 
   return (
     <div style={{ width: `${leftPanelWidth}px` }} className="bg-white border-r border-gray-200 flex flex-col h-full">
+      {/* 头部区域 */}
       <div className="flex-shrink-0 p-3 border-b border-gray-200 bg-gray-900 text-white">
+        {/* 标题栏 + 视图切换 + 操作按钮 */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold">待排期区</h2>
@@ -321,135 +220,33 @@ const UnscheduledArea = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mb-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
-            <input
-              type="text"
-              placeholder="搜索需求..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:bg-white/20 focus:border-white/40 transition text-xs"
-            />
-          </div>
-          <select
-            value={businessDomainFilter}
-            onChange={(e) => onBusinessDomainFilterChange(e.target.value)}
-            className="px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition whitespace-nowrap"
-          >
-            <option value="all" className="text-gray-900">全部业务域</option>
-            <option value="新零售" className="text-gray-900">新零售</option>
-            <option value="渠道零售" className="text-gray-900">渠道零售</option>
-            <option value="国际零售通用" className="text-gray-900">国际零售通用</option>
-            {customBusinessDomains.map(domain => (
-              <option key={domain} value={domain} className="text-gray-900">{domain}</option>
-            ))}
-          </select>
-          <label className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
-            <input
-              type="checkbox"
-              checked={rmsFilter}
-              onChange={(e) => onRMSFilterChange(e.target.checked)}
-              className="w-3.5 h-3.5 rounded cursor-pointer"
-            />
-            <span className="text-xs text-white">RMS</span>
-          </label>
-        </div>
-
-        <div className="flex items-center gap-1.5 mb-2">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="flex-1 px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
-          >
-            <option value="score" className="bg-gray-800 text-white">按权重分</option>
-            <option value="bv" className="bg-gray-800 text-white">按业务影响度</option>
-            <option value="submitDate" className="bg-gray-800 text-white">按提交时间</option>
-            <option value="effort" className="bg-gray-800 text-white">按工作量</option>
-          </select>
-          <button
-            onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-            className="flex-shrink-0 px-2 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white transition"
-            title={sortOrder === 'desc' ? '降序' : '升序'}
-          >
-            <ArrowUpDown size={14} />
-          </button>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex-shrink-0 px-2 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white transition"
-            title="筛选条件"
-          >
-            <Filter size={14} />
-          </button>
-        </div>
-
-        {showFilters && (
-          <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center gap-2">
-            <Filter size={14} className="text-gray-300 flex-shrink-0" />
-            <select
-              value={filterType}
-              onChange={(e) => onFilterChange(e.target.value)}
-              className="flex-1 px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
-            >
-              <option value="all" className="bg-gray-800 text-white">全部类型</option>
-              <option value="功能开发" className="bg-gray-800 text-white">功能开发</option>
-              <option value="技术债" className="bg-gray-800 text-white">技术债</option>
-              <option value="Bug修复" className="bg-gray-800 text-white">Bug修复</option>
-            </select>
-          </div>
-
-          <select
-            value={scoreFilter}
-            onChange={(e) => onScoreFilterChange(e.target.value)}
-            className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
-          >
-            <option value="all" className="bg-gray-800 text-white">全部权重</option>
-            <option value="high" className="bg-gray-800 text-white">高权重 (≥70)</option>
-            <option value="medium" className="bg-gray-800 text-white">中权重 (40-69)</option>
-            <option value="low" className="bg-gray-800 text-white">低权重 (&lt;40)</option>
-          </select>
-
-          <select
-            value={effortFilter}
-            onChange={(e) => onEffortFilterChange(e.target.value)}
-            className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
-          >
-            <option value="all" className="bg-gray-800 text-white">全部工作量</option>
-            <option value="tiny" className="bg-gray-800 text-white">微小 (≤3天)</option>
-            <option value="small" className="bg-gray-800 text-white">小 (4-10天)</option>
-            <option value="medium" className="bg-gray-800 text-white">中 (11-30天)</option>
-            <option value="large" className="bg-gray-800 text-white">大 (31-60天)</option>
-            <option value="xlarge" className="bg-gray-800 text-white">超大 (61-100天)</option>
-            <option value="huge" className="bg-gray-800 text-white">巨型 (&gt;100天)</option>
-          </select>
-
-          <select
-            value={bvFilter}
-            onChange={(e) => onBVFilterChange(e.target.value)}
-            className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition"
-          >
-            <option value="all" className="bg-gray-800 text-white">全部业务影响度</option>
-            <option value="战略平台" className="bg-blue-900 text-white font-medium">■ 战略平台 (10分)</option>
-            <option value="撬动核心" className="bg-blue-700 text-white font-medium">■ 撬动核心 (8-9分)</option>
-            <option value="明显" className="bg-blue-500 text-white font-medium">■ 明显 (5-7分)</option>
-            <option value="局部" className="bg-blue-200 text-gray-800 font-medium">■ 局部 (1-4分)</option>
-          </select>
-          </div>
-        )}
-
-        <div className="mt-2 bg-white/10 rounded-lg px-2.5 py-1.5 text-xs flex items-center justify-between">
-          <div>
-            <span className="text-gray-300">筛选结果: </span>
-            <span className="font-semibold text-white">{filteredReqs.length}</span>
-          </div>
-          <div>
-            <span className="text-gray-300">未评估: </span>
-            <span className="font-semibold text-red-300">{notReadyReqs.length}</span>
-          </div>
-        </div>
+        {/* 筛选栏组件 */}
+        <FilterBar
+          searchTerm={searchTerm}
+          onSearchChange={onSearchChange}
+          businessDomainFilter={businessDomainFilter}
+          onBusinessDomainFilterChange={onBusinessDomainFilterChange}
+          customBusinessDomains={customBusinessDomains}
+          rmsFilter={rmsFilter}
+          onRMSFilterChange={onRMSFilterChange}
+          sortBy={sortBy}
+          onSortByChange={setSortBy}
+          sortOrder={sortOrder}
+          onSortOrderChange={setSortOrder}
+          filterType={filterType}
+          onFilterChange={onFilterChange}
+          scoreFilter={scoreFilter}
+          onScoreFilterChange={onScoreFilterChange}
+          effortFilter={effortFilter}
+          onEffortFilterChange={onEffortFilterChange}
+          bvFilter={bvFilter}
+          onBVFilterChange={onBVFilterChange}
+          filteredCount={readyReqs.length + notReadyReqs.length}
+          notReadyCount={notReadyReqs.length}
+        />
       </div>
 
+      {/* 主内容区域 */}
       <div
         onDragOver={handleDragOver}
         onDrop={handleDrop}
@@ -457,170 +254,21 @@ const UnscheduledArea = ({
           isDragOver ? 'bg-teal-50' : ''
         }`}
       >
-        {viewMode === 'bubble' ? (
-          <>
-            {/* 气泡视图 - 可排期区 */}
-            <div className="p-3 pb-2">
-              <div className="flex flex-wrap gap-2 justify-start">
-                {readyReqs.map(req => (
-                  <RequirementCard
-                    key={req.id}
-                    requirement={req}
-                    compact={compact}
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('requirementId', req.id);
-                      e.dataTransfer.setData('sourcePoolId', 'unscheduled');
-                    }}
-                    onClick={() => onRequirementClick(req)}
-                  />
-                ))}
-              </div>
-            </div>
+        {/* 已评估需求区 */}
+        <ReadyRequirementsSection
+          requirements={readyReqs}
+          viewMode={viewMode}
+          compact={compact}
+          onRequirementClick={onRequirementClick}
+        />
 
-            {/* 分割线 + 未评估区 */}
-            {notReadyReqs.length > 0 && (
-              <>
-                <div className="px-3 py-2">
-                  <div className="border-t border-gray-300 relative">
-                    <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 py-0.5 text-xs text-gray-500 rounded-full border border-gray-300 whitespace-nowrap">
-                      未完成技术评估（不可排期）
-                    </div>
-                  </div>
-                </div>
-                <div className="px-3 pb-3 bg-gray-100">
-                  <div className="flex flex-wrap gap-2 justify-start opacity-60 pt-1.5">
-                    {notReadyReqs.map(req => (
-                      <RequirementCard
-                        key={req.id}
-                        requirement={req}
-                        compact={compact}
-                        onClick={() => onRequirementClick(req)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            {/* 列表视图 - 可排期区 */}
-            <div className="p-3">
-              <div className="border border-gray-200 rounded-lg">
-                <table className="text-xs border-collapse w-full">
-                  <thead className="bg-gray-100 sticky top-0 z-10">
-                    <tr>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">需求名称</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">权重分</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">星级</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">业务影响</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">复杂度</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">迫切程度</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">强制截止</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">工作量</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">提交方</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">RMS</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">技术评估</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {readyReqs.map(req => (
-                      <tr
-                        key={req.id}
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('requirementId', req.id);
-                          e.dataTransfer.setData('sourcePoolId', 'unscheduled');
-                        }}
-                        onClick={() => onRequirementClick(req)}
-                        className="hover:bg-gray-50 cursor-pointer transition"
-                      >
-                        <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.name}</td>
-                        <td className="border border-gray-300 px-2 py-1.5 text-center">
-                          <span className="font-semibold text-teal-700">{Math.round(req.displayScore || 0)}</span>
-                        </td>
-                        <td className="border border-gray-300 px-2 py-1.5 text-center">
-                          <span className="text-yellow-500" style={{ letterSpacing: '0.1em' }}>{'★'.repeat(req.stars || 0)}</span>
-                        </td>
-                        <td className="border border-gray-300 px-2 py-1.5 text-center">{req.businessImpactScore || '-'}</td>
-                        <td className="border border-gray-300 px-2 py-1.5 text-center">{req.complexityScore || '-'}</td>
-                        <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.tc}</td>
-                        <td className="border border-gray-300 px-2 py-1.5 text-center">{req.hardDeadline ? '有' : '无'}</td>
-                        <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">{roundNumber(req.effortDays, 1)}天</td>
-                        <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.submitter || '-'}</td>
-                        <td className="border border-gray-300 px-2 py-1.5 text-center">
-                          {req.isRMS ? <span className="text-purple-600 font-semibold">✓</span> : '-'}
-                        </td>
-                        <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.techProgress}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* 未评估区 - 列表视图 */}
-            {notReadyReqs.length > 0 && (
-              <>
-                <div className="px-3 py-2">
-                  <div className="border-t border-gray-300 relative">
-                    <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 py-0.5 text-xs text-gray-500 rounded-full border border-gray-300 whitespace-nowrap">
-                      未完成技术评估（不可排期）
-                    </div>
-                  </div>
-                </div>
-                <div className="px-3 pb-3 bg-gray-100">
-                  <div className="overflow-auto border border-gray-200 rounded-lg opacity-60" style={{ maxHeight: '300px' }}>
-                    <table className="text-xs border-collapse w-full">
-                      <thead className="bg-gray-200 sticky top-0 z-10">
-                        <tr>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">需求名称</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">权重分</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">星级</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">业务影响</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">复杂度</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">迫切程度</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">强制截止</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">工作量</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">提交方</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">RMS</th>
-                          <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">技术评估</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {notReadyReqs.map(req => (
-                          <tr
-                            key={req.id}
-                            onClick={() => onRequirementClick(req)}
-                            className="hover:bg-gray-50 cursor-pointer transition"
-                          >
-                            <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.name}</td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-center">
-                              <span className="text-gray-400">-</span>
-                            </td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-center">
-                              <span className="text-gray-400">-</span>
-                            </td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-center">{req.businessImpactScore || '-'}</td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-center">{req.complexityScore || '-'}</td>
-                            <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.tc}</td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-center">{req.hardDeadline ? '有' : '无'}</td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">未评估</td>
-                            <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.submitter || '-'}</td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-center">
-                              {req.isRMS ? <span className="text-purple-600 font-semibold">✓</span> : '-'}
-                            </td>
-                            <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.techProgress}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
-          </>
-        )}
+        {/* 未评估需求区 */}
+        <NotReadyRequirementsSection
+          requirements={notReadyReqs}
+          viewMode={viewMode}
+          compact={compact}
+          onRequirementClick={onRequirementClick}
+        />
       </div>
 
       {/* 底部清空按钮 */}
