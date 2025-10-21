@@ -29,7 +29,7 @@ import { AlertCircle, Plus } from 'lucide-react';
 import * as storage from './storage';
 
 // 导入类型定义
-import type { Requirement, SprintPool } from './types';
+import type { Requirement } from './types';
 
 // 导入工具函数
 import { calculateScores } from './utils/scoring';
@@ -39,9 +39,6 @@ import { useStore } from './store/useStore';
 
 // 导入常量
 import { NOT_READY_STATUSES } from './constants/techProgress';
-
-// 导入数据生成函数
-import { generateSampleData } from './data/sampleData';
 
 // 导入UI组件
 import HandbookModal from './components/HandbookModal';
@@ -62,6 +59,11 @@ import { useDataImport } from './hooks/useDataImport';
 import { useAIMapping } from './hooks/useAIMapping';
 import { useAIImport } from './hooks/useAIImport';
 import { useImportConfirm } from './hooks/useImportConfirm';
+import { useSprintOperations } from './hooks/useSprintOperations';
+import { useDragDrop } from './hooks/useDragDrop';
+
+// 导入工具函数
+import { createSampleData } from './utils/sampleDataLoader';
 
 export default function WSJFPlanner() {
   // ========== Zustand Store 状态 ==========
@@ -82,7 +84,6 @@ export default function WSJFPlanner() {
 
   // 拖拽相关状态
   const dragOverPool = useStore((state) => state.dragOverPool);
-  const setDragOverPool = useStore((state) => state.setDragOverPool);
 
   // 编辑相关状态
   const editingReq = useStore((state) => state.editingReq);
@@ -137,10 +138,6 @@ export default function WSJFPlanner() {
   // Store Actions
   const addRequirement = useStore((state) => state.addRequirement);
   const updateRequirement = useStore((state) => state.updateRequirement);
-  const moveRequirement = useStore((state) => state.moveRequirement);
-  const addSprintPool = useStore((state) => state.addSprintPool);
-  const updateSprintPool = useStore((state) => state.updateSprintPool);
-  const deleteSprintPool = useStore((state) => state.deleteSprintPool);
   const clearAllRequirements = useStore((state) => state.clearAllRequirements);
 
   // ========== 批量评估状态 ==========
@@ -168,29 +165,21 @@ export default function WSJFPlanner() {
   // ========== 导入确认 (使用Hook) ==========
   const { handleConfirmImport } = useImportConfirm();
 
+  // ========== Sprint 操作 (使用Hook) ==========
+  const { handleSaveSprint, handleDeleteSprint, handleAddSprint } = useSprintOperations();
+
+  // ========== 拖拽操作 (使用Hook) ==========
+  const { handleDragEnter, handleDragLeave, handleDrop } = useDragDrop();
+
   // 全局滚动监听已移除 - 用于诊断页面跳动问题
 
   // ========== 数据初始化和持久化 ==========
 
-  /**
-   * 加载示例数据
-   * 包含预置的需求和迭代池，帮助新用户快速了解系统
-   */
-
   const loadSampleData = () => {
-    const sampleReqs = generateSampleData();
-    const samplePools: SprintPool[] = [
-      { id: 'SPRINT-01', name: '迭代1', startDate: '2025-11', endDate: '2025-11-30', totalDays: 200, bugReserve: 10, refactorReserve: 15, otherReserve: 5, requirements: [] },
-      { id: 'SPRINT-02', name: '迭代2', startDate: '2025-12', endDate: '2025-12-31', totalDays: 200, bugReserve: 10, refactorReserve: 15, otherReserve: 5, requirements: [] },
-      { id: 'SPRINT-03', name: '迭代3', startDate: '2026-01', endDate: '2026-01-31', totalDays: 200, bugReserve: 10, refactorReserve: 15, otherReserve: 5, requirements: [] },
-    ];
-
-    const withScores = calculateScores(sampleReqs);
-    setRequirements(withScores);
-    setSprintPools(samplePools);
-
-    const sorted = [...withScores].sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0));
-    setUnscheduled(sorted);
+    const { requirements, sprintPools, unscheduled } = createSampleData();
+    setRequirements(requirements);
+    setSprintPools(sprintPools);
+    setUnscheduled(unscheduled);
   };
 
   // 初始化：检查用户登录状态
@@ -220,45 +209,6 @@ export default function WSJFPlanner() {
     } else {
       updateRequirement(req);
     }
-  };
-
-  const handleSaveSprint = (sprint: SprintPool) => {
-    updateSprintPool(sprint);
-  };
-
-  const handleDeleteSprint = (poolId: string) => {
-    const pool = sprintPools.find(p => p.id === poolId);
-    if (!pool) return;
-
-    if (pool.requirements.length > 0) {
-      if (!confirm(`迭代池"${pool.name}"中还有 ${pool.requirements.length} 个需求，删除后这些需求将被移回待排期区。确定删除吗？`)) {
-        return;
-      }
-    } else {
-      if (!confirm(`确定要删除迭代池"${pool.name}"吗？`)) {
-        return;
-      }
-    }
-
-    deleteSprintPool(poolId);
-  };
-
-  const handleAddSprint = () => {
-    const newId = `SPRINT-${Date.now()}`;
-    const newSprint: SprintPool = {
-      id: newId,
-      name: `迭代${sprintPools.length + 1}`,
-      startDate: '2026-01',
-      endDate: '2026-01-31',
-      totalDays: 200,
-      bugReserve: 10,
-      refactorReserve: 15,
-      otherReserve: 5,
-      requirements: []
-    };
-    addSprintPool(newSprint);
-    // 打开编辑弹窗让用户配置
-    setEditingSprint(newSprint);
   };
 
   const handleLogin = (user: storage.User) => {
@@ -340,27 +290,6 @@ export default function WSJFPlanner() {
   const handleExportPDFWithMenu = async () => {
     await handleExportPDF();
     setShowExportMenu(false);
-  };
-
-  const handleDragEnter = (poolId: string) => {
-    setDragOverPool(poolId);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverPool(null);
-  };
-
-  const handleDrop = (targetPoolId: string) => {
-    const event = window.event as DragEvent;
-    if (!event || !event.dataTransfer) return;
-
-    const reqId = event.dataTransfer.getData('requirementId');
-    const sourcePoolId = event.dataTransfer.getData('sourcePoolId');
-
-    if (!reqId) return;
-
-    // 使用 store action 处理移动逻辑
-    moveRequirement(reqId, sourcePoolId, targetPoolId);
   };
 
   const totalScheduled = sprintPools.reduce((sum, pool) => sum + pool.requirements.length, 0);
