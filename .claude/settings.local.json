@@ -6,7 +6,8 @@
       "Bash(cat:*)",
       "Bash(timeout 10 npm run dev)",
       "Bash(powershell -Command \"(Get-Content ''src/wsjf-sprint-planner.tsx'' | Measure-Object -Line).Lines\")",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(npx husky init)"
     ],
     "deny": [],
     "ask": []

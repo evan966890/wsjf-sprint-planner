@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 运行文件大小检查..."
+
+npm run check-file-size
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ 提交被拒绝：存在超过 500 行的文件"
+  echo ""
+  echo "📋 解决方案："
+  echo "   1. 运行 'npm run check-file-size' 查看问题文件"
+  echo "   2. 将超标文件拆分为多个小文件"
+  echo "   3. 使用 Hook 提取业务逻辑"
+  echo "   4. 使用子组件拆分 UI"
+  echo ""
+  echo "💡 参考文档："
+  echo "   - docs/architecture-guide.md"
+  echo "   - ai-templates/REFACTORING_LESSONS_LEARNED.md"
+  echo "   - ai-templates/FILE_SIZE_ENFORCEMENT.md"
+  echo ""
+  exit 1
+fi
+
+echo "✅ 文件大小检查通过"
