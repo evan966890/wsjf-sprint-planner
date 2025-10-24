@@ -13,12 +13,12 @@ import type { Requirement, BusinessImpactScore } from '../types';
 import { logger } from './logger';
 
 /**
- * 业务价值映射表
+ * 业务影响度映射表
  * 将旧的4档BV映射到新的10分制基础分
  */
 const BV_TO_SCORE_MAP: Record<string, number> = {
   '局部': 3,        // 局部影响 → 3分基础
-  '明显': 5,        // 明显价值 → 5分基础
+  '明显': 5,        // 明显影响 → 5分基础
   '撬动核心': 7,    // 撬动核心 → 7分基础
   '战略平台': 9     // 战略平台 → 9分基础
 };

@@ -45,7 +45,7 @@ export const autoMapFields = (sampleRow: any): Record<string, string> => {
     developer: ['开发人员', '开发', 'developer', 'dev', '开发者', '研发主r', '研发负责人'],
     effortDays: ['工作量', '人天', 'effort', 'days', '天数', '工时', '预估工时', 'workday'],
     bv: ['业务影响度', 'bv', 'business value', '价值', '重要性', '业务重要性'],
-    tc: ['时间临界', 'tc', 'time critical', '临界性', '紧急', '迫切'],
+    tc: ['时间窗口', 'tc', 'time critical', '时间临界', '临界性', '紧急', '迫切'],
     hardDeadline: ['强制截止', 'ddl', 'deadline', '截止', '上线时间', '交付时间'],
     type: ['类型', 'type', '需求类型'],
     submitDate: ['提交日期', '日期', 'date', '提交时间', '开始时间'],

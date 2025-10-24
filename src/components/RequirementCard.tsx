@@ -13,7 +13,7 @@ import { roundNumber } from '../utils/scoring';
  * 功能说明：
  * - 显示需求的核心信息（名称、工作量、分数、星级）
  * - 卡片尺寸随工作量动态变化，直观体现需求大小
- * - 根据业务价值和截止日期显示不同颜色渐变
+ * - 根据业务影响度和截止日期显示不同颜色渐变
  * - 支持拖拽功能（HTML5 Drag & Drop API）
  * - 悬停时显示详细信息的Tooltip
  *
@@ -171,7 +171,7 @@ const RequirementCard = ({
       tier = req.bv;
     }
 
-    // 根据业务价值档位返回不同深度的蓝色渐变
+    // 根据业务影响度档位返回不同深度的蓝色渐变
     const gradients: Record<string, string> = {
       '局部': 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',      // blue-100 to blue-200
       '明显': 'linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%)',      // blue-400 to blue-500

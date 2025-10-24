@@ -17,7 +17,7 @@ import type { Requirement } from '../types';
  *
  * 评分维度：
  * - BV(业务影响度-旧字段): 局部3 | 明显6 | 撬动核心8 | 战略平台10
- * - TC(时间临界): 随时0 | 三月窗口3 | 一月硬窗口5
+ * - TC(时间窗口): 随时0 | 三月窗口3 | 一月硬窗口5
  * - DDL(强制截止): 无0 | 有5
  * - WorkloadScore(工作量奖励): ≤2天+8 | 3-5天+7 | 6-14天+5 | 15-30天+3 | 31-50天+2 | 51-100天+1 | 101-150天+0 | >150天+0
  *
@@ -30,7 +30,7 @@ export const calculateScores = (requirements: Requirement[]): Requirement[] => {
     return [];
   }
 
-  // 业务价值映射表（默认值为最低档"局部"的3分）
+  // 业务影响度映射表（默认值为最低档"局部"的3分）
   const BV_MAP: Record<string, number> = {
     '局部': 3,
     '明显': 6,
@@ -68,8 +68,8 @@ export const calculateScores = (requirements: Requirement[]): Requirement[] => {
   // 第一步：计算原始分数（rawScore）
   const withRawScores = requirements.map(req => {
     // 使用默认值确保计算安全性
-    const bvScore = BV_MAP[req.bv || '局部'] || 3;           // 业务价值分
-    const tcScore = TC_MAP[req.tc || '随时'] || 0;           // 时间临界分
+    const bvScore = BV_MAP[req.bv || '局部'] || 3;           // 业务影响度分
+    const tcScore = TC_MAP[req.tc || '随时'] || 0;           // 时间窗口分
     const ddlScore = req.hardDeadline ? 5 : 0;     // 强制截止加分
     const wlScore = getWorkloadScore(req.effortDays); // 工作量加分
 

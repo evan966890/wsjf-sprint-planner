@@ -10,7 +10,10 @@
       "Bash(npx husky init)",
       "Read(//c/Users/Evan Tian/.claude/**)",
       "WebSearch",
-      "Bash(du -sh:*)"
+      "Bash(du -sh:*)",
+      "Bash(bash:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: 完成全项目术语规范统一\n\n全面修正术语违规，统一为标准术语：\n- 业务价值 → 业务影响度 (14处)\n- 热度分 → 权重分 (5处)\n- 时间临界性/时间临界 → 时间窗口 (7处)\n\n修改范围：\n- 核心代码文件：11个 (utils, hooks, components, constants)\n- 文档文件：2个 (CLAUDE.md, README.md)\n- 向后兼容：fileImportHelpers 保留旧术语用于识别旧格式\n\n验证结果：\n✓ 术语规范检查通过\n✓ TypeScript 类型检查通过\n✓ 生产构建成功\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

@@ -70,7 +70,7 @@ WSJF/
 
 **wsjf-sprint-planner.tsx** - 单文件包含所有组件：
 
-- `RequirementCard` - 需求卡片组件，显示需求信息和热度分
+- `RequirementCard` - 需求卡片组件，显示需求信息和权重分
 - `HandbookModal` - WSJF-Lite 评分说明书弹窗
 - `EditRequirementModal` - 需求编辑弹窗，包含实时预览
 - `EditSprintModal` - 迭代池编辑弹窗
@@ -85,8 +85,8 @@ WSJF/
 RawScore = BV + TC + DDL + WorkloadScore
 ```
 
-- BV (业务价值)：局部 3 | 明显 6 | 撬动核心 8 | 战略平台 10
-- TC (时间临界)：随时 0 | 三月窗口 3 | 一月硬窗口 5
+- BV (业务影响度)：局部 3 | 明显 6 | 撬动核心 8 | 战略平台 10
+- TC (时间窗口)：随时 0 | 三月窗口 3 | 一月硬窗口 5
 - DDL (强制截止)：无 0 | 有 5
 - WorkloadScore（8档细分）：
   - ≤2天 +8 | 3-5天 +7 | 6-14天 +5 | 15-30天 +3
@@ -118,13 +118,13 @@ DisplayScore = 10 + 90 * (RawScore - minRaw) / (maxRaw - minRaw)
 使用 React useState，主要状态：
 - `requirements` - 所有需求列表（含计算后的分数）
 - `sprintPools` - 迭代池列表（含已排期需求）
-- `unscheduled` - 待排期需求列表（按热度分降序）
+- `unscheduled` - 待排期需求列表（按权重分降序）
 - 各种 UI 状态（编辑弹窗、拖拽状态、筛选条件等）
 
 ### 样式系统
 
 使用 Tailwind CSS utility classes：
-- 渐变背景区分业务价值等级
+- 渐变背景区分业务影响度等级
 - 响应式布局（flex/grid）
 - 自定义颜色映射（蓝色系表示价值，红色表示 DDL）
 - hover/active 状态交互反馈

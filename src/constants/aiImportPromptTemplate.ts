@@ -157,7 +157,7 @@ ${rawDataStr}
 
 ## 三、时间维度（3个）
 
-### 13. timeCriticality（时间临界度）- 枚举
+### 13. timeCriticality（时间窗口）- 枚举
 - **可选值**：${config.timeCriticalityOptions.join(', ')}
 - **推导规则**：
   - 提到"紧急"、"立即"、"本月必须" → "一月硬窗口"

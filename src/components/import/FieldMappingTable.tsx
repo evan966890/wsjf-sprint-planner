@@ -32,7 +32,7 @@ const SYSTEM_FIELD_OPTIONS = [
   { value: 'developer', label: '开发人员' },
   { value: 'effortDays', label: '工作量(天数)' },
   { value: 'bv', label: '业务影响度' },
-  { value: 'tc', label: '时间临界' },
+  { value: 'tc', label: '时间窗口' },
   { value: 'hardDeadline', label: '强制截止' },
   { value: 'techProgress', label: '技术进展' },
   { value: 'productProgress', label: '产品进展' },

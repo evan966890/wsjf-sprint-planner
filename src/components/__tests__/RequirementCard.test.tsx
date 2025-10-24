@@ -77,7 +77,7 @@ describe('RequirementCard', () => {
   });
 
   /**
-   * 测试：不同业务价值的卡片颜色
+   * 测试：不同业务影响度的卡片颜色
    * 验证不同 BV 值对应不同的视觉样式
    */
   it('should apply different colors based on business value', () => {

@@ -60,7 +60,7 @@ export function transformImportRow(
   const validBV = ['局部', '明显', '撬动核心', '战略平台'];
   let finalBV = validBV.includes(mapped.bv) ? mapped.bv : '明显';
 
-  // 智能转换：如果是数字，尝试映射到业务价值等级
+  // 智能转换：如果是数字，尝试映射到业务影响度等级
   if (typeof mapped.bv === 'number' || !isNaN(Number(mapped.bv))) {
     const bvNum = Number(mapped.bv);
     if (bvNum >= 9) finalBV = '战略平台';
@@ -69,7 +69,7 @@ export function transformImportRow(
     else finalBV = '局部';
   }
 
-  // 验证时间临界
+  // 验证时间窗口
   const validTC = ['随时', '三月窗口', '一月硬窗口'];
   const finalTC = validTC.includes(mapped.tc) ? mapped.tc : '随时';
 

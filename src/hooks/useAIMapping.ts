@@ -54,7 +54,7 @@ export function useAIMapping({
         developer: '开发人员',
         effortDays: '工作量（天数）',
         bv: '业务影响度（局部/明显/撬动核心/战略平台）',
-        tc: '时间临界（随时/三月窗口/一月硬窗口）',
+        tc: '时间窗口（随时/三月窗口/一月硬窗口）',
         hardDeadline: '是否有强制截止日期（true/false）',
         techProgress: '技术进展（未评估/已评估工作量/已完成技术方案）',
         productProgress: '产品进展（未评估/设计中/开发中/已完成）',
