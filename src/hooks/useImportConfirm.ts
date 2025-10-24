@@ -71,6 +71,10 @@ export function useImportConfirm() {
 
         // 清理AI元数据字段（以_开头的字段）
         const cleanedRequirements: Requirement[] = selectedRequirements.map(req => {
+          // 调试：检查导入前的数据
+          console.log('[DEBUG useImportConfirm] 清理前 affectedMetrics:', req.affectedMetrics);
+          console.log('[DEBUG useImportConfirm] 清理前 businessImpactScore:', req.businessImpactScore);
+
           const cleaned: any = { ...req };
           // 删除所有_开头的元数据字段
           Object.keys(cleaned).forEach(key => {
@@ -78,11 +82,22 @@ export function useImportConfirm() {
               delete cleaned[key];
             }
           });
+
+          // 调试：检查清理后的数据
+          console.log('[DEBUG useImportConfirm] 清理后 affectedMetrics:', cleaned.affectedMetrics);
+          console.log('[DEBUG useImportConfirm] 清理后 businessImpactScore:', cleaned.businessImpactScore);
+
           return cleaned as Requirement;
         });
 
         // 计算WSJF分数（传入整个数组）
         const scoredRequirements = calculateScores(cleanedRequirements);
+
+        // 调试：检查评分后的数据
+        scoredRequirements.forEach((req, index) => {
+          console.log(`[DEBUG useImportConfirm] 评分后[${index}] affectedMetrics:`, req.affectedMetrics);
+          console.log(`[DEBUG useImportConfirm] 评分后[${index}] businessImpactScore:`, req.businessImpactScore);
+        });
 
         // 根据是否清空模式导入
         if (clearBeforeImport) {
