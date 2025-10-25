@@ -4,11 +4,19 @@
  * 包含应用中所有的TypeScript接口和类型定义
  */
 
+import type { TechProgressStatus, ProductProgressStatus } from './techProgress';
+
 /**
  * AI模型类型
  * 用于AI字段映射功能的模型选择
  */
 export type AIModelType = 'openai' | 'deepseek';
+
+/**
+ * 需求提交方类型
+ * v1.5.0新增：规范化提交方类型
+ */
+export type SubmitterType = '业务' | '产品' | '技术';
 
 /**
  * 业务影响度评分（1-10分制）
@@ -123,7 +131,7 @@ export interface Requirement {
   name: string;                  // 需求名称
   submitterName: string;         // 需求提交人姓名
   submitDate: string;            // 需求提交日期
-  submitter: string;             // 需求提交方：产品/研发/业务
+  submitter: SubmitterType;      // 需求提交方：业务/产品/技术
   businessTeam?: string;         // v1.2.0新增：业务团队（如 "开店团队"、"供应链团队"）
 
   // === 需求描述（v1.2.0新增）===
@@ -150,8 +158,8 @@ export interface Requirement {
   type: string;                  // 需求类型
   productManager: string;        // 产品经理
   developer: string;             // 研发负责人（保留用于向后兼容）
-  productProgress: string;       // 产品进度状态
-  techProgress: string;          // 技术进度状态
+  productProgress: ProductProgressStatus;  // 产品进度状态
+  techProgress: TechProgressStatus;        // 技术进度状态
   dependencies?: string[];       // 依赖的其他需求ID列表（可选）
   isRMS: boolean;                // 是否为RMS重构项目
 

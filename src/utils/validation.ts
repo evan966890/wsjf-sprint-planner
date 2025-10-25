@@ -16,7 +16,7 @@
  */
 
 import type { TechProgressStatus } from '../types/techProgress';
-import { ALL_TECH_PROGRESS_STATUSES, isValidStatus } from '../constants/techProgress';
+import { ALL_TECH_PROGRESS_STATUSES, isValidStatus, TECH_PROGRESS } from '../constants/techProgress';
 
 /**
  * 验证技术进展状态值
@@ -125,7 +125,7 @@ export function validateRequirements<T extends { id: string; techProgress?: stri
  * 用于处理历史数据或第三方数据
  *
  * @param status - 待验证的状态值
- * @param defaultValue - 默认值（默认为 '待评估'）
+ * @param defaultValue - 默认值（默认为 TECH_PROGRESS.PENDING）
  * @returns 有效的状态值或默认值
  *
  * @example
@@ -139,7 +139,7 @@ export function validateRequirements<T extends { id: string; techProgress?: stri
  */
 export function safeGetStatus(
   status: string | undefined | null,
-  defaultValue: TechProgressStatus = '待评估'
+  defaultValue: TechProgressStatus = TECH_PROGRESS.PENDING
 ): TechProgressStatus {
   if (!status || typeof status !== 'string') {
     return defaultValue;

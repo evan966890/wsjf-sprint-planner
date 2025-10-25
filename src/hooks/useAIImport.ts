@@ -27,7 +27,7 @@ import {
 } from '../config/businessFields';
 
 // 导入常量
-import { TECH_PROGRESS } from '../constants/techProgress';
+import { TECH_PROGRESS, PRODUCT_PROGRESS } from '../constants/techProgress';
 import { buildAIImportPromptTemplate } from '../constants/aiImportPromptTemplate';
 
 export function useAIImport() {
@@ -349,7 +349,7 @@ export function useAIImport() {
             effortDays: 5,
             productManager: '',
             developer: '',
-            productProgress: '待评估',
+            productProgress: PRODUCT_PROGRESS.PENDING,
             techProgress: TECH_PROGRESS.NOT_EVALUATED,
             hardDeadline: false,
             isRMS: false,

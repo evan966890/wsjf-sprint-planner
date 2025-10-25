@@ -180,6 +180,7 @@ const UnscheduledArea = ({
             <h2 className="text-base font-semibold">待排期区</h2>
             <div className="flex items-center bg-white/10 rounded-lg overflow-hidden">
               <button
+                type="button"
                 onClick={() => setViewMode('bubble')}
                 className={`px-2 py-1 text-xs transition ${
                   viewMode === 'bubble'
@@ -190,6 +191,7 @@ const UnscheduledArea = ({
                 气泡
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode('list')}
                 className={`px-2 py-1 text-xs transition ${
                   viewMode === 'list'
@@ -203,6 +205,7 @@ const UnscheduledArea = ({
           </div>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={onBatchEvaluate}
               className="text-white hover:bg-purple-600 bg-purple-500 rounded-lg px-2 py-1.5 transition flex items-center gap-1 text-xs font-medium"
               title="AI批量评估"
@@ -211,6 +214,7 @@ const UnscheduledArea = ({
               <span>AI评估</span>
             </button>
             <button
+              type="button"
               onClick={onAddNew}
               className="text-white hover:bg-white/10 rounded-lg p-1.5 transition"
               title="新增需求"
@@ -274,6 +278,7 @@ const UnscheduledArea = ({
       {/* 底部清空按钮 */}
       <div className="flex-shrink-0 border-t border-gray-200 p-3 bg-gray-50">
         <button
+          type="button"
           onClick={handleClearClick}
           className={`w-full px-4 py-2 rounded-lg transition text-sm font-medium flex items-center justify-center gap-2 ${
             clearConfirmStep === 0

@@ -120,11 +120,11 @@ export const generateSampleData = (): Requirement[] => {
     submitDate.setDate(submitDate.getDate() + daysOffset);
 
     // 根据类别分配需求提交方
-    let submitter: '产品' | '研发' | '业务' = '产品';
+    let submitter: '产品' | '技术' | '业务' = '产品';
     if (item.category === '中国区导入') {
       submitter = '业务';
     } else if (item.name.includes('优化') || item.name.includes('体验改善') || item.name.includes('看板')) {
-      submitter = i % 2 === 0 ? '产品' : '研发';
+      submitter = i % 2 === 0 ? '产品' : '技术';
     } else {
       submitter = '产品';
     }
@@ -172,7 +172,7 @@ export const generateSampleData = (): Requirement[] => {
       submitterName: item.pm,
       productManager: item.pm,
       developer: developer,
-      productProgress: item.status === 'doing' ? '已出PRD' : '已评估',
+      productProgress: item.status === 'doing' ? '开发中' : '设计中',
       effortDays: item.days,
       businessImpactScore: item.importance as any, // 业务影响度评分（1-10）
       complexityScore: complexityScore as any, // 添加复杂度评分

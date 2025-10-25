@@ -184,3 +184,27 @@ export function getNextStatus(current: TechProgressStatus): TechProgressStatus |
 
   return workflow[currentIndex + 1];
 }
+
+/**
+ * 产品进展状态常量
+ * 使用 as const 确保常量不可变
+ */
+export const PRODUCT_PROGRESS = {
+  /** 待评估 */
+  PENDING: '待评估' as const,
+
+  /** 需求评审中 */
+  REQUIREMENT_REVIEW: '需求评审中' as const,
+
+  /** 设计中 */
+  DESIGNING: '设计中' as const,
+
+  /** 设计评审中 */
+  DESIGN_REVIEW: '设计评审中' as const,
+
+  /** 开发中 */
+  DEVELOPING: '开发中' as const,
+
+  /** 已完成 */
+  COMPLETED: '已完成' as const,
+} as const;
