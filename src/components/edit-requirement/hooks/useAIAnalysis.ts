@@ -13,6 +13,7 @@ import { useState, useCallback } from 'react';
 import type { Requirement, AIModelType, AIAnalysisResult, AffectedMetric, AIRequestBody } from '../../../types';
 import { OPENAI_API_KEY, DEEPSEEK_API_KEY } from '../../../config/api';
 import { formatAIPrompt, AI_SYSTEM_MESSAGE } from '../../../config/aiPrompts';
+import { getAllMetrics } from '../../../config/metrics';
 import type { UploadedFileInfo } from './useDocumentManager';
 
 export type AIAdoptionStatus = 'pending' | 'adopted' | 'ignored' | 'partial';
@@ -21,6 +22,44 @@ interface AIAdoptedItems {
   score: boolean;
   okrMetrics: boolean;
   processMetrics: boolean;
+}
+
+/**
+ * 验证并修复AI返回的指标数据
+ * 确保所有 metricKey 都存在于系统定义中
+ */
+function validateAndFixMetrics(metrics: any[]): AffectedMetric[] {
+  const allMetrics = getAllMetrics();
+  const validMetricKeys = new Set(allMetrics.map(m => m.key));
+
+  const validatedMetrics: AffectedMetric[] = [];
+
+  for (const metric of metrics) {
+    if (!metric.metricKey) {
+      console.warn('AI返回的指标缺少 metricKey，已跳过:', metric);
+      continue;
+    }
+
+    // 检查 metricKey 是否有效
+    if (!validMetricKeys.has(metric.metricKey)) {
+      console.warn(`AI返回的 metricKey "${metric.metricKey}" 不存在于系统定义中，已跳过`, metric);
+      continue;
+    }
+
+    // 从系统定义中获取正确的指标信息
+    const metricDef = allMetrics.find(m => m.key === metric.metricKey);
+    if (!metricDef) continue;
+
+    validatedMetrics.push({
+      metricKey: metric.metricKey,
+      metricName: metricDef.defaultName, // 使用系统定义的名称
+      displayName: metricDef.defaultName,
+      estimatedImpact: metric.estimatedImpact || '',
+      category: metricDef.type // 使用系统定义的类型 (okr/process)
+    });
+  }
+
+  return validatedMetrics;
 }
 
 export function useAIAnalysis() {
@@ -252,18 +291,25 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
         suggestedTitle = match ? match[1].trim() : '需求标题（待补充）';
       }
 
-      // 构建AI分析结果
+      // 构建AI分析结果（使用验证函数确保指标有效）
+      const validatedOKRMetrics = validateAndFixMetrics(parsedData.suggestedOKRMetrics || []);
+      const validatedProcessMetrics = validateAndFixMetrics(parsedData.suggestedProcessMetrics || []);
+
+      // 如果AI返回了无效的指标，记录警告
+      const originalOKRCount = (parsedData.suggestedOKRMetrics || []).length;
+      const originalProcessCount = (parsedData.suggestedProcessMetrics || []).length;
+      if (validatedOKRMetrics.length < originalOKRCount) {
+        console.warn(`AI返回了 ${originalOKRCount} 个OKR指标，但只有 ${validatedOKRMetrics.length} 个有效`);
+      }
+      if (validatedProcessMetrics.length < originalProcessCount) {
+        console.warn(`AI返回了 ${originalProcessCount} 个过程指标，但只有 ${validatedProcessMetrics.length} 个有效`);
+      }
+
       const analysis: AIAnalysisResult = {
         suggestedScore: parsedData.suggestedScore || 5,
         reasoning: parsedData.reasoning || [],
-        suggestedOKRMetrics: (parsedData.suggestedOKRMetrics || []).map((m: any) => ({
-          ...m,
-          displayName: m.metricName
-        })),
-        suggestedProcessMetrics: (parsedData.suggestedProcessMetrics || []).map((m: any) => ({
-          ...m,
-          displayName: m.metricName
-        })),
+        suggestedOKRMetrics: validatedOKRMetrics,
+        suggestedProcessMetrics: validatedProcessMetrics,
         currentScore: requirement.businessImpactScore,
         confidence: 0.8,
         suggestedTitle: suggestedTitle || undefined

@@ -78,7 +78,9 @@ export function NotReadyRequirementsSection({
                 <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">权重分</th>
                 <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">星级</th>
                 <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">业务影响</th>
-                <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">复杂度</th>
+                <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">技术复杂度</th>
+                <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">业务域</th>
+                <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">业务子域</th>
                 <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">迫切程度</th>
                 <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">强制截止</th>
                 <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">工作量</th>
@@ -102,7 +104,15 @@ export function NotReadyRequirementsSection({
                     <span className="text-gray-400">-</span>
                   </td>
                   <td className="border border-gray-300 px-2 py-1.5 text-center">{req.businessImpactScore || '-'}</td>
-                  <td className="border border-gray-300 px-2 py-1.5 text-center">{req.complexityScore || '-'}</td>
+                  <td className="border border-gray-300 px-2 py-1.5 text-center">
+                    {req.complexityScore && req.complexityScore > 0 ? (
+                      <span className={`font-medium ${req.complexityScore >= 8 ? 'text-red-600' : req.complexityScore >= 5 ? 'text-orange-600' : 'text-green-600'}`}>
+                        {req.complexityScore}
+                      </span>
+                    ) : '-'}
+                  </td>
+                  <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.businessDomain || '国际零售通用'}</td>
+                  <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.businessSubDomain || '-'}</td>
                   <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.tc}</td>
                   <td className="border border-gray-300 px-2 py-1.5 text-center">{req.hardDeadline ? '有' : '无'}</td>
                   <td className="border border-gray-300 px-2 py-1.5 text-right whitespace-nowrap">未评估</td>

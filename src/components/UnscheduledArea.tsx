@@ -22,6 +22,7 @@ import { useRequirementFilter } from './unscheduled/hooks/useRequirementFilter';
 import { FilterBar } from './unscheduled/FilterBar';
 import { ReadyRequirementsSection } from './unscheduled/ReadyRequirementsSection';
 import { NotReadyRequirementsSection } from './unscheduled/NotReadyRequirementsSection';
+import { getSubDomainsByDomain } from '../config/businessFields';
 
 interface UnscheduledAreaProps {
   unscheduled: Requirement[];
@@ -43,6 +44,8 @@ interface UnscheduledAreaProps {
   onBVFilterChange: (filter: string) => void;
   businessDomainFilter: string;
   onBusinessDomainFilterChange: (filter: string) => void;
+  businessSubDomainFilter: string;
+  onBusinessSubDomainFilterChange: (filter: string) => void;
   rmsFilter: boolean;
   onRMSFilterChange: (filter: boolean) => void;
   leftPanelWidth: number;
@@ -69,6 +72,8 @@ const UnscheduledArea = ({
   onBVFilterChange,
   businessDomainFilter,
   onBusinessDomainFilterChange,
+  businessSubDomainFilter,
+  onBusinessSubDomainFilterChange,
   rmsFilter,
   onRMSFilterChange,
   leftPanelWidth,
@@ -95,28 +100,22 @@ const UnscheduledArea = ({
     effortFilter,
     bvFilter,
     businessDomainFilter,
+    businessSubDomainFilter,
     rmsFilter,
     sortBy,
     sortOrder,
   });
 
   // ============================================================================
-  // 自定义业务域提取
+  // 根据选择的业务域获取可用的业务子域
   // ============================================================================
 
-  const customBusinessDomains = useMemo(() => {
-    const domains = new Set<string>();
-    const presetDomains = ['新零售', '渠道零售', '国际零售通用', '自定义', 'all'];
-
-    unscheduled.forEach(req => {
-      if (req.businessDomain === '自定义' && req.customBusinessDomain) {
-        domains.add(req.customBusinessDomain);
-      } else if (req.businessDomain && !presetDomains.includes(req.businessDomain)) {
-        domains.add(req.businessDomain);
-      }
-    });
-    return Array.from(domains).sort();
-  }, [unscheduled]);
+  const availableSubDomains = useMemo(() => {
+    if (businessDomainFilter === 'all') {
+      return [];
+    }
+    return getSubDomainsByDomain(businessDomainFilter);
+  }, [businessDomainFilter]);
 
   // ============================================================================
   // 事件处理
@@ -230,7 +229,9 @@ const UnscheduledArea = ({
           onSearchChange={onSearchChange}
           businessDomainFilter={businessDomainFilter}
           onBusinessDomainFilterChange={onBusinessDomainFilterChange}
-          customBusinessDomains={customBusinessDomains}
+          businessSubDomainFilter={businessSubDomainFilter}
+          onBusinessSubDomainFilterChange={onBusinessSubDomainFilterChange}
+          availableSubDomains={availableSubDomains}
           rmsFilter={rmsFilter}
           onRMSFilterChange={onRMSFilterChange}
           sortBy={sortBy}

@@ -45,6 +45,7 @@ interface StoreState {
   showHandbook: boolean;
   showExportMenu: boolean;
   showImportModal: boolean;
+  showFeishuImportModal: boolean;  // 飞书导入Modal显示状态
   importData: ImportDataRow[];
   importMapping: Record<string, string>;
   isAIMappingLoading: boolean;
@@ -78,6 +79,7 @@ interface StoreState {
   effortFilter: string;
   bvFilter: string;
   businessDomainFilter: string;
+  businessSubDomainFilter: string;
   rmsFilter: boolean;
 
   // ========== 布局状态 ==========
@@ -118,6 +120,7 @@ interface StoreState {
   setShowHandbook: (show: boolean) => void;
   setShowExportMenu: (show: boolean) => void;
   setShowImportModal: (show: boolean) => void;
+  setShowFeishuImportModal: (show: boolean) => void;
   setImportData: (data: ImportDataRow[]) => void;
   setImportMapping: (mapping: Record<string, string>) => void;
   setImportModalScrollTop: (scrollTop: number) => void;
@@ -152,6 +155,7 @@ interface StoreState {
   setEffortFilter: (filter: string) => void;
   setBVFilter: (filter: string) => void;
   setBusinessDomainFilter: (filter: string) => void;
+  setBusinessSubDomainFilter: (filter: string) => void;
   setRMSFilter: (filter: boolean) => void;
 
   // 布局状态
@@ -192,6 +196,7 @@ export const useStore = create<StoreState>()(
         showHandbook: false,
         showExportMenu: false,
         showImportModal: false,
+        showFeishuImportModal: false,
         importData: [],
         importMapping: {},
         isAIMappingLoading: false,
@@ -225,6 +230,7 @@ export const useStore = create<StoreState>()(
         effortFilter: 'all',
         bvFilter: 'all',
         businessDomainFilter: 'all',
+        businessSubDomainFilter: 'all',
         rmsFilter: false,
 
         // 布局状态
@@ -445,6 +451,7 @@ export const useStore = create<StoreState>()(
         setShowHandbook: (show) => set({ showHandbook: show }),
         setShowExportMenu: (show) => set({ showExportMenu: show }),
         setShowImportModal: (show) => set({ showImportModal: show }),
+        setShowFeishuImportModal: (show) => set({ showFeishuImportModal: show }),
         setImportData: (data) => set({ importData: data }),
         setImportMapping: (mapping) => set({ importMapping: mapping }),
         setImportModalScrollTop: (scrollTop) => set({ importModalScrollTop: scrollTop }),
@@ -481,6 +488,7 @@ export const useStore = create<StoreState>()(
         setEffortFilter: (filter) => set({ effortFilter: filter }),
         setBVFilter: (filter) => set({ bvFilter: filter }),
         setBusinessDomainFilter: (filter) => set({ businessDomainFilter: filter }),
+        setBusinessSubDomainFilter: (filter) => set({ businessSubDomainFilter: filter }),
         setRMSFilter: (filter) => set({ rmsFilter: filter }),
 
         // 布局状态

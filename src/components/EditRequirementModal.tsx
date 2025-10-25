@@ -20,12 +20,14 @@ import { OPENAI_API_KEY, DEEPSEEK_API_KEY } from '../config/api';
 import { formatAIPrompt, AI_SYSTEM_MESSAGE } from '../config/aiPrompts';
 import {
   getStoreTypesByDomain,
+  getSubDomainsByDomain,
   getRoleConfigsByDomain,
   REGIONS,
   STORE_COUNT_RANGES,
   TIME_CRITICALITY_DESCRIPTIONS
 } from '../config/businessFields';
 import { COMPLEXITY_STANDARDS } from '../config/complexityStandards';
+import { getAllMetrics } from '../config/metrics';
 import { parseFile, isSupportedFile, formatFileSize } from '../utils/fileParser';
 
 interface EditRequirementModalProps {
@@ -33,6 +35,44 @@ interface EditRequirementModalProps {
   onSave: (req: Requirement) => void;
   onClose: () => void;
   isNew?: boolean;
+}
+
+/**
+ * 验证并修复AI返回的指标数据
+ * 确保所有 metricKey 都存在于系统定义中
+ */
+function validateAndFixMetrics(metrics: any[]): AffectedMetric[] {
+  const allMetrics = getAllMetrics();
+  const validMetricKeys = new Set(allMetrics.map(m => m.key));
+
+  const validatedMetrics: AffectedMetric[] = [];
+
+  for (const metric of metrics) {
+    if (!metric.metricKey) {
+      console.warn('AI返回的指标缺少 metricKey，已跳过:', metric);
+      continue;
+    }
+
+    // 检查 metricKey 是否有效
+    if (!validMetricKeys.has(metric.metricKey)) {
+      console.warn(`AI返回的 metricKey "${metric.metricKey}" 不存在于系统定义中，已跳过`, metric);
+      continue;
+    }
+
+    // 从系统定义中获取正确的指标信息
+    const metricDef = allMetrics.find(m => m.key === metric.metricKey);
+    if (!metricDef) continue;
+
+    validatedMetrics.push({
+      metricKey: metric.metricKey,
+      metricName: metricDef.defaultName, // 使用系统定义的名称
+      displayName: metricDef.defaultName,
+      estimatedImpact: metric.estimatedImpact || '',
+      category: metricDef.type // 使用系统定义的类型 (okr/process)
+    });
+  }
+
+  return validatedMetrics;
 }
 
 const EditRequirementModal = ({
@@ -153,6 +193,12 @@ const EditRequirementModal = ({
   // 根据业务域更新可选项
   const availableStoreTypes = useMemo(() =>
     getStoreTypesByDomain(form.businessDomain),
+    [form.businessDomain]
+  );
+
+  // 根据业务域获取可选的业务子域
+  const availableSubDomains = useMemo(() =>
+    getSubDomainsByDomain(form.businessDomain),
     [form.businessDomain]
   );
 
@@ -605,18 +651,25 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
         suggestedTitle = match ? match[1].trim() : '需求标题（待补充）';
       }
 
-      // 构建AI分析结果
+      // 构建AI分析结果（使用验证函数确保指标有效）
+      const validatedOKRMetrics = validateAndFixMetrics(parsedData.suggestedOKRMetrics || []);
+      const validatedProcessMetrics = validateAndFixMetrics(parsedData.suggestedProcessMetrics || []);
+
+      // 如果AI返回了无效的指标，记录警告
+      const originalOKRCount = (parsedData.suggestedOKRMetrics || []).length;
+      const originalProcessCount = (parsedData.suggestedProcessMetrics || []).length;
+      if (validatedOKRMetrics.length < originalOKRCount) {
+        console.warn(`AI返回了 ${originalOKRCount} 个OKR指标，但只有 ${validatedOKRMetrics.length} 个有效`);
+      }
+      if (validatedProcessMetrics.length < originalProcessCount) {
+        console.warn(`AI返回了 ${originalProcessCount} 个过程指标，但只有 ${validatedProcessMetrics.length} 个有效`);
+      }
+
       const analysis: AIAnalysisResult = {
         suggestedScore: parsedData.suggestedScore || 5,
         reasoning: parsedData.reasoning || [],
-        suggestedOKRMetrics: (parsedData.suggestedOKRMetrics || []).map((m: any) => ({
-          ...m,
-          displayName: m.metricName
-        })),
-        suggestedProcessMetrics: (parsedData.suggestedProcessMetrics || []).map((m: any) => ({
-          ...m,
-          displayName: m.metricName
-        })),
+        suggestedOKRMetrics: validatedOKRMetrics,
+        suggestedProcessMetrics: validatedProcessMetrics,
         currentScore: form.businessImpactScore,
         confidence: 0.8,
         suggestedTitle: suggestedTitle || undefined
@@ -866,8 +919,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                 />
               </div>
 
-              {/* 提交信息（两行布局） */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* 提交信息（两行布局，4列自适应） */}
+              <div className="grid grid-cols-4 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">提交日期</label>
                   <input
@@ -884,16 +937,35 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                     onChange={(e) => setForm({
                       ...form,
                       businessDomain: e.target.value,
-                      customBusinessDomain: e.target.value === '自定义' ? form.customBusinessDomain : ''
+                      businessSubDomain: '' // 切换业务域时清空业务子域
                     })}
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="新零售">新零售</option>
                     <option value="渠道零售">渠道零售</option>
                     <option value="国际零售通用">国际零售通用</option>
-                    <option value="自定义">自定义</option>
                   </select>
                 </div>
+
+                {/* 业务子域 - 根据业务域动态显示 */}
+                {availableSubDomains.length > 0 ? (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">业务子域</label>
+                    <select
+                      value={form.businessSubDomain || ''}
+                      onChange={(e) => setForm({ ...form, businessSubDomain: e.target.value })}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">请选择</option>
+                      {availableSubDomains.map(subDomain => (
+                        <option key={subDomain} value={subDomain}>{subDomain}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div></div>
+                )}
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">业务团队（总部）</label>
                   <select
@@ -907,20 +979,6 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                     ))}
                   </select>
                 </div>
-
-                {/* 自定义业务域 - 紧贴业务域选择器下方 */}
-                {form.businessDomain === '自定义' && (
-                  <div className="col-span-3">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">自定义业务域名称</label>
-                    <input
-                      type="text"
-                      value={form.customBusinessDomain || ''}
-                      onChange={(e) => setForm({ ...form, customBusinessDomain: e.target.value })}
-                      placeholder="请输入自定义业务域名称"
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1893,8 +1951,40 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
               )}
 
               {!isMetricsExpanded && (form.affectedMetrics || []).length > 0 && (
-                <div className="text-sm text-purple-700">
-                  已选择 {form.affectedMetrics!.length} 个指标
+                <div className="space-y-2">
+                  {/* 统计摘要 */}
+                  <div className="text-sm text-gray-700">
+                    已选择 <span className="font-semibold text-purple-700">{form.affectedMetrics!.length}</span> 个指标
+                    <span className="text-gray-500 ml-2">
+                      (OKR: {form.affectedMetrics!.filter(m => m.category === 'okr').length} |
+                      过程: {form.affectedMetrics!.filter(m => m.category === 'process').length})
+                    </span>
+                  </div>
+
+                  {/* 指标标签列表 */}
+                  <div className="flex flex-wrap gap-2">
+                    {form.affectedMetrics!.slice(0, 15).map((metric, idx) => (
+                      <span
+                        key={idx}
+                        className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
+                          metric.category === 'okr'
+                            ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                            : 'bg-purple-100 text-purple-800 border border-purple-300'
+                        }`}
+                        title={metric.estimatedImpact ? `预估影响: ${metric.estimatedImpact}` : undefined}
+                      >
+                        {metric.category === 'okr' ? '🎯' : '📊'} {metric.displayName}
+                        {metric.estimatedImpact && (
+                          <span className="ml-1 text-xs opacity-75">({metric.estimatedImpact})</span>
+                        )}
+                      </span>
+                    ))}
+                    {form.affectedMetrics!.length > 15 && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300">
+                        +{form.affectedMetrics!.length - 15} 个
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

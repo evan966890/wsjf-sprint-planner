@@ -9,6 +9,7 @@
 
 import * as pdfjsLib from 'pdfjs-dist';
 import * as XLSX from 'xlsx';
+import { detectOCRNeeds, formatOCRSuggestion } from './ocrParser';
 
 // 配置 PDF.js worker（使用国内可访问的CDN）
 // 优先使用 unpkg.com（国内速度快），失败则自动降级到 jsdelivr
@@ -26,6 +27,7 @@ interface PDFTextItem {
 /**
  * 解析PDF文件为文本
  * 支持多个CDN fallback机制
+ * 自动检测扫描PDF并提供OCR建议
  */
 export async function parsePDF(file: File): Promise<string> {
   const cdnList = [
@@ -44,9 +46,10 @@ export async function parsePDF(file: File): Promise<string> {
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
       let fullText = '';
+      const pageCount = pdf.numPages;
 
       // 逐页提取文本
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
         const pageText = textContent.items
@@ -56,7 +59,28 @@ export async function parsePDF(file: File): Promise<string> {
         fullText += `\n--- 第${pageNum}页 ---\n${pageText}\n`;
       }
 
-      return fullText.trim();
+      const trimmedText = fullText.trim();
+
+      // 检测是否需要OCR
+      const ocrDetection = detectOCRNeeds(trimmedText, pageCount, file.name);
+
+      if (ocrDetection.needsOCR) {
+        // 如果需要OCR，添加警告信息
+        const warning = `
+⚠️ OCR建议
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${formatOCRSuggestion(ocrDetection)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+当前提取的文本内容（可能不完整）：
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+
+        // 将警告信息添加到文本开头
+        return warning + trimmedText;
+      }
+
+      return trimmedText;
     } catch (error) {
       console.warn(`CDN ${i + 1} 失败，尝试下一个:`, cdnList[i], error);
       lastError = error instanceof Error ? error : new Error('未知错误');
@@ -122,6 +146,42 @@ export async function parseTXT(file: File): Promise<string> {
 }
 
 /**
+ * 解析Word文档(.docx)
+ */
+export async function parseWord(file: File): Promise<string> {
+  try {
+    const fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.docx')) {
+      throw new Error('仅支持 .docx 格式（不支持旧的 .doc 格式）');
+    }
+
+    // 动态导入mammoth
+    const mammoth = await import('mammoth/mammoth.browser');
+
+    const arrayBuffer = await file.arrayBuffer();
+
+    // 提取纯文本
+    const result = await mammoth.extractRawText({ arrayBuffer });
+
+    if (result.messages && result.messages.length > 0) {
+      console.warn('Word解析警告:', result.messages);
+    }
+
+    const text = result.value;
+
+    if (!text || text.trim().length === 0) {
+      throw new Error('Word文档内容为空');
+    }
+
+    return text.trim();
+
+  } catch (error) {
+    console.error('Word解析失败:', error);
+    throw new Error(`Word解析失败: ${error instanceof Error ? error.message : '未知错误'}`);
+  }
+}
+
+/**
  * 根据文件类型自动选择解析器
  */
 export async function parseFile(file: File): Promise<string> {
@@ -131,6 +191,8 @@ export async function parseFile(file: File): Promise<string> {
     return await parsePDF(file);
   } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
     return await parseExcel(file);
+  } else if (fileName.endsWith('.docx')) {
+    return await parseWord(file);
   } else if (fileName.endsWith('.txt')) {
     return await parseTXT(file);
   } else {
@@ -146,6 +208,7 @@ export function isSupportedFile(file: File): boolean {
   return fileName.endsWith('.pdf') ||
          fileName.endsWith('.xlsx') ||
          fileName.endsWith('.xls') ||
+         fileName.endsWith('.docx') ||
          fileName.endsWith('.txt');
 }
 

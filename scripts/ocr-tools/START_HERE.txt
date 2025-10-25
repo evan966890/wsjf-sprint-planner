@@ -1,0 +1,54 @@
+===============================================
+     HOW TO USE - BATCH PDF CONVERTER
+===============================================
+
+QUICK START (Easiest):
+
+  1. Copy quick-convert.bat to your PDF folder
+  2. Double-click it
+  3. Done! Check markdown_output folder
+
+-----------------------------------------------
+
+AVAILABLE FILES:
+
+  [1] quick-convert.bat
+      - Simplest option
+      - Just double-click
+      - Uses recommended settings
+      - Converts current folder
+
+  [2] run-batch-convert.bat
+      - Interactive mode
+      - Choose quality settings
+      - Can drag folder onto it
+
+  [3] batch-convert.py
+      - Python script (most flexible)
+      - Command line usage
+      - Full control over options
+
+-----------------------------------------------
+
+EXAMPLES:
+
+Quick conversion:
+  Double-click: quick-convert.bat
+
+Custom quality:
+  Double-click: run-batch-convert.bat
+  Select mode 1/2/3
+
+Command line:
+  python batch-convert.py ./my-pdfs
+  python batch-convert.py ./scans --resolution large
+
+-----------------------------------------------
+
+DOCUMENTATION:
+
+  Chinese: 使用说明.txt
+  English: README.md
+  Full docs: ../../docs/OCR_INTEGRATION.md
+
+===============================================

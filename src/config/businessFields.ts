@@ -41,6 +41,25 @@ export const getStoreTypesByDomain = (domain: string): string[] => {
   }
 };
 
+// ========== 业务子域 ==========
+
+/**
+ * 业务子域配置
+ * 不同业务域下有不同的子域选项
+ */
+export const BUSINESS_SUB_DOMAINS: Record<string, string[]> = {
+  '新零售': ['直营', '授权', '专卖', '通用能力'],
+  '渠道零售': ['数据', '通用能力'],
+  '国际零售通用': ['数据', '通用能力']
+};
+
+/**
+ * 根据业务域获取可选的业务子域
+ */
+export const getSubDomainsByDomain = (domain: string): string[] => {
+  return BUSINESS_SUB_DOMAINS[domain] || [];
+};
+
 // ========== 区域划分 ==========
 
 /**

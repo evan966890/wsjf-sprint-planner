@@ -1,0 +1,134 @@
+===============================================
+      开始这里 - WSL2 + DeepSeek-OCR
+===============================================
+
+您已经有WSL2，太好了！按照以下步骤操作即可。
+
+===============================================
+  第1步: 安装DeepSeek-OCR（10-20分钟）
+===============================================
+
+在Windows PowerShell中复制并运行:
+
+  wsl
+  cd /mnt/d/code/WSJF/scripts/ocr-tools
+  bash wsl-quick-install.sh
+
+然后等待安装完成。
+
+安装内容:
+  - Python 3.12
+  - PyTorch 2.6.0
+  - vLLM 0.8.5
+  - DeepSeek-OCR模型 (~3-6GB)
+
+===============================================
+  第2步: 测试转换（1分钟）
+===============================================
+
+安装完成后，在WSL2中测试:
+
+  source ~/deepseek-env/bin/activate
+
+  python3 ~/.claude/skills/deepseek-ocr-to-md/scripts/convert_to_md.py \
+    --input "/mnt/c/Users/Evan Tian/Downloads/DSTE/deepseek.pdf" \
+    --output "/mnt/c/Users/Evan Tian/Downloads/DSTE/test.md"
+
+如果成功生成test.md，说明安装正确！
+
+===============================================
+  第3步: 批量转换您的文件
+===============================================
+
+方法A: 从Windows调用（最简单）
+
+  1. 双击运行:
+     wsl-convert.bat
+
+  2. 等待转换完成
+
+  3. 查看 markdown_output 文件夹
+
+
+方法B: 在WSL2中运行
+
+  1. 打开PowerShell: wsl
+
+  2. 运行:
+     bash /mnt/d/code/WSJF/scripts/ocr-tools/wsl2-batch-convert.sh \
+       "C:\Users\Evan Tian\Downloads\DSTE"
+
+  3. 查看结果
+
+
+方法C: 转换单个文件
+
+  source ~/deepseek-env/bin/activate
+
+  python3 ~/.claude/skills/deepseek-ocr-to-md/scripts/convert_to_md.py \
+    --input "/mnt/c/path/to/file.pdf" \
+    --output output.md
+
+===============================================
+  重要提示
+===============================================
+
+1. 路径转换规则:
+   Windows: C:\Users\Evan Tian\Downloads
+   WSL2:    /mnt/c/Users/Evan Tian/Downloads
+
+2. 每次使用前激活环境:
+   source ~/deepseek-env/bin/activate
+
+3. 空格需要加引号:
+   "/mnt/c/Users/Evan Tian/file.pdf"
+
+===============================================
+  文件说明
+===============================================
+
+wsl-quick-install.sh
+  → 一键安装脚本（第1步用）
+
+wsl2-batch-convert.sh
+  → WSL2批量转换脚本
+
+wsl-convert.bat
+  → Windows调用WSL2的桥接工具
+
+README_WSL2.txt
+  → 简化版说明（本文件）
+
+WSL2_QUICK_START.md
+  → 详细快速入门
+
+WSL2_SETUP_GUIDE.md
+  → 完整安装指南
+
+===============================================
+  检查清单
+===============================================
+
+安装后在WSL2中运行以下命令验证:
+
+  □ python3.12 --version
+  □ source ~/deepseek-env/bin/activate
+  □ python3 -c "import torch; print(torch.cuda.is_available())"
+  □ python3 -c "import vllm; print(vllm.__version__)"
+  □ nvidia-smi
+
+全部通过 = 安装成功！
+
+===============================================
+  立即开始
+===============================================
+
+复制这3行命令到PowerShell运行:
+
+  wsl
+  cd /mnt/d/code/WSJF/scripts/ocr-tools
+  bash wsl-quick-install.sh
+
+等待安装完成后，再次告诉我，我会帮您测试！
+
+===============================================

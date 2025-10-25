@@ -151,6 +151,7 @@ export interface Requirement {
   // === 业务域 ===
   businessDomain: string;        // 业务域：新零售/渠道零售/国际零售通用/自定义
   customBusinessDomain?: string; // 自定义业务域名称（当businessDomain为"自定义"时填写）
+  businessSubDomain?: string;    // 业务子域（根据业务域不同而不同）
 
   // === 技术信息（产品/研发后续填写）===
   effortDays: number;            // 预估工作量（人天）

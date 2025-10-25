@@ -52,22 +52,10 @@ const RequirementCard = ({
   const displayScore = requirement.displayScore || 60;
   const stars = requirement.stars || 2;
 
-  // 业务域显示逻辑（兼容旧数据）
+  // 业务域显示逻辑
   const getBusinessDomainDisplay = () => {
-    const domain = requirement.businessDomain || '';
-    const customDomain = requirement.customBusinessDomain || '';
-
-    // 预设业务域
-    const presetDomains = ['新零售', '渠道零售', '国际零售通用'];
-
-    if (presetDomains.includes(domain)) {
-      return domain;
-    } else if (domain === '自定义') {
-      return customDomain || '-';
-    } else if (domain) {
-      return domain;
-    }
-    return '国际零售通用';
+    const domain = requirement.businessDomain || '国际零售通用';
+    return domain;
   };
 
   /**
@@ -357,6 +345,9 @@ const RequirementCard = ({
           <div className="space-y-1">
             <div className="font-semibold border-b border-white/20 pb-1 mb-1">{requirement.name}</div>
             <div>业务域: <span className="font-semibold">{getBusinessDomainDisplay()}</span></div>
+            {requirement.businessSubDomain && (
+              <div>业务子域: <span className="font-semibold">{requirement.businessSubDomain}</span></div>
+            )}
             <div>提交方: <span className="font-semibold">{requirement.submitter}</span></div>
             <div>业务影响度: <span className="font-semibold">{requirement.businessImpactScore || 5}分</span></div>
             {requirement.complexityScore && requirement.complexityScore > 0 && (

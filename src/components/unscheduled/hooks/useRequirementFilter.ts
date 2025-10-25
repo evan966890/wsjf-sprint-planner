@@ -19,6 +19,7 @@ interface FilterOptions {
   effortFilter: string;
   bvFilter: string;
   businessDomainFilter: string;
+  businessSubDomainFilter: string;
   rmsFilter: boolean;
   sortBy: 'score' | 'bv' | 'submitDate' | 'effort';
   sortOrder: 'asc' | 'desc';
@@ -77,27 +78,22 @@ export function useRequirementFilter(
       // 业务域匹配
       let matchesBusinessDomain = true;
       if (filters.businessDomainFilter !== 'all') {
-        const reqDomain = req?.businessDomain || '';
-        const reqCustomDomain = req?.customBusinessDomain || '';
+        const reqDomain = req?.businessDomain || '国际零售通用';
+        matchesBusinessDomain = reqDomain === filters.businessDomainFilter;
+      }
 
-        if (filters.businessDomainFilter === '国际零售通用') {
-          matchesBusinessDomain = reqDomain === '新零售' ||
-                                  reqDomain === '渠道零售' ||
-                                  reqDomain === '国际零售通用' ||
-                                  (!reqDomain && !reqCustomDomain);
-        } else if (['新零售', '渠道零售'].includes(filters.businessDomainFilter)) {
-          matchesBusinessDomain = reqDomain === filters.businessDomainFilter;
-        } else {
-          matchesBusinessDomain = (reqDomain === '自定义' && reqCustomDomain === filters.businessDomainFilter) ||
-                                  (reqDomain === filters.businessDomainFilter);
-        }
+      // 业务子域匹配
+      let matchesBusinessSubDomain = true;
+      if (filters.businessSubDomainFilter !== 'all' && filters.businessSubDomainFilter) {
+        const reqSubDomain = req?.businessSubDomain || '';
+        matchesBusinessSubDomain = reqSubDomain === filters.businessSubDomainFilter;
       }
 
       // RMS筛选
       const matchesRMS = !filters.rmsFilter || req?.isRMS === true;
 
       return matchesSearch && matchesType && matchesScore && matchesEffort &&
-             matchesBV && matchesBusinessDomain && matchesRMS;
+             matchesBV && matchesBusinessDomain && matchesBusinessSubDomain && matchesRMS;
     });
   }, [requirements, filters]);
 

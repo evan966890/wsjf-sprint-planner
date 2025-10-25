@@ -120,6 +120,7 @@ export default function WSJFPlanner() {
   const effortFilter = useStore((state) => state.effortFilter);
   const bvFilter = useStore((state) => state.bvFilter);
   const businessDomainFilter = useStore((state) => state.businessDomainFilter);
+  const businessSubDomainFilter = useStore((state) => state.businessSubDomainFilter);
   const rmsFilter = useStore((state) => state.rmsFilter);
   const setSearchTerm = useStore((state) => state.setSearchTerm);
   const setFilterType = useStore((state) => state.setFilterType);
@@ -127,6 +128,7 @@ export default function WSJFPlanner() {
   const setEffortFilter = useStore((state) => state.setEffortFilter);
   const setBVFilter = useStore((state) => state.setBVFilter);
   const setBusinessDomainFilter = useStore((state) => state.setBusinessDomainFilter);
+  const setBusinessSubDomainFilter = useStore((state) => state.setBusinessSubDomainFilter);
   const setRMSFilter = useStore((state) => state.setRMSFilter);
 
   // 布局相关状态
@@ -331,7 +333,7 @@ export default function WSJFPlanner() {
       <input
         id="file-import-input"
         type="file"
-        accept=".csv,.xlsx,.xls"
+        accept=".csv,.xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg,.webp,.bmp,.tiff,.txt"
         onChange={handleFileImport}
         className="hidden"
       />
@@ -375,6 +377,8 @@ export default function WSJFPlanner() {
             onBVFilterChange={setBVFilter}
             businessDomainFilter={businessDomainFilter}
             onBusinessDomainFilterChange={setBusinessDomainFilter}
+            businessSubDomainFilter={businessSubDomainFilter}
+            onBusinessSubDomainFilterChange={setBusinessSubDomainFilter}
             rmsFilter={rmsFilter}
             onRMSFilterChange={setRMSFilter}
             leftPanelWidth={leftPanelWidth}

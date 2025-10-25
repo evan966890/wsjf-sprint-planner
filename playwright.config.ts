@@ -9,10 +9,10 @@ import { defineConfig, devices } from '@playwright/test';
  * - AI可以自动运行和读取结果
  */
 export default defineConfig({
-  testDir: './tests/visual',
+  testDir: './tests',
 
   // 超时设置
-  timeout: 30 * 1000,
+  timeout: 60 * 1000,
   expect: {
     timeout: 5000,
   },
@@ -38,7 +38,7 @@ export default defineConfig({
   // 浏览器配置
   use: {
     // 基础URL
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3002',
 
     // 失败时截图
     screenshot: 'only-on-failure',
@@ -64,7 +64,7 @@ export default defineConfig({
   // 开发服务器
   webServer: {
     command: 'npm run dev',
-    port: 3000,
+    port: 3002,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

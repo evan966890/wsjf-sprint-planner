@@ -22,7 +22,11 @@ interface FilterBarProps {
   // 业务域筛选
   businessDomainFilter: string;
   onBusinessDomainFilterChange: (domain: string) => void;
-  customBusinessDomains: string[];
+
+  // 业务子域筛选
+  businessSubDomainFilter: string;
+  onBusinessSubDomainFilterChange: (subDomain: string) => void;
+  availableSubDomains: string[];
 
   // RMS筛选
   rmsFilter: boolean;
@@ -54,7 +58,9 @@ export function FilterBar({
   onSearchChange,
   businessDomainFilter,
   onBusinessDomainFilterChange,
-  customBusinessDomains,
+  businessSubDomainFilter,
+  onBusinessSubDomainFilterChange,
+  availableSubDomains,
   rmsFilter,
   onRMSFilterChange,
   sortBy,
@@ -97,10 +103,19 @@ export function FilterBar({
           <option value="新零售" className="text-gray-900">新零售</option>
           <option value="渠道零售" className="text-gray-900">渠道零售</option>
           <option value="国际零售通用" className="text-gray-900">国际零售通用</option>
-          {customBusinessDomains.map(domain => (
-            <option key={domain} value={domain} className="text-gray-900">{domain}</option>
-          ))}
         </select>
+        {availableSubDomains.length > 0 && (
+          <select
+            value={businessSubDomainFilter}
+            onChange={(e) => onBusinessSubDomainFilterChange(e.target.value)}
+            className="px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:bg-white/20 focus:border-white/40 transition whitespace-nowrap"
+          >
+            <option value="all" className="text-gray-900">全部子域</option>
+            {availableSubDomains.map(subDomain => (
+              <option key={subDomain} value={subDomain} className="text-gray-900">{subDomain}</option>
+            ))}
+          </select>
+        )}
         <label className="flex items-center gap-1 cursor-pointer whitespace-nowrap">
           <input
             type="checkbox"
