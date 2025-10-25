@@ -143,7 +143,7 @@ const EditRequirementModal = ({
     productProgress: '待评估',
     techProgress: '待评估',
     effortDays: 0,
-    complexityScore: 5 as ComplexityScore,  // v1.3.0新增：技术复杂度评分
+    complexityScore: undefined,  // v1.3.0：技术复杂度评分（无默认值，需手动评估）
     isRMS: false,
     bv: '明显',
     tc: '随时'
@@ -2072,10 +2072,11 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                     <span className="text-xs text-gray-500">(v1.3.0)</span>
                   </label>
                   <select
-                    value={form.complexityScore || 5}
-                    onChange={(e) => setForm({ ...form, complexityScore: parseInt(e.target.value) as ComplexityScore })}
+                    value={form.complexityScore || ''}
+                    onChange={(e) => setForm({ ...form, complexityScore: e.target.value ? parseInt(e.target.value) as ComplexityScore : undefined })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
+                    <option value="">请选择...</option>
                     {COMPLEXITY_STANDARDS.sort((a, b) => b.score - a.score).map((standard) => {
                       // 生成悬浮提示
                       const tooltipText = `【${standard.score}分 - ${standard.name}】\n${standard.shortDescription}\n\n典型案例：${standard.typicalCases.slice(0, 1).join('；')}`;
@@ -2093,8 +2094,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                   </select>
                   <div className="text-xs text-gray-500 mt-1">
                     {(() => {
-                      const selectedStandard = COMPLEXITY_STANDARDS.find(s => s.score === (form.complexityScore || 5));
-                      if (!selectedStandard) return null;
+                      const selectedStandard = form.complexityScore ? COMPLEXITY_STANDARDS.find(s => s.score === form.complexityScore) : null;
+                      if (!selectedStandard) return <div className="text-gray-400">请先选择技术复杂度</div>;
                       return (
                         <div>
                           <div className="font-medium text-gray-700 mb-1">
