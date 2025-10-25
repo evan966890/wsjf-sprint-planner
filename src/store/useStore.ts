@@ -228,7 +228,7 @@ export const useStore = create<StoreState>()(
         rmsFilter: false,
 
         // 布局状态
-        leftPanelWidth: 400,
+        leftPanelWidth: 320,
         poolWidths: {},
 
         // ========== Actions 实现 ==========
@@ -493,7 +493,7 @@ export const useStore = create<StoreState>()(
       }),
       {
         name: 'wsjf-storage',
-        version: 4, // v1.3.3: 重置AI模型默认值为deepseek
+        version: 7, // v1.3.4: 优化迭代池宽度为340px
         // 只持久化部分数据，避免存储过多临时状态
         // 注意：scoringStandards/okrMetrics/processMetrics 不再持久化
         // 原因：这些是代码配置而非用户数据，应始终从代码读取最新版本
@@ -509,7 +509,7 @@ export const useStore = create<StoreState>()(
         }),
         // 数据迁移逻辑
         migrate: (persistedState: any, version: number) => {
-          logger.log(`[Store] 检测到存储版本: ${version}，当前版本: 4`);
+          logger.log(`[Store] 检测到存储版本: ${version}，当前版本: 7`);
 
           const state = persistedState;
 
@@ -562,6 +562,32 @@ export const useStore = create<StoreState>()(
           if (version < 4) {
             logger.log('[Store] v3→v4迁移: 重置AI模型为deepseek');
             state.selectedAIModel = 'deepseek';
+          }
+
+          // v1.3.4：调整待排期区域和迭代池默认宽度（v5迁移）
+          // 注意：不仅检查版本号，还检查实际值，确保旧配置被重置
+          if (version < 5 || state.leftPanelWidth === 400 || state.leftPanelWidth > 350) {
+            logger.log('[Store] v4→v5迁移: 调整待排期区域宽度为320px，迭代池宽度为300px');
+            state.leftPanelWidth = 320;
+            // 重置所有迭代池宽度为300px（如果有旧的384px配置）
+            if (state.poolWidths && Object.values(state.poolWidths).some((w: any) => w > 350)) {
+              logger.log('[Store] 检测到旧的迭代池宽度配置，重置为300px');
+              state.poolWidths = {};
+            }
+          }
+
+          // v1.3.4：强制重置布局（v6迁移）- 确保HMR期间没有正确迁移的用户也能重置
+          // 迭代池宽度默认340px以确保内容完整显示
+          if (version < 6) {
+            logger.log('[Store] v5→v6迁移: 强制重置布局宽度（待排期320px，迭代池340px）');
+            state.leftPanelWidth = 320;
+            state.poolWidths = {};
+          }
+
+          // v1.3.4：优化迭代池宽度到340px（v7迁移）
+          if (version < 7) {
+            logger.log('[Store] v6→v7迁移: 优化迭代池宽度为340px以完整显示内容');
+            state.poolWidths = {};
           }
 
           return state;

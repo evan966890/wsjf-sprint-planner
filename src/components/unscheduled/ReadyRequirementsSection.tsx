@@ -26,8 +26,8 @@ export function ReadyRequirementsSection({
 }: ReadyRequirementsSectionProps) {
   if (viewMode === 'bubble') {
     return (
-      <div className="p-3 pb-2">
-        <div className="flex flex-wrap gap-2 justify-start">
+      <div className="p-3 pb-2" style={{ display: 'block' }}>
+        <div className="flex flex-wrap gap-2" style={{ alignContent: 'start', alignItems: 'start' }}>
           {requirements.map(req => (
             <RequirementCard
               key={req.id}

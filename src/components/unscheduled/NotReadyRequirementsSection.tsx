@@ -40,8 +40,8 @@ export function NotReadyRequirementsSection({
         </div>
 
         {/* 气泡视图 */}
-        <div className="px-3 pb-3 bg-gray-100">
-          <div className="flex flex-wrap gap-2 justify-start opacity-60 pt-1.5">
+        <div className="px-3 pb-3 bg-gray-100" style={{ display: 'block' }}>
+          <div className="flex flex-wrap gap-2 opacity-60 pt-1.5" style={{ alignContent: 'start', alignItems: 'start' }}>
             {requirements.map(req => (
               <RequirementCard
                 key={req.id}

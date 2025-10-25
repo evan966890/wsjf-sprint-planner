@@ -297,15 +297,18 @@ const RequirementCard = ({
           position: 'relative',
         }}
       >
-        <div className={`p-1.5 pointer-events-none flex-1 flex flex-col justify-between`}>
-          <div>
-            <div className={`font-semibold ${textColor} leading-tight line-clamp-2 ${nameSize}`}>
-              {requirement.name}
-            </div>
-            <div className={`flex items-center justify-between ${textColor} opacity-75 mt-0.5 ${daySize}`}>
-              <span>{requirement.effortDays > 0 ? `${roundNumber(requirement.effortDays, 1)}天` : '未评估'}</span>
-              <span className="ml-1 truncate">{getBusinessDomainDisplay()}</span>
-            </div>
+        {/* 标题区域 - 顶部 */}
+        <div className={`p-1.5 pb-0 pointer-events-none`}>
+          <div className={`font-semibold ${textColor} leading-tight line-clamp-2 ${nameSize}`}>
+            {requirement.name}
+          </div>
+        </div>
+
+        {/* 工作量和业务域 - 底部（权重分上方） */}
+        <div className={`px-1.5 pb-1.5 pointer-events-none`}>
+          <div className={`flex items-center justify-between ${textColor} opacity-75 ${daySize}`}>
+            <span>{requirement.effortDays > 0 ? `${roundNumber(requirement.effortDays, 1)}天` : '未评估'}</span>
+            <span className="ml-1 truncate">{getBusinessDomainDisplay()}</span>
           </div>
         </div>
 

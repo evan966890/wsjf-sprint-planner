@@ -414,7 +414,7 @@ export default function WSJFPlanner() {
                   onDragEnter={() => handleDragEnter(pool.id)}
                   onDragLeave={handleDragLeave}
                   className="h-full flex-shrink-0"
-                  style={{ width: `${poolWidths[pool.id] || 384}px` }}
+                  style={{ width: `${poolWidths[pool.id] || 340}px` }}
                 >
                   <SprintPoolComponent
                     pool={pool}
@@ -436,7 +436,7 @@ export default function WSJFPlanner() {
                   onMouseDown={(e) => {
                     e.preventDefault();
                     const startX = e.clientX;
-                    const startWidth = poolWidths[pool.id] || 384;
+                    const startWidth = poolWidths[pool.id] || 340;
 
                     const handleMouseMove = (e: MouseEvent) => {
                       const diff = e.clientX - startX;

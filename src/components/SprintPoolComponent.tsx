@@ -188,10 +188,10 @@ const SprintPoolComponent = ({
       <div className="flex-shrink-0 p-3 border-b border-gray-200 bg-gray-900 text-white rounded-t-xl">
         <div className="mb-2">
           <div className="flex items-start justify-between mb-1">
-            <h3 className="font-semibold text-lg">
-              {pool.name} <span className="text-sm font-normal text-gray-300">总工作量{roundNumber(pool.totalDays, 1)}天（可用{roundNumber(netAvailable, 1)}+不可用{roundNumber(reservedDays, 1)}）</span>
+            <h3 className="font-semibold text-lg flex-1 min-w-0">
+              {pool.name} <span className="text-sm font-normal text-gray-300">(总{roundNumber(pool.totalDays, 1)}天)</span>
             </h3>
-            <div className="flex gap-1 flex-shrink-0">
+            <div className="flex gap-1 flex-shrink-0 ml-2">
               <button
                 onClick={onEdit}
                 className="text-gray-300 hover:text-white hover:bg-white/10 rounded-lg p-2 transition"
@@ -209,10 +209,10 @@ const SprintPoolComponent = ({
             </div>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-gray-300 flex-shrink-0">
+            <p className="text-sm text-gray-300 flex-shrink min-w-0 truncate">
               {pool.startDate} ~ {pool.endDate}
             </p>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
               <select
                 value={businessDomainFilter}
                 onChange={(e) => setBusinessDomainFilter(e.target.value)}
@@ -303,7 +303,7 @@ const SprintPoolComponent = ({
 
         <div>
           <div className="flex justify-between items-baseline mb-1.5">
-            <span className="text-lg font-bold text-white">{roundNumber(usedDays, 1)}/{roundNumber(netAvailable, 1)}天</span>
+            <span className="text-sm font-medium text-white">已用 <span className="text-lg font-bold">{roundNumber(usedDays, 1)}</span> / 可用 <span className="text-lg font-bold">{roundNumber(netAvailable, 1)}</span> 天</span>
             <span className={`text-base font-bold ${percentage >= 100 ? 'text-red-400' : percentage >= 90 ? 'text-amber-400' : 'text-teal-400'}`}>
               {percentage}%
             </span>
