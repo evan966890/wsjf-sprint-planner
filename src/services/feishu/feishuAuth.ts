@@ -1,0 +1,239 @@
+/**
+ * 飞书集成 - 认证管理
+ *
+ * 处理飞书应用认证、token管理和刷新
+ */
+
+import type { FeishuConfig, FeishuTokenResponse } from './feishuTypes';
+import { FeishuAPIError as FeishuAPIErrorClass } from './feishuTypes';
+
+/**
+ * 飞书认证管理器
+ */
+export class FeishuAuthManager {
+  private config: FeishuConfig;
+  private accessToken: string | null = null;
+  private tokenExpireTime: number = 0;
+  private readonly TOKEN_BUFFER_TIME = 5 * 60 * 1000; // 提前5分钟刷新token
+
+  constructor(config: FeishuConfig) {
+    this.config = {
+      ...config,
+      baseUrl: config.baseUrl || 'https://open.feishu.cn/open-apis',
+    };
+  }
+
+  /**
+   * 获取访问令牌（自动刷新）
+   */
+  async getAccessToken(): Promise<string> {
+    // 检查token是否有效
+    if (this.isTokenValid()) {
+      return this.accessToken!;
+    }
+
+    // 获取新token
+    return await this.refreshAccessToken();
+  }
+
+  /**
+   * 检查token是否有效
+   */
+  private isTokenValid(): boolean {
+    if (!this.accessToken) {
+      return false;
+    }
+
+    // 检查是否即将过期（提前5分钟刷新）
+    const now = Date.now();
+    return now < this.tokenExpireTime - this.TOKEN_BUFFER_TIME;
+  }
+
+  /**
+   * 刷新访问令牌
+   */
+  async refreshAccessToken(): Promise<string> {
+    try {
+      const response = await fetch(
+        `${this.config.baseUrl}/auth/v3/tenant_access_token/internal`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            app_id: this.config.pluginId,
+            app_secret: this.config.pluginSecret,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new FeishuAPIErrorClass(
+          response.status,
+          `HTTP请求失败: ${response.statusText}`
+        );
+      }
+
+      const data: FeishuTokenResponse = await response.json();
+
+      if (data.code !== 0) {
+        throw new FeishuAPIErrorClass(
+          data.code,
+          data.msg || '获取访问令牌失败'
+        );
+      }
+
+      if (!data.tenant_access_token) {
+        throw new FeishuAPIErrorClass(
+          -1,
+          '响应中缺少tenant_access_token'
+        );
+      }
+
+      // 保存token和过期时间
+      this.accessToken = data.tenant_access_token;
+      this.tokenExpireTime = Date.now() + data.expire * 1000;
+
+      console.log('[FeishuAuth] Access token refreshed successfully');
+
+      return this.accessToken;
+    } catch (error) {
+      console.error('[FeishuAuth] Failed to refresh access token:', error);
+
+      if (error instanceof FeishuAPIErrorClass) {
+        throw error;
+      }
+
+      throw new FeishuAPIErrorClass(
+        -1,
+        `获取访问令牌失败: ${error instanceof Error ? error.message : '未知错误'}`
+      );
+    }
+  }
+
+  /**
+   * 清除token（用于登出或重新认证）
+   */
+  clearToken(): void {
+    this.accessToken = null;
+    this.tokenExpireTime = 0;
+  }
+
+  /**
+   * 更新配置
+   */
+  updateConfig(config: FeishuConfig): void {
+    this.config = {
+      ...config,
+      baseUrl: config.baseUrl || 'https://open.feishu.cn/open-apis',
+    };
+    // 清除旧token
+    this.clearToken();
+  }
+
+  /**
+   * 获取当前配置
+   */
+  getConfig(): FeishuConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * 测试连接（验证配置是否正确）
+   */
+  async testConnection(): Promise<boolean> {
+    try {
+      await this.refreshAccessToken();
+      return true;
+    } catch (error) {
+      console.error('[FeishuAuth] Connection test failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 获取token剩余有效时间（毫秒）
+   */
+  getTokenRemainingTime(): number {
+    if (!this.accessToken) {
+      return 0;
+    }
+
+    const remaining = this.tokenExpireTime - Date.now();
+    return Math.max(0, remaining);
+  }
+
+  /**
+   * 检查token是否即将过期
+   */
+  isTokenExpiringSoon(): boolean {
+    const remaining = this.getTokenRemainingTime();
+    return remaining > 0 && remaining < this.TOKEN_BUFFER_TIME;
+  }
+}
+
+/**
+ * 从localStorage加载飞书配置
+ */
+export function loadFeishuConfig(): FeishuConfig | null {
+  try {
+    const saved = localStorage.getItem('feishu_config');
+    if (!saved) {
+      return null;
+    }
+
+    const config = JSON.parse(saved) as FeishuConfig;
+
+    // 验证配置完整性
+    if (!config.pluginId || !config.pluginSecret) {
+      console.warn('[FeishuAuth] Incomplete config in localStorage');
+      return null;
+    }
+
+    return config;
+  } catch (error) {
+    console.error('[FeishuAuth] Failed to load config from localStorage:', error);
+    return null;
+  }
+}
+
+/**
+ * 保存飞书配置到localStorage
+ */
+export function saveFeishuConfig(config: FeishuConfig): void {
+  try {
+    localStorage.setItem('feishu_config', JSON.stringify(config));
+    console.log('[FeishuAuth] Config saved to localStorage');
+  } catch (error) {
+    console.error('[FeishuAuth] Failed to save config to localStorage:', error);
+    throw new Error('保存配置失败');
+  }
+}
+
+/**
+ * 清除飞书配置
+ */
+export function clearFeishuConfig(): void {
+  try {
+    localStorage.removeItem('feishu_config');
+    console.log('[FeishuAuth] Config cleared from localStorage');
+  } catch (error) {
+    console.error('[FeishuAuth] Failed to clear config from localStorage:', error);
+  }
+}
+
+/**
+ * 脱敏显示密钥
+ */
+export function maskSecret(secret: string): string {
+  if (!secret || secret.length <= 8) {
+    return '****';
+  }
+
+  const start = secret.slice(0, 4);
+  const end = secret.slice(-4);
+  const maskLength = secret.length - 8;
+
+  return `${start}${'*'.repeat(maskLength)}${end}`;
+}
