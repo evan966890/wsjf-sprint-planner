@@ -22,6 +22,21 @@ npm run build    # 构建生产版本到 dist 目录
 npm run preview  # 预览生产构建
 ```
 
+### 自动化测试（⭐ v1.6新增）
+```bash
+# 提交前快速测试（推荐，30-60秒完成）
+npm run test:quick
+
+# UI模式（可视化，可以看到浏览器自动测试）
+npm run test:visual:ui
+
+# 有头模式（看到浏览器操作过程）
+npm run test:visual:headed
+
+# 完整测试报告
+npm run test:visual:report
+```
+
 ## Architecture
 
 ⚠️ **重要：开发前必读**
@@ -29,8 +44,10 @@ npm run preview  # 预览生产构建
 - 📋 [新功能开发流程](docs/new-feature-workflow.md) - 标准开发检查清单
 - 🔧 [文件大小重构计划](docs/refactoring-plan.md) - 当前重构任务和执行指南
 - ⭐ [重构规范](docs/standards/refactoring-standards.md) - **强制执行的重构规范**
+- 🧪 [自动化测试规范](docs/standards/testing-standards.md) - **强制执行的测试规范（v1.6新增）**
 - 📚 [规范标准目录](docs/standards/README.md) - 所有项目规范文档
 - 🔍 运行 `npm run check-file-size` 检查文件大小
+- ✅ 运行 `npm run test:quick` 快速测试（⭐ 提交前必须运行）
 - ✅ 运行 `npm run pre-commit` 提交前检查
 
 ### 项目结构
@@ -424,8 +441,11 @@ npm run check-file-size
 1. 评估复杂度，预估代码行数
 2. 如果 > 200 行，提前规划拆分方案
 3. 创建必要的文件和目录
-4. 开发过程中持续检查文件大小
-5. 完成后运行 `npm run check-file-size`
+4. **为新组件添加 `data-testid` 属性**（⭐ v1.6新增）
+5. 开发过程中持续检查文件大小
+6. **编写测试用例**（⭐ v1.6新增，参考 `tests/comprehensive-fixed-v2/`）
+7. **运行快速测试** `npm run test:quick`（⭐ v1.6新增）
+8. 完成后运行 `npm run check-file-size`
 
 ### 进行重构
 **⚠️ 重构前必须阅读：** [重构规范](docs/standards/refactoring-standards.md) ⭐ **强制执行**
@@ -530,6 +550,43 @@ bash scripts/ai-visual-test.sh test
 
 ### 调整迭代池容量计算
 修改 `SprintPoolComponent` 中的资源计算逻辑（`netAvailable`, `percentage` 等）
+
+### 运行自动化测试（⭐ v1.6新增）
+**⚠️ 必读：** [自动化测试规范](docs/standards/testing-standards.md)
+
+**提交前必须运行**：
+```bash
+npm run test:quick  # 快速测试（30-60秒）
+```
+
+**可视化测试（推荐，可以看到浏览器自动操作）**：
+```bash
+npm run test:visual:ui      # UI模式
+npm run test:visual:headed  # 有头模式（看到浏览器）
+npm run test:visual:report  # 查看HTML报告
+```
+
+**为新功能添加测试**：
+1. 在组件中添加 `data-testid` 属性
+   ```tsx
+   <button data-testid="my-feature-btn">新功能</button>
+   ```
+
+2. 创建测试文件（参考 `tests/comprehensive-fixed-v2/`）
+   ```typescript
+   test('新功能可用', async ({ page }) => {
+     await expect(page.locator('[data-testid="my-feature-btn"]')).toBeVisible();
+   });
+   ```
+
+3. 运行测试验证
+   ```bash
+   npm run test:quick
+   ```
+
+**成功案例**：
+- 测试通过率从 9% 提升到 91%（10倍提升）
+- 详见：`COMPLETE_SUCCESS_REPORT.md`
 
 ### 重构超大文件
 **⚠️ 当前有 4 个文件超过 500 行，必须重构**
