@@ -6,14 +6,14 @@
  */
 
 import { useState, useEffect } from 'react';
-import { X, CheckCircle2, AlertCircle, Loader2, LogIn } from 'lucide-react';
+import { X, CheckCircle2, Loader2, LogIn } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { useFeishuAuth } from '../hooks/useFeishuAuth';
 import { useFeishuSync } from '../hooks/useFeishuSync';
 import { transformWorkItems } from '../utils/feishu/feishuDataTransform';
 import { DEFAULT_FIELD_MAPPINGS } from '../utils/feishu/feishuFieldMapper';
-import { maskSecret, startOAuthFlow } from '../services/feishu';
-import type { FeishuProject, FeishuWorkItem } from '../services/feishu';
+import { startOAuthFlow } from '../services/feishu';
+import type { FeishuProject } from '../services/feishu';
 import type { Requirement } from '../types';
 
 export interface FeishuImportModalProps {
@@ -30,10 +30,8 @@ export function FeishuImportModal({
   const { showToast } = useToast();
   const {
     config,
-    isConnected,
     isLoading: authLoading,
     saveConfig,
-    testConnection,
     authManager,
   } = useFeishuAuth({ showToast });
 
