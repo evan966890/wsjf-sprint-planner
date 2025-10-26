@@ -489,6 +489,7 @@ export default function WSJFPlanner() {
               <button
                 onClick={handleAddSprint}
                 className="w-full h-full bg-white border-2 border-dashed border-gray-300 rounded-xl hover:border-teal-500 hover:bg-teal-50 transition-all flex flex-col items-center justify-center gap-3 text-gray-500 hover:text-teal-600"
+                data-testid="add-sprint-pool-btn"
               >
                 <Plus size={48} className="opacity-50" />
                 <span className="text-lg font-medium">新增迭代池</span>

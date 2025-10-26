@@ -208,6 +208,7 @@ const UnscheduledArea = ({
               onClick={onBatchEvaluate}
               className="text-white hover:bg-purple-600 bg-purple-500 rounded-lg px-2 py-1.5 transition flex items-center gap-1 text-xs font-medium"
               title="AI批量评估"
+              data-testid="ai-batch-evaluate-btn"
             >
               <Sparkles size={14} />
               <span>AI评估</span>
@@ -217,6 +218,7 @@ const UnscheduledArea = ({
               onClick={onAddNew}
               className="text-white hover:bg-white/10 rounded-lg p-1.5 transition"
               title="新增需求"
+              data-testid="add-requirement-btn"
             >
               <Plus size={16} />
             </button>
