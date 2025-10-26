@@ -51,6 +51,7 @@ import BatchEvaluationModal from './components/BatchEvaluationModal';
 import { Header } from './components/Header';
 import ToastContainer from './components/ToastContainer';
 import ImportPreviewModal from './components/import/ImportPreviewModal';
+import { FeishuImportModal } from './components/FeishuImportModal';
 
 // 导入Hooks
 import { useToast } from './hooks/useToast';
@@ -98,6 +99,7 @@ export default function WSJFPlanner() {
   const showHandbook = useStore((state) => state.showHandbook);
   const showExportMenu = useStore((state) => state.showExportMenu);
   const showImportModal = useStore((state) => state.showImportModal);
+  const showFeishuImportModal = useStore((state) => state.showFeishuImportModal);
   const importData = useStore((state) => state.importData);
   const importMapping = useStore((state) => state.importMapping);
   const isAIMappingLoading = useStore((state) => state.isAIMappingLoading);
@@ -107,6 +109,7 @@ export default function WSJFPlanner() {
   const setShowHandbook = useStore((state) => state.setShowHandbook);
   const setShowExportMenu = useStore((state) => state.setShowExportMenu);
   const setShowImportModal = useStore((state) => state.setShowImportModal);
+  const setShowFeishuImportModal = useStore((state) => state.setShowFeishuImportModal);
   const setImportData = useStore((state) => state.setImportData);
   const setImportMapping = useStore((state) => state.setImportMapping);
   const setIsAIMappingLoading = useStore((state) => state.setIsAIMappingLoading);
@@ -166,6 +169,26 @@ export default function WSJFPlanner() {
 
   // ========== 导入确认 (使用Hook) ==========
   const { handleConfirmImport } = useImportConfirm();
+
+  // ========== 飞书导入处理 ==========
+  const handleFeishuImport = (importedRequirements: Requirement[]) => {
+    // 计算WSJF分数
+    const allRequirements = [...requirements, ...importedRequirements];
+    const scoredRequirements = calculateScores(allRequirements);
+
+    // 更新需求列表
+    setRequirements(scoredRequirements);
+
+    // 将新导入的需求添加到待排期区
+    const importedIds = new Set(importedRequirements.map(r => r.id));
+    const newlyImported = scoredRequirements.filter(r => importedIds.has(r.id));
+    const updatedUnscheduled = [...unscheduled, ...newlyImported].sort(
+      (a, b) => (b.displayScore || 0) - (a.displayScore || 0)
+    );
+    setUnscheduled(updatedUnscheduled);
+
+    showToast(`成功从飞书导入 ${importedRequirements.length} 个需求`, 'success');
+  };
 
   // ========== Sprint 操作 (使用Hook) ==========
   const { handleSaveSprint, handleDeleteSprint, handleAddSprint } = useSprintOperations();
@@ -321,6 +344,7 @@ export default function WSJFPlanner() {
         onToggleCompact={toggleCompact}
         onShowHandbook={() => setShowHandbook(true)}
         onImport={() => document.getElementById('file-import-input')?.click()}
+        onFeishuImport={() => setShowFeishuImportModal(true)}
         onExportExcel={handleExportExcelWithMenu}
         onExportPDF={handleExportPDFWithMenu}
         onExportPNG={handleExportPNGWithMenu}
@@ -533,6 +557,13 @@ export default function WSJFPlanner() {
         onAISmartFillClick={handleAISmartFill}
         onConfirmImport={handleConfirmImport}
         onTerminateAI={handleTerminateAI}
+      />
+
+      {/* 飞书导入Modal */}
+      <FeishuImportModal
+        isOpen={showFeishuImportModal}
+        onClose={() => setShowFeishuImportModal(false)}
+        onImport={handleFeishuImport}
       />
 
       {/* 批量AI评估Modal */}

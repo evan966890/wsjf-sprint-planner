@@ -20,7 +20,8 @@ import {
   FileText,
   Image as ImageIcon,
   Upload,
-  Star
+  Star,
+  Cloud
 } from 'lucide-react';
 import type { User } from '../storage';
 
@@ -30,6 +31,7 @@ interface HeaderProps {
   onToggleCompact: () => void;
   onShowHandbook: () => void;
   onImport: () => void;
+  onFeishuImport: () => void;
   onExportExcel: () => void;
   onExportPDF: () => void;
   onExportPNG: () => void;
@@ -44,6 +46,7 @@ export function Header({
   onToggleCompact,
   onShowHandbook,
   onImport,
+  onFeishuImport,
   onExportExcel,
   onExportPDF,
   onExportPNG,
@@ -117,6 +120,16 @@ export function Header({
           >
             <Upload size={16} />
             导入
+          </button>
+
+          {/* 从飞书导入按钮 */}
+          <button
+            onClick={onFeishuImport}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
+            title="从飞书项目导入需求"
+          >
+            <Cloud size={16} />
+            从飞书导入
           </button>
 
           <div className="relative">
