@@ -11,7 +11,6 @@ import type {
   FeishuProject,
   FeishuWorkItem,
   FeishuPagedResponse,
-  FeishuAPIResponse,
   FeishuProjectSpace,
 } from './feishuTypes';
 import { FeishuAPIError } from './feishuTypes';
@@ -25,7 +24,14 @@ export class FeishuAPI {
 
   constructor(config: FeishuConfig) {
     this.authManager = new FeishuAuthManager(config);
-    this.baseUrl = config.baseUrl || 'https://open.feishu.cn/open-apis';
+    // 使用代理路径避免CORS问题
+    // 在开发环境使用 /feishu-proxy，生产环境使用实际域名
+    const isDev = import.meta.env.DEV;
+    if (isDev) {
+      this.baseUrl = '/feishu-proxy';
+    } else {
+      this.baseUrl = config.baseUrl || 'https://project.f.mioffice.cn';
+    }
   }
 
   // ========== 认证相关 ==========
@@ -49,7 +55,7 @@ export class FeishuAPI {
    */
   updateConfig(config: FeishuConfig): void {
     this.authManager.updateConfig(config);
-    this.baseUrl = config.baseUrl || 'https://open.feishu.cn/open-apis';
+    this.baseUrl = config.baseUrl || 'https://project.f.mioffice.cn';
   }
 
   // ========== 项目空间API ==========
@@ -84,42 +90,78 @@ export class FeishuAPI {
 
   /**
    * 获取项目列表
+   * 飞书项目平台结构：空间→工作项，没有"获取所有空间"的API
+   * 需要用户提供已知的空间simple_name
    */
-  async getProjects(params?: {
+  async getProjects(_params?: {
     space_id?: string;
     page_size?: number;
     page_token?: string;
   }): Promise<FeishuPagedResponse<FeishuProject>> {
     try {
-      const queryParams = new URLSearchParams();
-
-      if (params?.space_id) {
-        queryParams.append('space_id', params.space_id);
+      // 临时Mock模式 - 用于测试流程
+      const { ENABLE_MOCK, getProjectsFromMockData } = await import('./mockFeishuData');
+      if (ENABLE_MOCK) {
+        console.log('[FeishuAPI] Using Mock data for testing');
+        const projects = getProjectsFromMockData();
+        return {
+          items: projects,
+          has_more: false,
+          total: projects.length,
+        };
       }
 
-      if (params?.page_size) {
-        queryParams.append('page_size', params.page_size.toString());
-      }
+      // 根据官方文档和PowerShell测试成功的端点
+      // /open_api/projects/detail (POST)
+      const config = this.authManager.getConfig();
+      const knownSpaces = ['mit', 'minrd']; // 已知的空间simple_name
 
-      if (params?.page_token) {
-        queryParams.append('page_token', params.page_token);
-      }
+      console.log('[FeishuAPI] Fetching projects from /open_api/projects/detail');
 
-      const endpoint = `/project/v1/project?${queryParams.toString()}`;
-
-      const response = await this.request<FeishuPagedResponse<FeishuProject>>(
-        endpoint,
+      const response = await this.request<any>(
+        '/open_api/projects/detail',
         {
-          method: 'GET',
+          method: 'POST',
+          body: JSON.stringify({
+            simple_names: knownSpaces,
+            user_key: config.userKey || '',
+          }),
         }
       );
 
-      return response;
+      console.log('[FeishuAPI] Projects detail response:', response);
+
+      // response已经被request函数解析，是data.data的值
+      // 格式：{ [project_key]: {...} }
+      if (response && typeof response === 'object' && !Array.isArray(response)) {
+        const projects = Object.values(response).map((p: any) => ({
+          id: p.project_key || p._id,
+          name: p.name,
+          simple_name: p.simple_name,
+          description: p.description || '',
+          status: 'active' as const,
+          space_id: '',
+          created_at: p.created_at || Date.now() / 1000,
+          updated_at: p.updated_at || Date.now() / 1000,
+        }));
+
+        console.log('[FeishuAPI] Parsed projects:', projects);
+
+        return {
+          items: projects,
+          has_more: false,
+          total: projects.length,
+        };
+      }
+
+      throw new Error('Unexpected response format from /open_api/projects/detail');
+
     } catch (error) {
       console.error('[FeishuAPI] Failed to get projects:', error);
       throw error;
     }
   }
+
 
   /**
    * 获取所有项目（自动处理分页）
@@ -171,7 +213,34 @@ export class FeishuAPI {
   // ========== 工作项API ==========
 
   /**
+   * 获取工作项类型列表
+   */
+  async getWorkItemTypes(projectKey: string): Promise<any[]> {
+    try {
+      const endpoint = `/open_api/${projectKey}/work_item/types`;
+
+      console.log('[FeishuAPI] Fetching work item types from:', endpoint);
+
+      const response = await this.request<any>(
+        endpoint,
+        {
+          method: 'GET',
+        }
+      );
+
+      console.log('[FeishuAPI] Work item types response:', response);
+
+      const types = response.work_item_types || response.types || [];
+      return types;
+    } catch (error) {
+      console.error('[FeishuAPI] Failed to get work item types:', error);
+      return [];
+    }
+  }
+
+  /**
    * 获取工作项列表
+   * 根据API文档格式：/open_api/:project_key/work_item/filter
    */
   async getWorkItems(params: {
     project_id: string;
@@ -180,31 +249,42 @@ export class FeishuAPI {
     work_item_type_id?: string;
   }): Promise<FeishuPagedResponse<FeishuWorkItem>> {
     try {
-      const queryParams = new URLSearchParams();
-      queryParams.append('project_id', params.project_id);
+      // work_item_type_key：从用户之前的Response中发现的MIT空间的类型key
+      // TODO: 未来支持用户配置或自动获取
+      let workItemTypeKey = params.work_item_type_id || '6337b4e95f9672378dda1432';
 
-      if (params.page_size) {
-        queryParams.append('page_size', params.page_size.toString());
-      }
+      console.log('[FeishuAPI] Using work_item_type_key:', workItemTypeKey);
 
-      if (params.page_token) {
-        queryParams.append('page_token', params.page_token);
-      }
+      const endpoint = `/open_api/${params.project_id}/work_item/filter`;
 
-      if (params.work_item_type_id) {
-        queryParams.append('work_item_type_id', params.work_item_type_id);
-      }
+      const body = {
+        page_size: params.page_size || 100,
+        page_num: params.page_token ? parseInt(params.page_token) : 1,
+        work_item_type_key: workItemTypeKey,
+      };
 
-      const endpoint = `/project/v1/work_item/list?${queryParams.toString()}`;
+      console.log('[FeishuAPI] Fetching work items from:', endpoint);
+      console.log('[FeishuAPI] Request body:', JSON.stringify(body, null, 2));
 
-      const response = await this.request<FeishuPagedResponse<FeishuWorkItem>>(
+      const response = await this.request<any>(
         endpoint,
         {
-          method: 'GET',
+          method: 'POST',
+          body: JSON.stringify(body),
         }
       );
 
-      return response;
+      console.log('[FeishuAPI] Work items response:', response);
+
+      // 适配响应格式
+      const items = response.work_items || response.items || [];
+
+      return {
+        items,
+        has_more: response.has_more || false,
+        total: response.total || items.length,
+        page_token: response.page_num ? String(response.page_num + 1) : undefined,
+      };
     } catch (error) {
       console.error('[FeishuAPI] Failed to get work items:', error);
       throw error;
@@ -288,49 +368,128 @@ export class FeishuAPI {
         ? endpoint
         : `${this.baseUrl}${endpoint}`;
 
-      // 构建headers - 支持两种header方式
+      // 构建headers
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...options?.headers as Record<string, string>,
       };
 
-      // 如果是飞书项目插件，使用X-Plugin-Token header
-      if (config.usePluginHeader) {
+      // Cookie模式：不添加任何认证header，依赖浏览器Cookie
+      if (config.manualToken === 'cookie') {
+        console.log('[FeishuAPI] Using Cookie authentication (no auth header)');
+        // 不添加任何认证header
+      } else if (config.usePluginHeader) {
+        // 飞书项目插件模式：X-Plugin-Token + X-User-Key
+        // 根据错误20039，plugin_access_token必须配合User Key使用
         headers['X-Plugin-Token'] = token;
+        if (config.userKey) {
+          headers['X-User-Key'] = config.userKey;
+          console.log('[FeishuAPI] Using Plugin Token + User Key authentication');
+        } else {
+          console.warn('[FeishuAPI] Warning: Plugin Token without User Key (may fail)');
+        }
       } else {
-        // 标准OAuth使用Authorization Bearer
+        // 标准OAuth模式：使用Authorization Bearer
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      console.log('[FeishuAPI] Request:', {
+        url,
+        method: options?.method || 'GET',
+        headers: { ...headers, 'X-Plugin-Token': headers['X-Plugin-Token'] ? headers['X-Plugin-Token'].substring(0, 20) + '...' : undefined },
+        useProxy: this.baseUrl.includes('feishu-proxy'),
+      });
+
       // 发起请求
+      // Cookie模式需要发送credentials以包含Cookie
       const response = await fetch(url, {
         ...options,
         headers,
+        credentials: config.manualToken === 'cookie' ? 'include' : 'same-origin',
+      });
+
+      console.log('[FeishuAPI] Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        url: response.url,
       });
 
       // 检查HTTP状态
       if (!response.ok) {
+        // 尝试读取错误响应
+        const errorText = await response.text();
+        console.error('[FeishuAPI] Error response:', errorText.substring(0, 500));
+
         throw new FeishuAPIError(
           response.status,
           `HTTP请求失败: ${response.statusText}`
         );
       }
 
-      // 解析响应
-      const data: FeishuAPIResponse<T> = await response.json();
+      // 尝试解析响应
+      const responseText = await response.text();
+      console.log('[FeishuAPI] Response body:', responseText.substring(0, 500));
 
-      // 检查飞书API错误码
-      if (data.code !== 0) {
+      let data: any;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[FeishuAPI] JSON parse failed:', responseText.substring(0, 200));
         throw new FeishuAPIError(
-          data.code,
-          data.msg || '飞书API调用失败',
-          data
+          -1,
+          'API返回的不是有效的JSON格式'
         );
       }
 
-      // 返回数据
-      return data.data as T;
+      // 飞书项目OpenAPI格式：{err_code: 0, data: {...}}
+      if ('err_code' in data) {
+        console.log('[FeishuAPI] Using Feishu Project OpenAPI format (err_code)');
+        if (data.err_code !== 0) {
+          throw new FeishuAPIError(
+            data.err_code,
+            data.err_msg || data.err?.msg || '飞书项目API调用失败',
+            data
+          );
+        }
+        return data.data as T;
+      }
+
+      // 飞书项目平台格式：{statusCode: 0, data: {value: [...]}}
+      if ('statusCode' in data) {
+        console.log('[FeishuAPI] Using Feishu Project format (statusCode)');
+        if (data.statusCode !== 0) {
+          throw new FeishuAPIError(
+            data.statusCode,
+            data.message || '飞书项目API调用失败',
+            data
+          );
+        }
+        return data.data as T;
+      }
+
+      // 标准飞书API格式：{code: 0, data: {...}}
+      if ('code' in data) {
+        console.log('[FeishuAPI] Using standard Feishu format (code)');
+        if (data.code !== 0) {
+          throw new FeishuAPIError(
+            data.code,
+            data.msg || '飞书API调用失败',
+            data
+          );
+        }
+        return data.data as T;
+      }
+
+      // 未知格式
+      console.warn('[FeishuAPI] Unknown response format:', data);
+      throw new FeishuAPIError(
+        -1,
+        '未知的API响应格式'
+      );
     } catch (error) {
+      console.error('[FeishuAPI] Request failed:', error);
+
       // 重新抛出FeishuAPIError
       if (error instanceof FeishuAPIError) {
         throw error;

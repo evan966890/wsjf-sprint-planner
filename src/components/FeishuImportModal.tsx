@@ -55,9 +55,11 @@ export function FeishuImportModal({
   const [transformedRequirements, setTransformedRequirements] = useState<Requirement[]>([]);
 
   // 授权模式和token
-  const [authMode, setAuthMode] = useState<'oauth' | 'manual'>('manual'); // 默认手动模式（更快）
+  const [authMode, setAuthMode] = useState<'oauth' | 'manual' | 'cookie'>('manual'); // 改回手动Token模式
   const [manualToken, setManualToken] = useState('');
-  const [usePluginHeader, setUsePluginHeader] = useState(true); // 默认使用插件Header
+  const [userKey, setUserKey] = useState('7541721806923694188'); // 用户Key（从文档获取）
+  const [usePluginHeader, setUsePluginHeader] = useState(true); // 使用Plugin Header
+  const [platformDomain, setPlatformDomain] = useState('https://project.f.mioffice.cn'); // 平台域名
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   // 初始化：检查是否已有配置和授权
@@ -69,6 +71,7 @@ export function FeishuImportModal({
         setAuthMode(config.authMode === 'manual' ? 'manual' : 'oauth');
         setManualToken(config.manualToken || '');
         setUsePluginHeader(config.usePluginHeader || false);
+        setPlatformDomain(config.baseUrl || 'https://project.f.mioffice.cn');
 
         // 检查是否已授权
         const authorized = authManager?.isAuthorized() || false;
@@ -94,26 +97,33 @@ export function FeishuImportModal({
     onClose();
   };
 
-  // 保存配置（手动Token模式）
-  const handleSaveManualToken = () => {
-    if (!pluginId || !pluginSecret) {
-      showToast('请填写Plugin ID和Secret', 'error');
-      return;
+  // 保存配置
+  const handleSaveConfig = () => {
+    // 手动Token模式：需要完整配置
+    if (authMode === 'manual') {
+      if (!pluginId || !pluginSecret) {
+        showToast('请填写Plugin ID和Secret', 'error');
+        return;
+      }
+
+      if (!manualToken.trim()) {
+        showToast('请填写Plugin Token', 'error');
+        return;
+      }
+
+      if (!userKey.trim()) {
+        showToast('请填写User Key', 'error');
+        return;
+      }
+
+      saveConfig(pluginId, pluginSecret, manualToken, usePluginHeader, platformDomain, userKey);
+      setIsAuthorized(true);
+      showToast('配置已保存，可以开始导入', 'success');
+
+      // 进入项目选择步骤
+      setStep('project');
+      fetchProjects();
     }
-
-    if (!manualToken.trim()) {
-      showToast('请填写Plugin Token', 'error');
-      return;
-    }
-
-    // 保存配置（manual模式）
-    saveConfig(pluginId, pluginSecret, manualToken, usePluginHeader);
-    setIsAuthorized(true);
-    showToast('Token已保存，可以开始导入', 'success');
-
-    // 进入下一步
-    setStep('project');
-    fetchProjects();
   };
 
   // 启动OAuth授权
@@ -220,7 +230,7 @@ export function FeishuImportModal({
 
         {/* 步骤指示器 */}
         <div className="px-6 py-4 border-b flex items-center justify-center gap-8">
-          {['配置', '选择项目', '选择任务', '确认导入'].map((label, idx) => {
+          {['配置', '选择空间', '选择任务', '确认导入'].map((label, idx) => {
             const stepValue = ['config', 'project', 'tasks', 'confirm'][idx];
             const isActive = step === stepValue;
             const stepIndex = ['config', 'project', 'tasks', 'confirm'].indexOf(step);
@@ -298,67 +308,120 @@ export function FeishuImportModal({
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       授权方式 <span className="text-red-500">*</span>
                     </label>
-                    <div className="flex gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                       <button
                         type="button"
-                        onClick={() => setAuthMode('manual')}
-                        className={`flex-1 px-4 py-3 border-2 rounded-lg text-left transition ${
+                        onClick={() => {
+                          setAuthMode('cookie');
+                          setUsePluginHeader(false);
+                        }}
+                        className={`px-4 py-3 border-2 rounded-lg text-left transition ${
+                          authMode === 'cookie'
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <p className="font-bold text-sm">Cookie（推荐）</p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          🍪 最简单，复用浏览器登录
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMode('manual');
+                          setUsePluginHeader(true);
+                        }}
+                        className={`px-4 py-3 border-2 rounded-lg text-left transition ${
                           authMode === 'manual'
                             ? 'border-green-500 bg-green-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
-                        <p className="font-bold text-sm">手动Token（推荐）</p>
+                        <p className="font-bold text-sm">手动Token</p>
                         <p className="text-xs text-gray-600 mt-1">
-                          ⚡ 立即可用，无需OAuth配置
+                          ⚡ Plugin API
                         </p>
                       </button>
                       <button
                         type="button"
                         onClick={() => setAuthMode('oauth')}
-                        className={`flex-1 px-4 py-3 border-2 rounded-lg text-left transition ${
+                        className={`px-4 py-3 border-2 rounded-lg text-left transition ${
                           authMode === 'oauth'
-                            ? 'border-blue-500 bg-blue-50'
+                            ? 'border-purple-500 bg-purple-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
-                        <p className="font-bold text-sm">OAuth授权</p>
+                        <p className="font-bold text-sm">OAuth</p>
                         <p className="text-xs text-gray-600 mt-1">
-                          🔐 需要配置回调URL
+                          🔐 需要配置
                         </p>
                       </button>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Plugin ID <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={pluginId}
-                      onChange={(e) => setPluginId(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="MII_68F1064FA240006C"
-                    />
-                  </div>
+                  {/* Cookie模式的说明 */}
+                  {authMode === 'cookie' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                      <p className="font-bold mb-2">🍪 Cookie认证说明：</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li>请先在浏览器中登录飞书项目平台</li>
+                        <li>然后点击下方"使用Cookie认证"按钮</li>
+                        <li>WSJF会自动复用您的登录状态</li>
+                        <li>无需配置任何Token</li>
+                      </ul>
+                    </div>
+                  )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Plugin Secret <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      value={pluginSecret}
-                      onChange={(e) => setPluginSecret(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="050E***********64F"
-                    />
-                  </div>
+                  {/* 手动Token/OAuth模式才需要这些字段 */}
+                  {authMode !== 'cookie' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Plugin ID <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={pluginId}
+                          onChange={(e) => setPluginId(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="MII_68F1064FA240006C"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Plugin Secret <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          value={pluginSecret}
+                          onChange={(e) => setPluginSecret(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="050E***********64F"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {/* 手动Token模式的额外输入 */}
                   {authMode === 'manual' && (
                     <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Platform Domain <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={platformDomain}
+                          onChange={(e) => setPlatformDomain(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                          placeholder="https://project.f.mioffice.cn"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          飞书项目平台地址（如：project.f.mioffice.cn 或 project.feishu.cn）
+                        </p>
+                      </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Plugin Token <span className="text-red-500">*</span>
@@ -366,26 +429,29 @@ export function FeishuImportModal({
                         <textarea
                           value={manualToken}
                           onChange={(e) => setManualToken(e.target.value)}
-                          rows={3}
+                          rows={2}
                           className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
                           placeholder="p-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                          从飞书开放平台获取（详见下方说明）
+                          运行 get-project-token.ps1 获取
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="usePluginHeader"
-                          checked={usePluginHeader}
-                          onChange={(e) => setUsePluginHeader(e.target.checked)}
-                          className="w-4 h-4 text-green-600 rounded"
-                        />
-                        <label htmlFor="usePluginHeader" className="text-sm text-gray-700">
-                          使用飞书项目插件Header（X-Plugin-Token）
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          User Key <span className="text-red-500">*</span>
                         </label>
+                        <input
+                          type="text"
+                          value={userKey}
+                          onChange={(e) => setUserKey(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
+                          placeholder="7541721806923694188"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          您在飞书项目中的用户ID（username字段）
+                        </p>
                       </div>
 
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
@@ -656,10 +722,19 @@ export function FeishuImportModal({
                   <CheckCircle2 className="w-5 h-5" />
                   继续导入
                 </button>
+              ) : authMode === 'cookie' ? (
+                <button
+                  type="button"
+                  onClick={handleSaveConfig}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 flex items-center gap-2 font-bold"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  使用Cookie认证
+                </button>
               ) : authMode === 'manual' ? (
                 <button
                   type="button"
-                  onClick={handleSaveManualToken}
+                  onClick={handleSaveConfig}
                   disabled={!pluginId || !pluginSecret || !manualToken}
                   className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 disabled:bg-gray-300 disabled:from-gray-300 disabled:to-gray-300 flex items-center gap-2 font-bold"
                 >
@@ -671,7 +746,7 @@ export function FeishuImportModal({
                   type="button"
                   onClick={handleStartAuth}
                   disabled={!pluginId || !pluginSecret}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:bg-gray-300 disabled:from-gray-300 disabled:to-gray-300 flex items-center gap-2 font-bold"
+                  className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 disabled:bg-gray-300 disabled:from-gray-300 disabled:to-gray-300 flex items-center gap-2 font-bold"
                 >
                   <LogIn className="w-5 h-5" />
                   开始OAuth授权

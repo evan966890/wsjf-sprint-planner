@@ -20,6 +20,7 @@ export interface FeishuConfig {
   redirectUri?: string; // OAuth回调地址（用户授权模式需要）
   manualToken?: string; // 手动输入的token（manual模式使用）
   usePluginHeader?: boolean; // 是否使用X-Plugin-Token header（飞书项目插件专用）
+  userKey?: string; // 用户Key（飞书项目插件需要，配合X-Plugin-Token使用）
 }
 
 /**

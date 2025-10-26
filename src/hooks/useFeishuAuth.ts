@@ -36,16 +36,18 @@ export function useFeishuAuth({ showToast }: UseFeishuAuthOptions) {
   }, []);
 
   /**
-   * 保存飞书配置（支持手动token模式）
+   * 保存飞书配置（支持手动token模式和userKey）
    */
   const saveConfig = useCallback(
-    (pluginId: string, pluginSecret: string, manualToken?: string, usePluginHeader?: boolean) => {
+    (pluginId: string, pluginSecret: string, manualToken?: string, usePluginHeader?: boolean, baseUrl?: string, userKey?: string) => {
       const newConfig: FeishuConfig = {
         pluginId,
         pluginSecret,
         authMode: manualToken ? 'manual' : 'user',
         manualToken,
         usePluginHeader: usePluginHeader !== undefined ? usePluginHeader : !!manualToken,
+        baseUrl: baseUrl || 'https://project.f.mioffice.cn', // 默认飞书项目平台
+        userKey, // 用户Key（飞书项目插件需要）
       };
 
       setConfig(newConfig);
