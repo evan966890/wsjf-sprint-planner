@@ -4,36 +4,84 @@
  * 处理飞书应用认证、token管理和刷新
  */
 
-import type { FeishuConfig, FeishuTokenResponse } from './feishuTypes';
+import type { FeishuConfig, FeishuTokenResponse, OAuthTokenInfo } from './feishuTypes';
 import { FeishuAPIError as FeishuAPIErrorClass } from './feishuTypes';
+import { FeishuOAuthManager } from './feishuOAuth';
 
 /**
- * 飞书认证管理器
+ * 飞书认证管理器（统一接口，支持租户和用户授权）
  */
 export class FeishuAuthManager {
   private config: FeishuConfig;
   private accessToken: string | null = null;
   private tokenExpireTime: number = 0;
+  private oauthManager: FeishuOAuthManager | null = null;
   private readonly TOKEN_BUFFER_TIME = 5 * 60 * 1000; // 提前5分钟刷新token
 
   constructor(config: FeishuConfig) {
     this.config = {
       ...config,
       baseUrl: config.baseUrl || 'https://open.feishu.cn/open-apis',
+      authMode: config.authMode || 'user', // 默认使用用户授权模式
     };
+
+    // 如果是用户授权模式，创建OAuth管理器
+    if (this.config.authMode === 'user') {
+      this.oauthManager = new FeishuOAuthManager(this.config);
+    }
   }
 
   /**
    * 获取访问令牌（自动刷新）
    */
   async getAccessToken(): Promise<string> {
-    // 检查token是否有效
+    // 如果是用户授权模式，使用OAuth管理器
+    if (this.config.authMode === 'user') {
+      if (!this.oauthManager) {
+        throw new FeishuAPIErrorClass(-1, 'OAuth管理器未初始化');
+      }
+      return await this.oauthManager.getAccessToken();
+    }
+
+    // 租户授权模式（原有逻辑）
     if (this.isTokenValid()) {
       return this.accessToken!;
     }
 
-    // 获取新token
     return await this.refreshAccessToken();
+  }
+
+  /**
+   * 检查是否已授权
+   */
+  isAuthorized(): boolean {
+    if (this.config.authMode === 'user') {
+      return this.oauthManager?.isAuthorized() || false;
+    }
+
+    return this.isTokenValid();
+  }
+
+  /**
+   * 获取OAuth授权URL（仅用户授权模式）
+   */
+  getAuthorizationUrl(): string {
+    if (this.config.authMode !== 'user' || !this.oauthManager) {
+      throw new FeishuAPIErrorClass(-1, '仅用户授权模式支持OAuth授权');
+    }
+
+    return this.oauthManager.getAuthorizationUrl();
+  }
+
+  /**
+   * 使用授权码换取token（仅用户授权模式）
+   */
+  async exchangeCodeForToken(code: string): Promise<OAuthTokenInfo> {
+    if (this.config.authMode !== 'user' || !this.oauthManager) {
+      throw new FeishuAPIErrorClass(-1, '仅用户授权模式支持OAuth授权');
+    }
+
+    return await this.oauthManager.exchangeCodeForToken(code);
   }
 
   /**
@@ -116,8 +164,12 @@ export class FeishuAuthManager {
    * 清除token（用于登出或重新认证）
    */
   clearToken(): void {
-    this.accessToken = null;
-    this.tokenExpireTime = 0;
+    if (this.config.authMode === 'user' && this.oauthManager) {
+      this.oauthManager.clearToken();
+    } else {
+      this.accessToken = null;
+      this.tokenExpireTime = 0;
+    }
   }
 
   /**

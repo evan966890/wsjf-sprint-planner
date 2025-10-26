@@ -6,13 +6,13 @@
  */
 
 import { useState, useEffect } from 'react';
-import { X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { X, CheckCircle2, AlertCircle, Loader2, LogIn } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { useFeishuAuth } from '../hooks/useFeishuAuth';
 import { useFeishuSync } from '../hooks/useFeishuSync';
 import { transformWorkItems } from '../utils/feishu/feishuDataTransform';
 import { DEFAULT_FIELD_MAPPINGS } from '../utils/feishu/feishuFieldMapper';
-import { maskSecret } from '../services/feishu';
+import { maskSecret, startOAuthFlow } from '../services/feishu';
 import type { FeishuProject, FeishuWorkItem } from '../services/feishu';
 import type { Requirement } from '../types';
 
@@ -34,6 +34,7 @@ export function FeishuImportModal({
     isLoading: authLoading,
     saveConfig,
     testConnection,
+    authManager,
   } = useFeishuAuth({ showToast });
 
   const {
@@ -55,16 +56,31 @@ export function FeishuImportModal({
   const [selectedWorkItemIds, setSelectedWorkItemIds] = useState<Set<string>>(new Set());
   const [transformedRequirements, setTransformedRequirements] = useState<Requirement[]>([]);
 
-  // 初始化：检查是否已有配置
+  // 检查是否已授权
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  // 初始化：检查是否已有配置和授权
   useEffect(() => {
-    if (config && isOpen) {
-      setStep('project');
-      setPluginId(config.pluginId);
-      setPluginSecret(config.pluginSecret);
-    } else if (isOpen) {
-      setStep('config');
+    if (isOpen) {
+      if (config) {
+        setPluginId(config.pluginId);
+        setPluginSecret(config.pluginSecret);
+
+        // 检查是否已授权
+        const authorized = authManager?.isAuthorized() || false;
+        setIsAuthorized(authorized);
+
+        if (authorized) {
+          setStep('project');
+        } else {
+          setStep('config');
+        }
+      } else {
+        setStep('config');
+        setIsAuthorized(false);
+      }
     }
-  }, [config, isOpen]);
+  }, [config, isOpen, authManager]);
 
   // 关闭Modal时重置状态
   const handleClose = () => {
@@ -74,21 +90,26 @@ export function FeishuImportModal({
     onClose();
   };
 
-  // 保存配置并测试连接
-  const handleSaveConfig = async () => {
+  // 保存配置并启动OAuth授权
+  const handleStartAuth = () => {
     if (!pluginId || !pluginSecret) {
-      showToast('请填写完整的认证信息', 'error');
+      showToast('请填写完整的应用信息', 'error');
       return;
     }
 
+    // 保存配置
     saveConfig(pluginId, pluginSecret);
 
-    // 测试连接
-    const success = await testConnection();
-    if (success) {
-      setStep('project');
-      // 自动获取项目列表
-      fetchProjects();
+    // 启动OAuth授权流程（跳转到飞书授权页面）
+    if (config) {
+      try {
+        startOAuthFlow(config);
+      } catch (error) {
+        showToast(
+          error instanceof Error ? error.message : '启动授权失败',
+          'error'
+        );
+      }
     }
   };
 
@@ -226,69 +247,94 @@ export function FeishuImportModal({
 
         {/* 内容区域 */}
         <div className="flex-1 overflow-auto p-6">
-          {/* 步骤1: 飞书认证配置 */}
+          {/* 步骤1: 用户授权 */}
           {step === 'config' && (
-            <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-6">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div className="text-sm text-blue-800">
-                    <p className="font-bold mb-1">配置说明：</p>
-                    <p>请前往飞书开放平台创建应用，获取 Plugin ID 和 Plugin Secret</p>
-                    <p className="mt-1 text-xs">
-                      文档：
-                      <a
-                        href="https://open.feishu.cn"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline ml-1"
-                      >
-                        https://open.feishu.cn
-                      </a>
+                  <AlertCircle className="w-6 h-6 text-blue-600 mt-0.5" />
+                  <div className="text-sm text-gray-800">
+                    <p className="font-bold text-lg mb-2">🔐 用户授权模式</p>
+                    <p className="mb-2">
+                      本功能使用<span className="font-bold text-blue-600">用户授权</span>，
+                      只读取您个人有权限访问的飞书项目和任务，
+                      <span className="font-bold text-green-600">无需管理员安装应用</span>。
+                    </p>
+                    <p className="text-xs text-gray-600 mt-2">
+                      授权后，您可以访问您在飞书中能看到的所有项目和任务。
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Plugin ID <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={pluginId}
-                  onChange={(e) => setPluginId(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="请输入 Plugin ID"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Plugin Secret <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  value={pluginSecret}
-                  onChange={(e) => setPluginSecret(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="请输入 Plugin Secret"
-                />
-                {config && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    当前配置：{maskSecret(config.pluginSecret)}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                {isConnected && (
-                  <div className="flex items-center gap-2 text-green-600 text-sm">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>连接成功</span>
+              {!isAuthorized ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Plugin ID <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={pluginId}
+                      onChange={(e) => setPluginId(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="MII_68F1064FA240006C"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      从飞书开放平台获取（基本信息 → 插件凭证）
+                    </p>
                   </div>
-                )}
-              </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Plugin Secret <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={pluginSecret}
+                      onChange={(e) => setPluginSecret(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="请输入 Plugin Secret"
+                    />
+                    {config && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        当前配置：{maskSecret(config.pluginSecret)}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-sm text-yellow-800">
+                      💡 <span className="font-bold">提示</span>：
+                      填写Plugin ID和Secret后，点击"开始授权"将跳转到飞书授权页面，
+                      您需要在飞书中同意授权，授权成功后会自动返回并获取您的项目列表。
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="w-8 h-8 text-green-600" />
+                    <div>
+                      <p className="font-bold text-green-900 text-lg">✅ 已授权</p>
+                      <p className="text-sm text-green-700 mt-1">
+                        您已成功授权，可以访问飞书项目数据
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      authManager?.clearToken();
+                      setIsAuthorized(false);
+                      showToast('已清除授权，请重新授权', 'info');
+                    }}
+                    className="mt-4 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-white transition"
+                  >
+                    重新授权
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -492,14 +538,29 @@ export function FeishuImportModal({
             )}
 
             {step === 'config' && (
-              <button
-                type="button"
-                onClick={handleSaveConfig}
-                disabled={isLoading}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300"
-              >
-                {isLoading ? '连接中...' : '保存并连接'}
-              </button>
+              isAuthorized ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('project');
+                    fetchProjects();
+                  }}
+                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  继续导入
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleStartAuth}
+                  disabled={!pluginId || !pluginSecret}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:bg-gray-300 disabled:from-gray-300 disabled:to-gray-300 flex items-center gap-2 font-bold"
+                >
+                  <LogIn className="w-5 h-5" />
+                  开始授权（跳转到飞书）
+                </button>
+              )
             )}
 
             {step === 'tasks' && (

@@ -16,9 +16,17 @@ export {
   maskSecret,
 } from './feishuAuth';
 
+// OAuth用户授权
+export {
+  FeishuOAuthManager,
+  handleOAuthCallback,
+  startOAuthFlow,
+} from './feishuOAuth';
+
 // 类型定义
 export type {
   FeishuConfig,
+  FeishuAuthMode,
   FeishuProject,
   FeishuWorkItem,
   FeishuProjectSpace,
@@ -34,6 +42,8 @@ export type {
   FeishuImportConfig,
   FeishuAPIResponse,
   FeishuTokenResponse,
+  FeishuUserTokenResponse,
+  OAuthTokenInfo,
 } from './feishuTypes';
 
 export { FeishuAPIError } from './feishuTypes';

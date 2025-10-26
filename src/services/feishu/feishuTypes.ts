@@ -5,22 +5,53 @@
  */
 
 /**
+ * 飞书授权模式
+ */
+export type FeishuAuthMode = 'tenant' | 'user';
+
+/**
  * 飞书API配置
  */
 export interface FeishuConfig {
   pluginId: string;
   pluginSecret: string;
   baseUrl?: string; // 默认: https://open.feishu.cn/open-apis
+  authMode?: FeishuAuthMode; // 授权模式：tenant（租户）或 user（用户），默认user
+  redirectUri?: string; // OAuth回调地址（用户授权模式需要）
 }
 
 /**
- * 飞书访问令牌响应
+ * 飞书访问令牌响应（应用授权）
  */
 export interface FeishuTokenResponse {
   code: number;
   msg: string;
   tenant_access_token?: string;
   expire: number;
+}
+
+/**
+ * 飞书用户访问令牌响应（用户授权）
+ */
+export interface FeishuUserTokenResponse {
+  code: number;
+  msg: string;
+  data?: {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    token_type: string;
+  };
+}
+
+/**
+ * OAuth授权信息
+ */
+export interface OAuthTokenInfo {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  tokenType: string;
 }
 
 /**
