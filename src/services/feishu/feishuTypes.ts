@@ -7,7 +7,7 @@
 /**
  * 飞书授权模式
  */
-export type FeishuAuthMode = 'tenant' | 'user';
+export type FeishuAuthMode = 'tenant' | 'user' | 'manual';
 
 /**
  * 飞书API配置
@@ -16,8 +16,10 @@ export interface FeishuConfig {
   pluginId: string;
   pluginSecret: string;
   baseUrl?: string; // 默认: https://open.feishu.cn/open-apis
-  authMode?: FeishuAuthMode; // 授权模式：tenant（租户）或 user（用户），默认user
+  authMode?: FeishuAuthMode; // 授权模式：tenant（租户）、user（用户）、manual（手动token）
   redirectUri?: string; // OAuth回调地址（用户授权模式需要）
+  manualToken?: string; // 手动输入的token（manual模式使用）
+  usePluginHeader?: boolean; // 是否使用X-Plugin-Token header（飞书项目插件专用）
 }
 
 /**

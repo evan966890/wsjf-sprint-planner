@@ -281,20 +281,31 @@ export class FeishuAPI {
     try {
       // 获取访问令牌
       const token = await this.authManager.getAccessToken();
+      const config = this.authManager.getConfig();
 
       // 构建完整URL
       const url = endpoint.startsWith('http')
         ? endpoint
         : `${this.baseUrl}${endpoint}`;
 
+      // 构建headers - 支持两种header方式
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...options?.headers as Record<string, string>,
+      };
+
+      // 如果是飞书项目插件，使用X-Plugin-Token header
+      if (config.usePluginHeader) {
+        headers['X-Plugin-Token'] = token;
+      } else {
+        // 标准OAuth使用Authorization Bearer
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       // 发起请求
       const response = await fetch(url, {
         ...options,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
+        headers,
       });
 
       // 检查HTTP状态

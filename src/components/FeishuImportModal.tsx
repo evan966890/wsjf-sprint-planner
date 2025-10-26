@@ -56,7 +56,10 @@ export function FeishuImportModal({
   const [selectedWorkItemIds, setSelectedWorkItemIds] = useState<Set<string>>(new Set());
   const [transformedRequirements, setTransformedRequirements] = useState<Requirement[]>([]);
 
-  // 检查是否已授权
+  // 授权模式和token
+  const [authMode, setAuthMode] = useState<'oauth' | 'manual'>('manual'); // 默认手动模式（更快）
+  const [manualToken, setManualToken] = useState('');
+  const [usePluginHeader, setUsePluginHeader] = useState(true); // 默认使用插件Header
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   // 初始化：检查是否已有配置和授权
@@ -65,6 +68,9 @@ export function FeishuImportModal({
       if (config) {
         setPluginId(config.pluginId);
         setPluginSecret(config.pluginSecret);
+        setAuthMode(config.authMode === 'manual' ? 'manual' : 'oauth');
+        setManualToken(config.manualToken || '');
+        setUsePluginHeader(config.usePluginHeader || false);
 
         // 检查是否已授权
         const authorized = authManager?.isAuthorized() || false;
@@ -90,14 +96,36 @@ export function FeishuImportModal({
     onClose();
   };
 
-  // 保存配置并启动OAuth授权
+  // 保存配置（手动Token模式）
+  const handleSaveManualToken = () => {
+    if (!pluginId || !pluginSecret) {
+      showToast('请填写Plugin ID和Secret', 'error');
+      return;
+    }
+
+    if (!manualToken.trim()) {
+      showToast('请填写Plugin Token', 'error');
+      return;
+    }
+
+    // 保存配置（manual模式）
+    saveConfig(pluginId, pluginSecret, manualToken, usePluginHeader);
+    setIsAuthorized(true);
+    showToast('Token已保存，可以开始导入', 'success');
+
+    // 进入下一步
+    setStep('project');
+    fetchProjects();
+  };
+
+  // 启动OAuth授权
   const handleStartAuth = () => {
     if (!pluginId || !pluginSecret) {
       showToast('请填写完整的应用信息', 'error');
       return;
     }
 
-    // 保存配置
+    // 保存配置（user模式）
     saveConfig(pluginId, pluginSecret);
 
     // 启动OAuth授权流程（跳转到飞书授权页面）
@@ -247,21 +275,19 @@ export function FeishuImportModal({
 
         {/* 内容区域 */}
         <div className="flex-1 overflow-auto p-6">
-          {/* 步骤1: 用户授权 */}
+          {/* 步骤1: 配置和授权 */}
           {step === 'config' && (
             <div className="space-y-6">
-              <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-6">
+              {/* 说明 */}
+              <div className="bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-lg p-6">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-6 h-6 text-blue-600 mt-0.5" />
+                  <CheckCircle2 className="w-6 h-6 text-green-600 mt-0.5" />
                   <div className="text-sm text-gray-800">
-                    <p className="font-bold text-lg mb-2">🔐 用户授权模式</p>
+                    <p className="font-bold text-lg mb-2">✨ 快速模式（推荐）</p>
                     <p className="mb-2">
-                      本功能使用<span className="font-bold text-blue-600">用户授权</span>，
-                      只读取您个人有权限访问的飞书项目和任务，
-                      <span className="font-bold text-green-600">无需管理员安装应用</span>。
-                    </p>
-                    <p className="text-xs text-gray-600 mt-2">
-                      授权后，您可以访问您在飞书中能看到的所有项目和任务。
+                      使用<span className="font-bold text-green-600">手动Token</span>模式，
+                      <span className="font-bold text-blue-600">立即可用</span>，
+                      无需复杂配置！
                     </p>
                   </div>
                 </div>
@@ -269,6 +295,43 @@ export function FeishuImportModal({
 
               {!isAuthorized ? (
                 <>
+                  {/* 授权模式选择 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      授权方式 <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setAuthMode('manual')}
+                        className={`flex-1 px-4 py-3 border-2 rounded-lg text-left transition ${
+                          authMode === 'manual'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <p className="font-bold text-sm">手动Token（推荐）</p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          ⚡ 立即可用，无需OAuth配置
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAuthMode('oauth')}
+                        className={`flex-1 px-4 py-3 border-2 rounded-lg text-left transition ${
+                          authMode === 'oauth'
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <p className="font-bold text-sm">OAuth授权</p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          🔐 需要配置回调URL
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Plugin ID <span className="text-red-500">*</span>
@@ -280,9 +343,6 @@ export function FeishuImportModal({
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="MII_68F1064FA240006C"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      从飞书开放平台获取（基本信息 → 插件凭证）
-                    </p>
                   </div>
 
                   <div>
@@ -294,31 +354,78 @@ export function FeishuImportModal({
                       value={pluginSecret}
                       onChange={(e) => setPluginSecret(e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="请输入 Plugin Secret"
+                      placeholder="050E***********64F"
                     />
-                    {config && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        当前配置：{maskSecret(config.pluginSecret)}
-                      </p>
-                    )}
                   </div>
 
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-sm text-yellow-800">
-                      💡 <span className="font-bold">提示</span>：
-                      填写Plugin ID和Secret后，点击"开始授权"将跳转到飞书授权页面，
-                      您需要在飞书中同意授权，授权成功后会自动返回并获取您的项目列表。
-                    </p>
-                  </div>
+                  {/* 手动Token模式的额外输入 */}
+                  {authMode === 'manual' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Plugin Token <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          value={manualToken}
+                          onChange={(e) => setManualToken(e.target.value)}
+                          rows={3}
+                          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
+                          placeholder="p-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          从飞书开放平台获取（详见下方说明）
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="usePluginHeader"
+                          checked={usePluginHeader}
+                          onChange={(e) => setUsePluginHeader(e.target.checked)}
+                          className="w-4 h-4 text-green-600 rounded"
+                        />
+                        <label htmlFor="usePluginHeader" className="text-sm text-gray-700">
+                          使用飞书项目插件Header（X-Plugin-Token）
+                        </label>
+                      </div>
+
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                        <p className="font-bold mb-2">📖 如何获取Plugin Token：</p>
+                        <ol className="list-decimal list-inside space-y-1 text-xs">
+                          <li>在飞书开放平台 → 您的插件 → 开发 → 权限管理</li>
+                          <li>找到"虚拟plugin_token"或"测试Token"</li>
+                          <li>复制token粘贴到上方输入框</li>
+                          <li>勾选"使用飞书项目插件Header"</li>
+                          <li>点击"保存并测试"</li>
+                        </ol>
+                      </div>
+                    </>
+                  )}
+
+                  {/* OAuth模式的提示 */}
+                  {authMode === 'oauth' && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="text-sm text-yellow-800">
+                        💡 <span className="font-bold">OAuth模式需要额外配置</span>：
+                        需要在飞书开放平台配置回调URL。
+                        <br />
+                        建议先使用"手动Token"模式快速测试！
+                      </p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="w-8 h-8 text-green-600" />
                     <div>
-                      <p className="font-bold text-green-900 text-lg">✅ 已授权</p>
+                      <p className="font-bold text-green-900 text-lg">✅ 已配置</p>
                       <p className="text-sm text-green-700 mt-1">
-                        您已成功授权，可以访问飞书项目数据
+                        Token已保存，可以访问飞书项目数据
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        模式: {authMode === 'manual' ? '手动Token' : 'OAuth授权'}
                       </p>
                     </div>
                   </div>
@@ -327,11 +434,12 @@ export function FeishuImportModal({
                     onClick={() => {
                       authManager?.clearToken();
                       setIsAuthorized(false);
-                      showToast('已清除授权，请重新授权', 'info');
+                      setManualToken('');
+                      showToast('已清除配置，请重新配置', 'info');
                     }}
                     className="mt-4 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-white transition"
                   >
-                    重新授权
+                    重新配置
                   </button>
                 </div>
               )}
@@ -550,6 +658,16 @@ export function FeishuImportModal({
                   <CheckCircle2 className="w-5 h-5" />
                   继续导入
                 </button>
+              ) : authMode === 'manual' ? (
+                <button
+                  type="button"
+                  onClick={handleSaveManualToken}
+                  disabled={!pluginId || !pluginSecret || !manualToken}
+                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 disabled:bg-gray-300 disabled:from-gray-300 disabled:to-gray-300 flex items-center gap-2 font-bold"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  保存并测试
+                </button>
               ) : (
                 <button
                   type="button"
@@ -558,7 +676,7 @@ export function FeishuImportModal({
                   className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:bg-gray-300 disabled:from-gray-300 disabled:to-gray-300 flex items-center gap-2 font-bold"
                 >
                   <LogIn className="w-5 h-5" />
-                  开始授权（跳转到飞书）
+                  开始OAuth授权
                 </button>
               )
             )}

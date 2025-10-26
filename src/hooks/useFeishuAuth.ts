@@ -36,13 +36,16 @@ export function useFeishuAuth({ showToast }: UseFeishuAuthOptions) {
   }, []);
 
   /**
-   * 保存飞书配置
+   * 保存飞书配置（支持手动token模式）
    */
   const saveConfig = useCallback(
-    (pluginId: string, pluginSecret: string) => {
+    (pluginId: string, pluginSecret: string, manualToken?: string, usePluginHeader?: boolean) => {
       const newConfig: FeishuConfig = {
         pluginId,
         pluginSecret,
+        authMode: manualToken ? 'manual' : 'user',
+        manualToken,
+        usePluginHeader: usePluginHeader !== undefined ? usePluginHeader : !!manualToken,
       };
 
       setConfig(newConfig);

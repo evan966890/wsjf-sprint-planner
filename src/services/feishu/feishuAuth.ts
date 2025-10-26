@@ -35,7 +35,15 @@ export class FeishuAuthManager {
    * 获取访问令牌（自动刷新）
    */
   async getAccessToken(): Promise<string> {
-    // 如果是用户授权模式，使用OAuth管理器
+    // 手动token模式：直接返回用户输入的token
+    if (this.config.authMode === 'manual') {
+      if (!this.config.manualToken) {
+        throw new FeishuAPIErrorClass(-1, '请输入Token');
+      }
+      return this.config.manualToken;
+    }
+
+    // 用户授权模式：使用OAuth管理器
     if (this.config.authMode === 'user') {
       if (!this.oauthManager) {
         throw new FeishuAPIErrorClass(-1, 'OAuth管理器未初始化');
@@ -55,10 +63,17 @@ export class FeishuAuthManager {
    * 检查是否已授权
    */
   isAuthorized(): boolean {
+    // 手动token模式：检查是否有token
+    if (this.config.authMode === 'manual') {
+      return !!this.config.manualToken;
+    }
+
+    // 用户授权模式：检查OAuth状态
     if (this.config.authMode === 'user') {
       return this.oauthManager?.isAuthorized() || false;
     }
 
+    // 租户授权模式：检查token有效性
     return this.isTokenValid();
   }
 
