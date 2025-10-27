@@ -249,22 +249,24 @@ export class FeishuAPI {
     work_item_type_id?: string;
   }): Promise<FeishuPagedResponse<FeishuWorkItem>> {
     try {
-      // work_item_type_key：从用户之前的Response中发现的MIT空间的类型key
-      // TODO: 未来支持用户配置或自动获取
-      let workItemTypeKey = params.work_item_type_id || '6337b4e95f9672378dda1432';
-
-      console.log('[FeishuAPI] Using work_item_type_key:', workItemTypeKey);
-
       const endpoint = `/open_api/${params.project_id}/work_item/filter`;
 
-      const body = {
-        page_size: params.page_size || 100,
+      // 使用官方Postman模板中的正确格式
+      const body: any = {
+        work_item_type_keys: [params.work_item_type_id || 'story'], // 注意：复数keys，数组格式
         page_num: params.page_token ? parseInt(params.page_token) : 1,
-        work_item_type_key: workItemTypeKey,
+        page_size: params.page_size || 100,
+        expand: {
+          need_workflow: true,
+          relation_fields_detail: true,
+          need_multi_text: true,
+          need_user_detail: true,
+          need_sub_task_parent: true
+        }
       };
 
       console.log('[FeishuAPI] Fetching work items from:', endpoint);
-      console.log('[FeishuAPI] Request body:', JSON.stringify(body, null, 2));
+      console.log('[FeishuAPI] Request body (official format):', JSON.stringify(body, null, 2));
 
       const response = await this.request<any>(
         endpoint,
@@ -276,8 +278,15 @@ export class FeishuAPI {
 
       console.log('[FeishuAPI] Work items response:', response);
 
-      // 适配响应格式
-      const items = response.work_items || response.items || [];
+      // 适配响应格式：response可能直接是数组，也可能是包含items的对象
+      let items: any[];
+      if (Array.isArray(response)) {
+        items = response; // response直接是数组（官方API格式）
+        console.log('[FeishuAPI] Response is array, items count:', items.length);
+      } else {
+        items = response.work_items || response.items || response.data || [];
+        console.log('[FeishuAPI] Response is object, extracted items count:', items.length);
+      }
 
       return {
         items,
@@ -296,8 +305,22 @@ export class FeishuAPI {
    */
   async getAllWorkItems(
     projectId: string,
-    onProgress?: (current: number, total?: number) => void
+    onProgress?: (current: number, total?: number) => void,
+    workItemTypeName?: string
   ): Promise<FeishuWorkItem[]> {
+    // Mock模式：使用测试数据
+    const { ENABLE_MOCK } = await import('./mockFeishuData');
+    if (ENABLE_MOCK) {
+      console.log('[FeishuAPI] Using Mock work items for testing');
+      const { getMockWorkItems } = await import('./mockWorkItems');
+      const mockItems = getMockWorkItems();
+      return mockItems as any;
+    }
+
+    // 使用用户指定的工作项类型名称（如：story、bug、task）
+    const typeName = workItemTypeName || 'story';
+    console.log('[FeishuAPI] Using work item type name:', typeName);
+
     const allWorkItems: FeishuWorkItem[] = [];
     let pageToken: string | undefined;
     let hasMore = true;
@@ -307,6 +330,7 @@ export class FeishuAPI {
         project_id: projectId,
         page_size: 100,
         page_token: pageToken,
+        work_item_type_id: typeName, // 直接使用类型名称
       });
 
       allWorkItems.push(...response.items);

@@ -9,11 +9,11 @@
 ```
 docs/
 ├── standards/              # 项目规范标准（强制执行）
-│   ├── README.md          # 本文件
-│   ├── coding-standards.md      # 编码规范
-│   ├── refactoring-standards.md # 重构规范
-│   ├── ui-design-standards.md   # UI设计规范
-│   └── testing-standards.md     # 测试规范
+│   ├── README.md                            # 本文件
+│   ├── coding-standards.md                  # 编码规范
+│   ├── refactoring-standards.md             # 重构规范
+│   ├── ui-design-standards.md               # UI设计规范
+│   └── chrome-devtools-testing-standards.md # 测试规范（v1.7）
 │
 ├── checklists/            # 检查清单（流程工具）
 │   ├── refactoring-checklist.md
@@ -49,13 +49,13 @@ docs/
 - 交互状态规范
 - 响应式设计规范
 
-### 4. [测试规范](./testing-standards.md) ⭐ **强制执行（v1.6新增）**
-- 自动化测试要求（所有新功能必须包含测试）
-- data-testid 命名规范
-- 测试用例编写标准
-- 提交前测试要求
-- 测试工具使用指南（Playwright + DevTools MCP）
-- **成果**: 测试通过率从9%提升到91%（10倍提升）
+### 4. [Chrome DevTools 测试规范](./chrome-devtools-testing-standards.md) ⭐ **推荐（v1.7新增）**
+- Chrome DevTools MCP 使用指南
+- AI 自动化验证流程
+- 控制台错误检查规范
+- 重构后 UI 验证流程
+- 测试场景模板和最佳实践
+- **优势**: 零依赖、即时验证、AI 完全自主
 
 ---
 
@@ -120,7 +120,7 @@ docs/
 | 文件大小合规率 | 100% | [ ] |
 | 代码审查通过率 | > 95% | [ ] |
 | 重构bug率 | < 5% | [ ] |
-| 测试覆盖率 | > 80% | [ ] |
+| Chrome DevTools 验证率 | 100% | [ ] |
 
 ---
 

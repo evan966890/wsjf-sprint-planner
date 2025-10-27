@@ -679,29 +679,34 @@ fi
 
 ---
 
-## 🤖 终极方案：Playwright自动化视觉测试 ⭐⭐⭐
+## 🤖 终极方案：Chrome DevTools MCP 自动化验证 ⭐⭐⭐
 
 ### AI现在可以完全自主验证！
 
-通过配置Playwright，AI获得了：
-- ✅ 自己运行程序
+通过配置 Chrome DevTools MCP，AI获得了：
+- ✅ 自己导航到页面
 - ✅ 自己截图
-- ✅ 自己对比差异
-- ✅ 自己识别问题
+- ✅ 自己检查控制台错误
+- ✅ 自己分析网络请求
+- ✅ 自己识别UI问题
 - ✅ 自己修复问题
 
 ### AI重构新工作流程（完全自动化）
 
 ```bash
-# 1. AI创建baseline（重构前）
-bash scripts/ai-visual-test.sh baseline
+# 1. AI导航到页面（重构前）
+mcp__chrome-devtools__navigate_page("http://localhost:3000")
+mcp__chrome-devtools__take_screenshot() # 保存baseline
 → 自动截图，无需用户参与
 
 # 2. AI执行重构
 [代码重构...]
 
-# 3. AI自动测试（重构后）
-bash scripts/ai-visual-test.sh test
+# 3. AI自动验证（重构后）
+mcp__chrome-devtools__navigate_page("http://localhost:3000")
+mcp__chrome-devtools__list_console_messages() # 检查错误
+mcp__chrome-devtools__take_screenshot() # 对比UI
+mcp__chrome-devtools__take_snapshot() # 检查元素
 → 自动对比，AI读取结果
 
 # 4. AI处理结果
@@ -709,41 +714,47 @@ bash scripts/ai-visual-test.sh test
 如果成功 → 报告用户可以提交
 ```
 
-### 测试输出示例（AI可以读取）
+### 验证输出示例（AI可以读取）
 
-**成功输出**:
+**控制台检查结果**:
 ```
-✓ homepage baseline (2.7s)
-✓ check header color (1.2s)
-✓ check section colors (1.5s)
-✓ check button types (0.8s)
-5 passed (6.2s)
+✅ 控制台错误: 0
+✅ 控制台警告: 0
+✅ 页面错误: 0
+✅ 所有资源加载成功
 ```
 
-**失败输出（AI可以识别问题）**:
+**发现问题时（AI可以识别）**:
 ```
-✗ check header color (1.3s)
-  Error: Element not found: .bg-gradient-to-r.from-blue-600.to-blue-700
-  Found instead: .bg-white
+❌ 控制台错误: 2
+1. TypeError: Cannot read property 'color' of undefined
+   at RequirementCard.tsx:45
 
-AI理解：标题栏丢失了蓝色渐变，需要修复
+AI理解：卡片组件丢失了颜色属性，需要修复
 ```
 
 ### 配置方法
 
-**详见**：
-- 项目具体配置：`docs/standards/automated-ui-testing.md`
-- 用户使用指南：`docs/HOW_TO_REFACTOR_WITH_AI.md`
-- 演示文档：`docs/AI_VISUAL_TESTING_DEMO.md`
+**在新项目中配置 Chrome DevTools MCP**：
 
-**已生成的文件**：
-- `playwright.config.ts` - 配置
-- `tests/visual/*.spec.ts` - 测试用例
-- `scripts/ai-visual-test.sh` - AI执行脚本
-- `tests/visual/*-snapshots/*.png` - 已生成3个截图
+1. 创建 `.mcp.json` 配置文件：
+```json
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    }
+  }
+}
+```
 
-**复用到新项目**：
-1. 复制上述文件到新项目
-2. 运行 `npm install --save-dev @playwright/test pixelmatch pngjs`
-3. 运行 `npx playwright install chromium`
-4. AI就可以自动化测试了
+2. 重启 Claude Code
+
+3. AI就可以自动化验证了！
+
+**优势**：
+- ✅ 无需额外依赖（不需要安装 Playwright）
+- ✅ 实时浏览器交互（真实用户体验）
+- ✅ 完整开发者工具（控制台、网络、元素检查）
+- ✅ 零配置（只需一个配置文件）

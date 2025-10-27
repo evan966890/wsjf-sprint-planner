@@ -213,7 +213,7 @@
   - HTML属性完整性规范（type="button"等）
   - 颜色系统映射规范（禁止批量替换颜色）
   - AI助手常见错误模式和最佳实践
-  - 自动化工具（样式对比脚本、pre-commit增强）
+  - 自动化工具（Chrome DevTools MCP 验证）
   - 标准重构流程（3阶段验证）
 
 - **适用场景**:
@@ -232,6 +232,35 @@
   - 📖 [重构规范](../docs/standards/refactoring-standards.md) - 项目具体规范
   - ✅ [重构检查清单](../docs/checklists/refactoring-checklist.md) - 操作清单
   - 📊 [重构Bug分析](../docs/refactoring-lessons/refactoring-bug-analysis.md) - 案例分析
+
+#### 10. [CHROME_DEVTOOLS_TESTING.md](./CHROME_DEVTOOLS_TESTING.md) ⭐ **新增 2025-10-27**
+**Chrome DevTools MCP 测试规范 - AI 自动化验证方案**
+
+- **目的**: 使用 Chrome DevTools MCP 进行零依赖的即时 UI 验证
+- **核心内容**:
+  - Chrome DevTools MCP vs Playwright 对比
+  - AI 自动化测试工作流程
+  - 测试场景模板（登录、表单、重构验证）
+  - 控制台错误检查规范
+  - 截图对比和元素验证
+  - 故障排查指南
+  - 项目集成指南（从 Playwright 迁移）
+
+- **适用场景**:
+  - 新项目启动，建立测试规范
+  - 从 Playwright 等测试框架迁移
+  - AI 辅助开发时需要即时验证
+  - 重构后 UI 完整性检查
+
+- **预期效果**:
+  - 验证速度提升 6-8倍（120秒 → 15秒）
+  - 零测试框架依赖（节省 100MB+）
+  - AI 完全自主验证（无需编写测试代码）
+  - 即时反馈（无需等待测试套件）
+
+- **关联文档**:
+  - 📖 [项目测试规范](../docs/standards/chrome-devtools-testing-standards.md) - 项目特定规范
+  - 🔧 [重构质量标准](./REFACTORING_QUALITY_STANDARDS.md) - 配合使用
 
 ---
 
@@ -373,8 +402,11 @@ git submodule add https://github.com/your-team/ai-collaboration-templates ai-tem
 | **Token消耗过高** | AI_COLLABORATION_BEST_PRACTICES.md | 折衷协作方案、分段读取策略 |
 | **AI在根目录创建文档** | DOCUMENT_ORGANIZATION.md | 标准目录结构、文档分类规则 |
 | **文件命名不一致** | FILE_NAMING_CONVENTIONS.md | 命名风格速查表、检查清单 |
-| **新项目启动** | 全部三个模板 | 建立完整规范体系 |
-| **团队协作混乱** | 全部三个模板 | 统一团队标准 |
+| **需要UI测试验证** | CHROME_DEVTOOLS_TESTING.md | AI自动化验证、零依赖测试 |
+| **从Playwright迁移** | CHROME_DEVTOOLS_TESTING.md | 迁移指南、配置方法 |
+| **重构后UI验证** | CHROME_DEVTOOLS_TESTING.md + REFACTORING_QUALITY_STANDARDS.md | 截图对比、控制台检查 |
+| **新项目启动** | 全部模板 | 建立完整规范体系 |
+| **团队协作混乱** | 全部模板 | 统一团队标准 |
 
 ### 与 .claude/ 目录的区别
 

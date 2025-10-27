@@ -56,7 +56,7 @@ export const MOCK_PROJECTS_RESPONSE = {
 /**
  * 是否启用Mock模式
  */
-export const ENABLE_MOCK = false; // 禁用Mock，聚焦真实API
+export const ENABLE_MOCK = false; // 禁用Mock，使用真实API
 
 /**
  * 从Response中提取项目列表

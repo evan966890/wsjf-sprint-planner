@@ -4,8 +4,11 @@
  * 功能：
  * - 检测PDF是否需要OCR
  * - 提供OCR转换指引
- * - 支持调用后端OCR服务（可选）
+ * - 支持双OCR后端（OCR.space + 百度OCR）
+ * - 用户可选择使用哪个后端
  */
+
+export type OCRBackend = 'ocrspace' | 'baidu' | 'auto';
 
 /**
  * 检测PDF是否是扫描件（需要OCR）
@@ -75,24 +78,30 @@ export function detectOCRNeeds(
       suggestion = `此PDF文件 "${fileName}" 没有文字层，是扫描件或图片PDF，需要使用OCR识别。
 
 建议操作：
-1. 使用批量转换工具：双击运行 scripts/ocr-tools/batch-convert.bat
-2. 或使用命令行：python scripts/ocr-tools/batch-convert.py <文件路径>
-3. 详细说明参见：scripts/ocr-tools/README.md
+1. 智能OCR（推荐）：python scripts/ocr/smart_ocr.py <文件路径> -o output.txt
+2. 交互式测试：python scripts/ocr/test_ocr.py
+3. 选择后端：
+   - OCR.space: 免费25,000次/月，中英文混合
+   - 百度OCR: 免费1,000-2,000次/月，中文准确率最高
+4. 详细说明：scripts/ocr/DUAL_OCR_GUIDE.md
 
-转换后的Markdown文件可以重新上传使用。`;
+转换后的文本可以重新使用。`;
 
-      guideUrl = 'scripts/ocr-tools/README.md';
+      guideUrl = 'scripts/ocr/DUAL_OCR_GUIDE.md';
     } else {
       suggestion = `此PDF文件 "${fileName}" 文本内容较少（共${charCount}字符，${pageCount}页，平均每页${Math.round(charsPerPage)}字符），可能是扫描质量较差或部分页面为图片。
 
 建议操作：
 1. 如果确认是扫描件，使用OCR工具获得更好的识别效果
-2. 批量转换工具：scripts/ocr-tools/batch-convert.bat
-3. 详细说明：scripts/ocr-tools/README.md
+2. 智能OCR：python scripts/ocr/smart_ocr.py <文件路径> --backend auto
+3. 选择后端：
+   - 中文为主 → 百度OCR (--backend baidu)
+   - 英文/混合 → OCR.space (--backend ocrspace)
+4. 详细说明：scripts/ocr/DUAL_OCR_GUIDE.md
 
 或者，您可以继续使用当前提取的文本（可能不完整）。`;
 
-      guideUrl = 'scripts/ocr-tools/README.md';
+      guideUrl = 'scripts/ocr/DUAL_OCR_GUIDE.md';
     }
   }
 
@@ -107,20 +116,24 @@ export function detectOCRNeeds(
 }
 
 /**
- * 调用后端OCR服务（可选）
+ * 调用后端OCR服务（支持双后端）
  *
- * 如果您部署了OCR API服务器，可以使用此函数
+ * 注意：需要后端提供 /api/ocr 接口
+ * 支持 OCR.space 和百度OCR两种后端
  *
  * @param file - 文件对象
- * @param apiUrl - API服务器地址（默认：http://localhost:8000）
- * @returns 转换后的Markdown内容
+ * @param backend - OCR后端选择 ('ocrspace', 'baidu', 'auto')
+ * @param apiUrl - 后端API地址
+ * @returns 转换后的文本内容
  */
 export async function callOCRAPI(
   file: File,
-  apiUrl: string = 'http://localhost:8000/api/convert-document'
-): Promise<string> {
+  backend: OCRBackend = 'auto',
+  apiUrl: string = '/api/ocr'
+): Promise<{ text: string; backend_used: string }> {
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('backend', backend);
 
   try {
     const response = await fetch(apiUrl, {
@@ -129,8 +142,7 @@ export async function callOCRAPI(
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP ${response.status}`);
+      throw new Error(`HTTP ${response.status}`);
     }
 
     const data = await response.json();
@@ -139,17 +151,19 @@ export async function callOCRAPI(
       throw new Error(data.error || 'OCR转换失败');
     }
 
-    return data.markdown;
+    return {
+      text: data.text,
+      backend_used: data.backend_used || backend
+    };
 
   } catch (error) {
     if (error instanceof Error) {
-      // 网络错误或服务器错误
       if (error.message.includes('Failed to fetch')) {
         throw new Error(
-          'OCR服务器无法连接。请确认：\n' +
-          '1. OCR API服务已启动（运行 scripts/ocr-tools/api-server.py）\n' +
-          '2. 服务地址正确（默认: http://localhost:8000）\n' +
-          '3. 或使用批量转换工具：scripts/ocr-tools/batch-convert.bat'
+          'OCR服务器无法连接。\n' +
+          '或使用命令行工具：\n' +
+          'python scripts/ocr/smart_ocr.py <文件路径> --backend auto\n' +
+          '详见：scripts/ocr/DUAL_OCR_GUIDE.md'
         );
       }
       throw error;
@@ -161,22 +175,14 @@ export async function callOCRAPI(
 /**
  * OCR服务状态检查
  *
- * @param apiUrl - API服务器地址
- * @returns 服务是否可用
+ * 注意：当前使用在线OCR方案，无需检查本地服务状态
+ *
+ * @returns 始终返回 false（建议使用命令行工具）
  */
-export async function checkOCRServiceAvailable(
-  apiUrl: string = 'http://localhost:8000'
-): Promise<boolean> {
-  try {
-    const response = await fetch(`${apiUrl}/health`, {
-      method: 'GET',
-      signal: AbortSignal.timeout(3000) // 3秒超时
-    });
-
-    return response.ok;
-  } catch {
-    return false;
-  }
+export async function checkOCRServiceAvailable(): Promise<boolean> {
+  // 在线OCR方案不需要本地服务
+  // 建议用户使用命令行工具：python scripts/ocr/simple_ocr.py
+  return false;
 }
 
 /**

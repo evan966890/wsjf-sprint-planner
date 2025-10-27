@@ -39,21 +39,22 @@ export function useFeishuAuth({ showToast }: UseFeishuAuthOptions) {
    * 保存飞书配置（支持手动token模式和userKey）
    */
   const saveConfig = useCallback(
-    (pluginId: string, pluginSecret: string, manualToken?: string, usePluginHeader?: boolean, baseUrl?: string, userKey?: string) => {
+    (pluginId: string, pluginSecret: string, manualToken?: string, usePluginHeader?: boolean, baseUrl?: string, userKey?: string, workItemTypeKey?: string) => {
       const newConfig: FeishuConfig = {
         pluginId,
         pluginSecret,
-        authMode: manualToken ? 'manual' : 'user',
-        manualToken,
-        usePluginHeader: usePluginHeader !== undefined ? usePluginHeader : !!manualToken,
+        authMode: 'manual', // 项目管理平台统一使用manual模式（支持自动刷新）
+        manualToken: manualToken || '', // 留空时系统会自动获取
+        usePluginHeader: usePluginHeader !== undefined ? usePluginHeader : true,
         baseUrl: baseUrl || 'https://project.f.mioffice.cn', // 默认飞书项目平台
         userKey, // 用户Key（飞书项目插件需要）
+        workItemTypeKey, // 工作项类型Key
       };
 
       setConfig(newConfig);
       setAuthManager(new FeishuAuthManager(newConfig));
       saveFeishuConfig(newConfig);
-      showToast('飞书配置已保存', 'success');
+      // showToast由调用方处理，避免重复提示
     },
     [showToast]
   );

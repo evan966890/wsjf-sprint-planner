@@ -35,12 +35,36 @@ export class FeishuAuthManager {
    * 获取访问令牌（自动刷新）
    */
   async getAccessToken(): Promise<string> {
-    // 手动token模式：直接返回用户输入的token
+    // 手动token模式（特殊处理：支持自动刷新）
     if (this.config.authMode === 'manual') {
-      if (!this.config.manualToken) {
-        throw new FeishuAPIErrorClass(-1, '请输入Token');
+      // Cookie模式：不返回token，由浏览器Cookie认证
+      if (this.config.manualToken === 'cookie') {
+        return 'cookie'; // 特殊标记，API层会据此跳过Authorization header
       }
-      return this.config.manualToken;
+
+      // 检查是否是项目管理平台（支持自动刷新）
+      const isProjectPlatform =
+        this.config.baseUrl?.includes('project.f.mioffice.cn') ||
+        this.config.baseUrl?.includes('project.feishu.cn') ||
+        this.config.usePluginHeader;
+
+      if (isProjectPlatform && this.config.pluginId && this.config.pluginSecret) {
+        // 项目管理平台：支持自动刷新token
+        if (this.isTokenValid()) {
+          console.log('[FeishuAuth] Using cached project platform token');
+          return this.accessToken!;
+        }
+
+        // Token无效或即将过期，自动刷新
+        console.log('[FeishuAuth] Token expired or about to expire, auto-refreshing...');
+        return await this.refreshAccessToken();
+      } else {
+        // 非项目管理平台：使用用户提供的token（不自动刷新）
+        if (!this.config.manualToken) {
+          throw new FeishuAPIErrorClass(-1, '请输入Token');
+        }
+        return this.config.manualToken;
+      }
     }
 
     // 用户授权模式：使用OAuth管理器
@@ -117,50 +141,114 @@ export class FeishuAuthManager {
    */
   async refreshAccessToken(): Promise<string> {
     try {
-      const response = await fetch(
-        `${this.config.baseUrl}/auth/v3/tenant_access_token/internal`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            app_id: this.config.pluginId,
-            app_secret: this.config.pluginSecret,
-          }),
+      // 检测是否是项目管理平台（私有化部署）
+      const isProjectPlatform =
+        this.config.baseUrl?.includes('project.f.mioffice.cn') ||
+        this.config.baseUrl?.includes('project.feishu.cn') ||
+        this.config.usePluginHeader;
+
+      if (isProjectPlatform) {
+        // 项目管理平台：使用 /open_api/authen/plugin_token
+        console.log('[FeishuAuth] Refreshing project platform plugin token');
+
+        // 在开发环境使用代理，避免CORS问题
+        const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+        const baseUrl = isDev ? '/feishu-proxy' : this.config.baseUrl;
+
+        console.log('[FeishuAuth] Using baseUrl:', baseUrl, '(dev mode:', isDev, ')');
+
+        const response = await fetch(
+          `${baseUrl}/open_api/authen/plugin_token`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              plugin_id: this.config.pluginId,
+              plugin_secret: this.config.pluginSecret,
+              type: 0, // plugin_access_token类型
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new FeishuAPIErrorClass(
+            response.status,
+            `HTTP请求失败: ${response.statusText}`
+          );
         }
-      );
 
-      if (!response.ok) {
-        throw new FeishuAPIErrorClass(
-          response.status,
-          `HTTP请求失败: ${response.statusText}`
+        const data = await response.json();
+
+        if (data.error?.code !== 0) {
+          throw new FeishuAPIErrorClass(
+            data.error?.code || -1,
+            data.error?.msg || '获取插件Token失败'
+          );
+        }
+
+        if (!data.data?.token) {
+          throw new FeishuAPIErrorClass(
+            -1,
+            '响应中缺少token'
+          );
+        }
+
+        // 保存token和过期时间
+        this.accessToken = data.data.token;
+        this.tokenExpireTime = Date.now() + (data.data.expire_time || 7200) * 1000;
+
+        console.log('[FeishuAuth] Project platform token refreshed successfully, expires in', data.data.expire_time, 'seconds');
+
+        return this.accessToken;
+      } else {
+        // 标准飞书API：使用 /auth/v3/tenant_access_token/internal
+        const response = await fetch(
+          `${this.config.baseUrl}/auth/v3/tenant_access_token/internal`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              app_id: this.config.pluginId,
+              app_secret: this.config.pluginSecret,
+            }),
+          }
         );
+
+        if (!response.ok) {
+          throw new FeishuAPIErrorClass(
+            response.status,
+            `HTTP请求失败: ${response.statusText}`
+          );
+        }
+
+        const data: FeishuTokenResponse = await response.json();
+
+        if (data.code !== 0) {
+          throw new FeishuAPIErrorClass(
+            data.code,
+            data.msg || '获取访问令牌失败'
+          );
+        }
+
+        if (!data.tenant_access_token) {
+          throw new FeishuAPIErrorClass(
+            -1,
+            '响应中缺少tenant_access_token'
+          );
+        }
+
+        // 保存token和过期时间
+        this.accessToken = data.tenant_access_token;
+        this.tokenExpireTime = Date.now() + data.expire * 1000;
+
+        console.log('[FeishuAuth] Access token refreshed successfully');
+
+        return this.accessToken;
       }
-
-      const data: FeishuTokenResponse = await response.json();
-
-      if (data.code !== 0) {
-        throw new FeishuAPIErrorClass(
-          data.code,
-          data.msg || '获取访问令牌失败'
-        );
-      }
-
-      if (!data.tenant_access_token) {
-        throw new FeishuAPIErrorClass(
-          -1,
-          '响应中缺少tenant_access_token'
-        );
-      }
-
-      // 保存token和过期时间
-      this.accessToken = data.tenant_access_token;
-      this.tokenExpireTime = Date.now() + data.expire * 1000;
-
-      console.log('[FeishuAuth] Access token refreshed successfully');
-
-      return this.accessToken;
     } catch (error) {
       console.error('[FeishuAuth] Failed to refresh access token:', error);
 

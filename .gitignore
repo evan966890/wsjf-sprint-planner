@@ -20,6 +20,23 @@ dist-ssr
 .env.test.local
 .env.production.local
 
+# OCR 配置（包含 API Keys）
+scripts/ocr/baidu_ocr_config.json
+scripts/ocr/*_config.json
+!scripts/ocr/*_config.json.example
+
+# OCR 测试文件
+scripts/ocr/test_*.txt
+scripts/ocr/test_*.png
+scripts/ocr/test_content.txt
+scripts/ocr/test_baidu.txt
+scripts/ocr/create_test_image.py
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

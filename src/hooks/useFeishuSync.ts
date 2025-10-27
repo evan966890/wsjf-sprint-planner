@@ -91,7 +91,7 @@ export function useFeishuSync({ config, showToast }: UseFeishuSyncOptions) {
    * 获取工作项列表
    */
   const fetchWorkItems = useCallback(
-    async (projectId: string) => {
+    async (projectId: string, workItemTypeName?: string) => {
       if (!api) {
         showToast('请先配置飞书认证', 'error');
         return;
@@ -109,7 +109,8 @@ export function useFeishuSync({ config, showToast }: UseFeishuSyncOptions) {
           (current, total) => {
             const progress = total ? (current / total) * 100 : 0;
             updateState({ progress });
-          }
+          },
+          workItemTypeName // 传递工作项类型名称
         );
 
         updateState({

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>飞书项目API测试工具</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    .section {
+      background: #f5f5f5;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      box-sizing: border-box;
+      font-family: monospace;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .result {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow: auto;
+    }
+    .success { border-color: #4CAF50; background: #e8f5e9; }
+    .error { border-color: #f44336; background: #ffebee; }
+    .info { border-color: #2196F3; background: #e3f2fd; }
+  </style>
+</head>
+<body>
+  <h1>🔍 飞书项目API测试工具</h1>
+
+  <div class="section">
+    <h2>配置</h2>
+    <label>Plugin Token:</label>
+    <input type="text" id="token" value="p-b0998e9d-a248-4bd2-bc90-302268b25136" placeholder="p-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+
+    <label>Platform Domain:</label>
+    <input type="text" id="domain" value="https://project.f.mioffice.cn" placeholder="https://project.f.mioffice.cn">
+  </div>
+
+  <div class="section">
+    <h2>尝试不同的API端点</h2>
+    <label>选择或输入API端点:</label>
+    <select id="endpoint-select" onchange="document.getElementById('endpoint').value = this.value">
+      <option value="/api/projects/list">GET /api/projects/list</option>
+      <option value="/api/projects">GET /api/projects</option>
+      <option value="/open_api/projects/list">GET /open_api/projects/list</option>
+      <option value="/open_api/projects">GET /open_api/projects</option>
+      <option value="/project/v1/project">GET /project/v1/project (当前代码使用)</option>
+      <option value="/open-apis/project/v1/project">GET /open-apis/project/v1/project</option>
+      <option value="custom">自定义...</option>
+    </select>
+
+    <label>API端点路径:</label>
+    <input type="text" id="endpoint" value="/api/projects/list" placeholder="/api/projects/list">
+
+    <label>User Key (可选，某些端点可能需要):</label>
+    <input type="text" id="userKey" value="" placeholder="您的用户标识">
+
+    <button onclick="testAPI()">🚀 测试API</button>
+    <button onclick="clearResults()">🗑️ 清空结果</button>
+  </div>
+
+  <div class="section">
+    <h2>测试结果</h2>
+    <div id="results"></div>
+  </div>
+
+  <script>
+    function addResult(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `result ${type}`;
+      div.textContent = message;
+      document.getElementById('results').insertBefore(div, document.getElementById('results').firstChild);
+    }
+
+    function clearResults() {
+      document.getElementById('results').innerHTML = '';
+    }
+
+    async function testAPI() {
+      const token = document.getElementById('token').value;
+      const domain = document.getElementById('domain').value;
+      const endpoint = document.getElementById('endpoint').value;
+      const userKey = document.getElementById('userKey').value;
+
+      if (!token) {
+        addResult('❌ 请填写Plugin Token', 'error');
+        return;
+      }
+
+      const url = `${domain}${endpoint}`;
+
+      addResult(`🔄 正在测试: ${url}`, 'info');
+
+      try {
+        const headers = {
+          'Content-Type': 'application/json',
+          'X-Plugin-Token': token,
+        };
+
+        if (userKey) {
+          headers['X-User-Key'] = userKey;
+        }
+
+        addResult(`📤 请求头:\n${JSON.stringify(headers, null, 2)}`, 'info');
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: headers,
+        });
+
+        addResult(`📥 HTTP状态: ${response.status} ${response.statusText}`,
+                  response.ok ? 'success' : 'error');
+
+        const responseHeaders = {};
+        response.headers.forEach((value, key) => {
+          responseHeaders[key] = value;
+        });
+        addResult(`📥 响应头:\n${JSON.stringify(responseHeaders, null, 2)}`, 'info');
+
+        const text = await response.text();
+
+        // 尝试解析JSON
+        try {
+          const json = JSON.parse(text);
+          addResult(`✅ JSON响应:\n${JSON.stringify(json, null, 2)}`, 'success');
+
+          // 如果有项目列表，显示
+          if (json.data && Array.isArray(json.data.items)) {
+            addResult(`🎉 找到 ${json.data.items.length} 个项目！`, 'success');
+            addResult(`✅✅✅ 成功！请使用此端点：${endpoint}`, 'success');
+          } else if (json.data) {
+            addResult(`📊 返回数据：\n${JSON.stringify(json.data, null, 2).substring(0, 500)}`, 'success');
+          }
+        } catch (e) {
+          // 不是JSON，可能是HTML
+          if (text.includes('<!doctype html>') || text.includes('<html>')) {
+            addResult(`❌ 返回的是HTML页面，不是API\n前200字符:\n${text.substring(0, 200)}`, 'error');
+          } else {
+            addResult(`❌ 非JSON响应:\n${text.substring(0, 500)}`, 'error');
+          }
+        }
+      } catch (error) {
+        addResult(`❌ 请求失败: ${error.message}\n完整错误: ${error.stack}`, 'error');
+
+        if (error.message.includes('Failed to fetch')) {
+          addResult(`💡 提示: "Failed to fetch" 通常表示CORS跨域问题或网络错误`, 'info');
+        }
+      }
+    }
+
+    // 页面加载时显示说明
+    window.onload = function() {
+      addResult(`
+📖 使用说明：
+
+1. 确保您已经获取了有效的Plugin Token（运行 get-project-token.ps1）
+2. 选择或输入要测试的API端点
+3. 点击"测试API"按钮
+4. 查看返回结果：
+   - ✅ 绿色 = 成功！找到正确的端点
+   - ❌ 红色 = 失败，尝试其他端点
+
+⚠️ 注意：
+- 这个页面需要在飞书项目平台的域名下运行才能避免CORS问题
+- 或者使用浏览器扩展（如CORS Unblock）暂时禁用CORS检查
+- 最好的方法是直接在飞书项目平台中按F12查看Network标签的真实API调用
+      `, 'info');
+    };
+  </script>
+</body>
+</html>

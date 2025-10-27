@@ -21,6 +21,7 @@ export interface FeishuConfig {
   manualToken?: string; // 手动输入的token（manual模式使用）
   usePluginHeader?: boolean; // 是否使用X-Plugin-Token header（飞书项目插件专用）
   userKey?: string; // 用户Key（飞书项目插件需要，配合X-Plugin-Token使用）
+  workItemTypeKey?: string; // 工作项类型Key（如：6337b4e95f9672378dda1432）
 }
 
 /**
