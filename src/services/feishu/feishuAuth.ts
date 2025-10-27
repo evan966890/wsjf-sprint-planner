@@ -201,7 +201,7 @@ export class FeishuAuthManager {
 
         console.log('[FeishuAuth] Project platform token refreshed successfully, expires in', data.data.expire_time, 'seconds');
 
-        return this.accessToken;
+        return this.accessToken || '';
       } else {
         // 标准飞书API：使用 /auth/v3/tenant_access_token/internal
         const response = await fetch(

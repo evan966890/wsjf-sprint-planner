@@ -6,13 +6,13 @@
  */
 
 import { useState, useEffect } from 'react';
-import { X, CheckCircle2, Loader2, LogIn } from 'lucide-react';
+import { X, CheckCircle2, Loader2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { useFeishuAuth } from '../hooks/useFeishuAuth';
 import { useFeishuSync } from '../hooks/useFeishuSync';
 import { transformWorkItems } from '../utils/feishu/feishuDataTransform';
 import { DEFAULT_FIELD_MAPPINGS } from '../utils/feishu/feishuFieldMapper';
-import { startOAuthFlow } from '../services/feishu';
+// import { startOAuthFlow } from '../services/feishu'; // OAuth功能暂未启用
 import type { FeishuProject } from '../services/feishu';
 import type { Requirement } from '../types';
 
@@ -49,17 +49,18 @@ export function FeishuImportModal({
   } = useFeishuSync({ config, showToast });
 
   const [step, setStep] = useState<'config' | 'project' | 'tasks' | 'confirm'>('config');
-  const [pluginId, setPluginId] = useState('');
-  const [pluginSecret, setPluginSecret] = useState('');
+  const [pluginId, setPluginId] = useState('MII_68F1064FA240006C'); // 预填Plugin ID
+  const [pluginSecret, setPluginSecret] = useState('050E0E049ACB87339CB9D11E5641564F'); // 预填Plugin Secret
   const [selectedWorkItemIds, setSelectedWorkItemIds] = useState<Set<string>>(new Set());
   const [transformedRequirements, setTransformedRequirements] = useState<Requirement[]>([]);
 
   // 配置信息
   const [manualToken, setManualToken] = useState('');
-  const [userKey, setUserKey] = useState('7541721806923694188'); // 用户Key（从文档获取）
+  const [userKey, setUserKey] = useState(''); // 用户需要输入自己的User Key
   const [platformDomain, setPlatformDomain] = useState('https://project.f.mioffice.cn'); // 平台域名
   const [workItemTypeName, setWorkItemTypeName] = useState('story'); // 工作项类型（story=需求）
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [showAdvancedConfig, setShowAdvancedConfig] = useState(false); // 是否显示高级配置
 
   // 初始化：仅在Modal首次打开时加载配置
   useEffect(() => {
@@ -122,28 +123,7 @@ export function FeishuImportModal({
     console.log('[FeishuImportModal] handleSaveConfig completed');
   };
 
-  // 启动OAuth授权
-  const handleStartAuth = () => {
-    if (!pluginId || !pluginSecret) {
-      showToast('请填写完整的应用信息', 'error');
-      return;
-    }
-
-    // 保存配置（user模式）
-    saveConfig(pluginId, pluginSecret);
-
-    // 启动OAuth授权流程（跳转到飞书授权页面）
-    if (config) {
-      try {
-        startOAuthFlow(config);
-      } catch (error) {
-        showToast(
-          error instanceof Error ? error.message : '启动授权失败',
-          'error'
-        );
-      }
-    }
-  };
+  // OAuth授权功能暂未启用（保留配置供未来使用）
 
   // 选择项目并获取工作项
   const handleSelectProject = async (project: FeishuProject) => {
@@ -180,13 +160,31 @@ export function FeishuImportModal({
     console.log('[FeishuImportModal] Selected work items:', selected.length);
     console.log('[FeishuImportModal] First work item sample:', selected[0]);
 
+    // 详细分析fields结构，方便字段映射
+    const firstItem = selected[0] as any;
+    if (firstItem && firstItem.fields) {
+      console.log('[FeishuImportModal] Fields count:', firstItem.fields.length);
+      console.log('[FeishuImportModal] Sample fields (first 10):', firstItem.fields.slice(0, 10));
+
+      // 打印所有字段的key和value
+      const fieldMap: any = {};
+      firstItem.fields.forEach((f: any) => {
+        const key = f.field_key || f.key;
+        const value = f.field_value?.value || f.field_value || f.value;
+        if (key && value !== undefined && value !== null && value !== '') {
+          fieldMap[key] = value;
+        }
+      });
+      console.log('[FeishuImportModal] Non-empty fields map:', fieldMap);
+    }
+
     if (selected.length === 0) {
       showToast('请至少选择一个任务', 'error');
       return;
     }
 
-    // 转换数据
-    const result = transformWorkItems(selected, DEFAULT_FIELD_MAPPINGS, {
+    // 转换数据 (使用 any 避免类型错误)
+    const result = transformWorkItems(selected as any[], DEFAULT_FIELD_MAPPINGS, {
       defaultSubmitter: '业务',
       defaultBusinessDomain: '国际零售通用',
     });
@@ -316,65 +314,7 @@ export function FeishuImportModal({
 
               {!isAuthorized ? (
                 <>
-                  {/* 配置信息 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Plugin ID <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={pluginId}
-                      onChange={(e) => setPluginId(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="MII_68F1064FA240006C"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Plugin Secret <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      value={pluginSecret}
-                      onChange={(e) => setPluginSecret(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="050E***********64F"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Platform Domain <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={platformDomain}
-                      onChange={(e) => setPlatformDomain(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="https://project.f.mioffice.cn"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      飞书项目平台地址
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Plugin Token <span className="text-gray-400">（可选，留空自动获取）</span>
-                    </label>
-                    <textarea
-                      value={manualToken}
-                      onChange={(e) => setManualToken(e.target.value)}
-                      rows={2}
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
-                      placeholder="留空让系统自动获取，或粘贴已有token"
-                    />
-                    <p className="text-xs text-green-600 mt-1 font-medium">
-                      ✨ 推荐留空！系统会使用Plugin ID和Secret自动获取并刷新token
-                    </p>
-                  </div>
-
+                  {/* 主要配置 - User Key */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       User Key <span className="text-red-500">*</span>
@@ -473,6 +413,74 @@ ${script}
                     <p className="text-xs text-gray-500 mt-1">
                       选择要导入的工作项类型（通常选择"需求"）
                     </p>
+                  </div>
+
+                  {/* 高级配置（折叠） */}
+                  <div className="border-t pt-4 mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedConfig(!showAdvancedConfig)}
+                      className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+                    >
+                      <span className="text-lg">{showAdvancedConfig ? '▼' : '▶'}</span>
+                      <span>高级配置（通常无需修改）</span>
+                    </button>
+
+                    {showAdvancedConfig && (
+                      <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Plugin ID
+                          </label>
+                          <input
+                            type="text"
+                            value={pluginId}
+                            onChange={(e) => setPluginId(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                            placeholder="MII_68F1064FA240006C"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Plugin Secret
+                          </label>
+                          <input
+                            type="password"
+                            value={pluginSecret}
+                            onChange={(e) => setPluginSecret(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                            placeholder="050E***********64F"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Platform Domain
+                          </label>
+                          <input
+                            type="text"
+                            value={platformDomain}
+                            onChange={(e) => setPlatformDomain(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="https://project.f.mioffice.cn"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Plugin Token（可选，留空自动获取）
+                          </label>
+                          <textarea
+                            value={manualToken}
+                            onChange={(e) => setManualToken(e.target.value)}
+                            rows={2}
+                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                            placeholder="留空让系统自动获取"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">

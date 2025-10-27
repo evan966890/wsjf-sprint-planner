@@ -140,7 +140,7 @@ const UnscheduledArea = ({
       setClearConfirmStep(1);
       clearTimeoutRef.current = setTimeout(() => {
         setClearConfirmStep(0);
-      }, 5000);
+      }, 5000) as unknown as number;
     } else {
       if (clearTimeoutRef.current) {
         clearTimeout(clearTimeoutRef.current);

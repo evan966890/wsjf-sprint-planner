@@ -36,16 +36,17 @@ export function transformWorkItemToRequirement(
 ): Requirement {
   // 从fields数组中提取name字段（飞书新格式）
   let workItemName = workItem.name;
-  if (!workItemName && workItem.fields && Array.isArray(workItem.fields)) {
-    const nameField = workItem.fields.find((f: any) => f.field_key === 'name' || f.key === 'name');
+  const workItemAny = workItem as any;
+  if (!workItemName && workItemAny.fields && Array.isArray(workItemAny.fields)) {
+    const nameField = workItemAny.fields.find((f: any) => f.field_key === 'name' || f.key === 'name');
     if (nameField && nameField.field_value) {
       workItemName = nameField.field_value.value || nameField.field_value;
     }
   }
 
   // 初始化需求对象（包含所有必填字段的默认值）
-  const requirement: Partial<Requirement> = {
-    id: `feishu_${workItem.work_item_id || workItem.id}_${Date.now()}`,
+  const requirement: any = {
+    id: `feishu_${workItemAny.work_item_id || workItem.id}_${Date.now()}`,
     title: workItemName || '未命名需求',  // 使用提取的名称
     description: '',
     submitter: options?.defaultSubmitter === '业务' || options?.defaultSubmitter === '产品' || options?.defaultSubmitter === '技术'

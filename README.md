@@ -9,6 +9,11 @@
 - 🔍 **多维度筛选**：支持按类型、热度、工作量、业务影响度等多维度筛选
 - 📈 **资源管理**：实时展示各迭代池的资源使用情况和容量预警
 - 📖 **完整说明书**：内置详细的 WSJF-Lite 评分方法说明
+- 🤖 **双OCR方案** (v1.6新增)：支持PDF和图片导入，智能识别文本
+  - OCR.space: 25,000次/月，中英文混合
+  - 百度OCR: 1,000-2,000次/月，中文准确率98%+
+  - 总免费额度: 27,000次/月
+- 🔄 **飞书集成** (v1.6新增)：从飞书项目直接导入工作项
 
 ## 快速开始
 
@@ -20,11 +25,19 @@ npm install
 
 ### 2. 启动开发服务器
 
+#### 方式 A: 仅启动前端（基础功能）
 ```bash
 npm run dev
 ```
 
-服务器将自动在浏览器中打开 `http://localhost:3000`
+#### 方式 B: 同时启动前端和OCR服务（完整功能）⭐
+```bash
+npm run dev:full
+```
+
+服务器将自动在浏览器中打开：
+- 前端应用: `http://localhost:3000`
+- OCR API: `http://localhost:3001`
 
 ### 3. 构建生产版本
 
@@ -40,11 +53,18 @@ npm run preview
 
 ## 技术栈
 
+### 前端
 - **React 18** - UI 框架
 - **TypeScript** - 类型安全
 - **Vite** - 构建工具
 - **Tailwind CSS** - 样式框架
 - **Lucide React** - 图标库
+
+### OCR 服务 (v1.6新增)
+- **Node.js + Express** - OCR API 服务器
+- **Python** - OCR 引擎
+- **OCR.space API** - 在线OCR（25,000次/月）
+- **百度OCR API** - 中文OCR（1,000-2,000次/月）
 
 ## 项目结构
 
@@ -80,6 +100,14 @@ WSJF/
 - 热度筛选：高/中/低热度
 - 工作量筛选：小/中/大规模
 - 价值筛选：局部/明显/撬动核心/战略平台
+
+### 导入PDF/图片（v1.6新增）🆕
+1. 启动完整服务：`npm run dev:full`
+2. 在需求编辑界面上传PDF或图片
+3. 系统自动调用OCR识别文本
+4. 支持中英文混合识别
+
+**详细文档**：[OCR集成指南](./docs/OCR_INTEGRATION_GUIDE.md)
 
 ### 查看说明
 点击顶部"查看说明书"按钮，了解详细的 WSJF-Lite 评分方法。
@@ -204,6 +232,39 @@ displayScore = 10 + 90 × (rawScore - min) / (max - min)
 ---
 
 **注意**：v1.0.0 是纯前端完整版本的里程碑。未来如果需要恢复到此版本，使用 `git checkout v1.0.0`
+
+---
+
+### v1.6.0 (2025-10-27) - OCR集成与飞书集成 🚀
+
+#### 核心功能
+- ✅ **双OCR方案集成**：支持PDF和图片导入识别
+  - OCR.space: 25,000次/月免费额度
+  - 百度OCR: 1,000-2,000次/月，中文准确率98%+
+  - 智能后端选择：自动选择最佳OCR引擎
+- ✅ **OCR API服务器**：Node.js Express服务
+- ✅ **批量处理工具**：Python脚本支持批量PDF/图片转Markdown
+- ✅ **飞书集成**：直接从飞书项目导入工作项
+
+#### 技术更新
+- Node.js依赖：express, multer, cors, concurrently
+- Python依赖：requests, baidu-aip, PyPDF2
+- 新增启动命令：`npm run dev:full`（同时启动前端和OCR）
+- 新增启动命令：`npm run ocr:server`（仅启动OCR服务）
+
+#### 文档
+- docs/OCR_INTEGRATION_GUIDE.md - OCR完整集成指南
+- scripts/ocr/*.md - 11个详细OCR文档
+- WSJF_OCR完整集成总结.md - 功能总结
+
+#### 部署
+- ✅ 已部署到腾讯云：https://xiaomi-4g92opdf60df693e-1314072882.tcloudbaseapp.com/
+
+---
+
+## 在线演示
+
+**生产环境**: https://xiaomi-4g92opdf60df693e-1314072882.tcloudbaseapp.com/
 
 ## 许可证
 
