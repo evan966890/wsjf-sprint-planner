@@ -12,6 +12,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { X, Save, Info, Link as LinkIcon, Users, Store, Target, Sparkles, Loader, AlertCircle, CheckCircle, Settings, Upload, FileText, Trash2, Eye } from 'lucide-react';
 import type { Requirement, BusinessImpactScore, ComplexityScore, AffectedMetric, Document, AIModelType, AIAnalysisResult, AIRequestBody } from '../types';
 import type { ProductProgressStatus, TechProgressStatus } from '../types/techProgress';
+import { isReadyForSchedule } from '../constants/techProgress';
 import { useStore } from '../store/useStore';
 import BusinessImpactScoreSelector from './BusinessImpactScoreSelector';
 import MetricSelector from './MetricSelector';
@@ -263,7 +264,7 @@ const EditRequirementModal = ({
     return { raw, display };
   }, [form.bv, form.tc, form.hardDeadline, form.effortDays]);
 
-  const canEditEffort = form.techProgress === '已评估工作量' || form.techProgress === '已完成技术方案';
+  const canEditEffort = isReadyForSchedule(form.techProgress);
 
   /**
    * v1.3.1新增：从URL中提取文件名
@@ -518,6 +519,9 @@ const EditRequirementModal = ({
     setAIAnalysisProgress(0);
     setAIAnalysisStep('初始化分析...');
 
+    // 在外部声明timeout引用，以便在finally块中清理
+    let timeoutId: NodeJS.Timeout | null = null;
+
     try {
       // 阶段1：读取文档/需求描述
       setAIAnalysisProgress(20);
@@ -575,7 +579,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
 
       // 创建超时控制器
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+      timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
 
       let response: Response | undefined;
       try {
@@ -648,7 +652,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
         // 从分析理由中提取关键词作为标题
         const firstReason = parsedData.reasoning[0];
         const match = firstReason.match(/(.{10,30})/);
-        suggestedTitle = match ? match[1].trim() : '需求标题（待补充）';
+        suggestedTitle = (match && match[0]) ? match[0].trim() : '需求标题（待补充）';
       }
 
       // 构建AI分析结果（使用验证函数确保指标有效）
@@ -705,6 +709,10 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
       setAIAnalysisProgress(0);
       setAIAnalysisStep('');
     } finally {
+      // 清理超时定时器
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       setIsAIAnalyzing(false);
     }
   };

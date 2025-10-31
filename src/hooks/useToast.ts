@@ -20,7 +20,7 @@
  * ```
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export interface ToastMessage {
   id: number;
@@ -36,6 +36,7 @@ export interface ToastOptions {
 export function useToast() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const terminationToastIdRef = useRef<number | null>(null);
+  const timeoutIdsRef = useRef<Map<number, NodeJS.Timeout>>(new Map()); // 保存所有timeout引用
 
   /**
    * 显示Toast通知
@@ -55,9 +56,13 @@ export function useToast() {
     // 如果不是持久toast，则在指定时间后自动移除
     if (!options?.persistent) {
       const duration = options?.duration || 3000;
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         setToasts(prev => prev.filter(toast => toast.id !== id));
+        timeoutIdsRef.current.delete(id); // 清理timeout引用
       }, duration);
+
+      // 保存timeout引用以便组件卸载时清理
+      timeoutIdsRef.current.set(id, timeoutId);
     }
 
     return id; // 返回ID，用于手动移除
@@ -67,8 +72,28 @@ export function useToast() {
    * 手动移除指定ID的toast
    */
   const dismissToast = (id: number) => {
+    // 清除对应的timeout
+    const timeoutId = timeoutIdsRef.current.get(id);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutIdsRef.current.delete(id);
+    }
+
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
+
+  /**
+   * 组件卸载时清理所有pending的timeouts
+   */
+  useEffect(() => {
+    return () => {
+      // 清理所有pending的timeouts
+      timeoutIdsRef.current.forEach((timeoutId) => {
+        clearTimeout(timeoutId);
+      });
+      timeoutIdsRef.current.clear();
+    };
+  }, []);
 
   return {
     toasts,

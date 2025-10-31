@@ -16,6 +16,7 @@ export class FeishuOAuthManager {
   private tokenInfo: OAuthTokenInfo | null = null;
   private readonly TOKEN_BUFFER_TIME = 5 * 60 * 1000; // 提前5分钟刷新
   private readonly STORAGE_KEY = 'feishu_oauth_token';
+  private readonly STATE_STORAGE_KEY = 'feishu_oauth_state'; // CSRF防护state存储key
 
   constructor(config: FeishuConfig) {
     this.config = {
@@ -33,10 +34,15 @@ export class FeishuOAuthManager {
    * 生成OAuth授权URL
    */
   getAuthorizationUrl(state?: string): string {
+    const stateValue = state || this.generateState();
+
+    // 保存state到sessionStorage用于CSRF验证
+    this.saveStateToStorage(stateValue);
+
     const params = new URLSearchParams({
       app_id: this.config.pluginId,
       redirect_uri: this.config.redirectUri!,
-      state: state || this.generateState(),
+      state: stateValue,
     });
 
     return `https://open.feishu.cn/open-apis/authen/v1/authorize?${params.toString()}`;
@@ -212,6 +218,51 @@ export class FeishuOAuthManager {
   }
 
   /**
+   * 保存state到sessionStorage
+   */
+  private saveStateToStorage(state: string): void {
+    try {
+      sessionStorage.setItem(this.STATE_STORAGE_KEY, state);
+      console.log('[FeishuOAuth] State saved for CSRF verification');
+    } catch (error) {
+      console.error('[FeishuOAuth] Failed to save state:', error);
+    }
+  }
+
+  /**
+   * 验证state参数（防止CSRF攻击）
+   * @throws {FeishuAPIError} state验证失败时抛出错误
+   */
+  verifyState(receivedState: string | null): void {
+    try {
+      const savedState = sessionStorage.getItem(this.STATE_STORAGE_KEY);
+
+      // 清除已保存的state（一次性使用）
+      sessionStorage.removeItem(this.STATE_STORAGE_KEY);
+
+      if (!savedState) {
+        throw new FeishuAPIError(-1, 'CSRF验证失败：未找到已保存的state参数');
+      }
+
+      if (!receivedState) {
+        throw new FeishuAPIError(-1, 'CSRF验证失败：回调中缺少state参数');
+      }
+
+      if (savedState !== receivedState) {
+        throw new FeishuAPIError(-1, 'CSRF验证失败：state参数不匹配');
+      }
+
+      console.log('[FeishuOAuth] State verification passed');
+    } catch (error) {
+      if (error instanceof FeishuAPIError) {
+        throw error;
+      }
+      console.error('[FeishuOAuth] State verification error:', error);
+      throw new FeishuAPIError(-1, 'CSRF验证失败：state验证过程出错');
+    }
+  }
+
+  /**
    * 保存token到localStorage
    */
   private saveTokenToStorage(): void {
@@ -298,10 +349,12 @@ export async function handleOAuthCallback(
     throw new FeishuAPIError(-1, 'URL中缺少授权码(code)参数');
   }
 
-  // TODO: 验证state参数防止CSRF攻击
+  // 验证state参数防止CSRF攻击
+  const oauthManager = new FeishuOAuthManager(config);
+  oauthManager.verifyState(state);
+
   console.log('[FeishuOAuth] Received authorization code:', code, 'state:', state);
 
-  const oauthManager = new FeishuOAuthManager(config);
   return await oauthManager.exchangeCodeForToken(code);
 }
 

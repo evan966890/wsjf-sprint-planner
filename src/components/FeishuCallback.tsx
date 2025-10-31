@@ -5,16 +5,24 @@
  * 文件大小控制: < 200行
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { handleOAuthCallback, loadFeishuConfig } from '../services/feishu';
 
 export function FeishuCallback() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('正在处理授权...');
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     handleCallback();
+
+    // 组件卸载时清理timeout
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+    };
   }, []);
 
   const handleCallback = async () => {
@@ -42,7 +50,7 @@ export function FeishuCallback() {
       setMessage('授权成功！正在返回...');
 
       // 2秒后跳转回主页
-      setTimeout(() => {
+      redirectTimeoutRef.current = setTimeout(() => {
         window.location.href = '/';
       }, 2000);
     } catch (error) {

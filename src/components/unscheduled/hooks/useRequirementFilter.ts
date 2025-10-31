@@ -10,7 +10,7 @@
 
 import { useMemo } from 'react';
 import type { Requirement } from '../../../types';
-import { NOT_READY_STATUSES } from '../../../constants/techProgress';
+import { isReadyForSchedule, needsEvaluation } from '../../../constants/techProgress';
 
 interface FilterOptions {
   searchTerm: string;
@@ -128,12 +128,8 @@ export function useRequirementFilter(
    * 分组逻辑（已评估 vs 未评估）
    */
   const { readyReqs, notReadyReqs } = useMemo(() => {
-    const ready = sortedReqs.filter(r =>
-      r.techProgress && !(NOT_READY_STATUSES as readonly string[]).includes(r.techProgress)
-    );
-    const notReady = sortedReqs.filter(r =>
-      !r.techProgress || (NOT_READY_STATUSES as readonly string[]).includes(r.techProgress)
-    );
+    const ready = sortedReqs.filter(r => isReadyForSchedule(r.techProgress));
+    const notReady = sortedReqs.filter(r => needsEvaluation(r.techProgress));
 
     // 验证分组完整性（开发环境）
     if (import.meta.env.DEV) {

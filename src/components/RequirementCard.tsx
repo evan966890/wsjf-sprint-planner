@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Star } from 'lucide-react';
 import type { Requirement } from '../types';
 import { roundNumber } from '../utils/scoring';
-import { NOT_READY_STATUSES } from '../constants/techProgress';
+import { isReadyForSchedule } from '../constants/techProgress';
 
 // ============================================================================
 // UI组件 - 需求卡片 (Requirement Card Component)
@@ -301,7 +301,7 @@ const RequirementCard = ({
         </div>
 
         {/* 未完成技术评估的需求不显示权重分和星级（不可排期） */}
-        {requirement.techProgress && !(NOT_READY_STATUSES as readonly string[]).includes(requirement.techProgress) && (
+        {isReadyForSchedule(requirement.techProgress) && (
           <div className={`${isLight ? 'bg-white/40' : 'bg-black/20'} backdrop-blur-sm p-1.5 rounded-b-lg`}>
             <div className="flex items-center justify-between pointer-events-none">
               <div className={`font-bold ${textColor} ${scoreSize}`}>

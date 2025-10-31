@@ -26,6 +26,9 @@ npm run preview  # 预览生产构建
 ## Architecture
 
 ⚠️ **重要：开发前必读**
+- 🔒 [安全规范](docs/standards/security-standards.md) - **强制执行（v1.5新增）** - CSRF/XSS防护
+- 💧 [资源管理规范](docs/standards/resource-management.md) - **强制执行（v1.5新增）** - 防止内存泄漏
+- ✅ [AI代码质量检查清单](ai-templates/CODE_QUALITY_CHECKLIST.md) - **AI开发必读**
 - 📖 [架构指导原则](docs/architecture-guide.md) - 文件大小限制和代码组织规范
 - 📋 [新功能开发流程](docs/new-feature-workflow.md) - 标准开发检查清单
 - 🔧 [文件大小重构计划](docs/refactoring-plan.md) - 当前重构任务和执行指南

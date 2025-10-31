@@ -273,7 +273,8 @@ export function debugArrayChange<T>(
  *
  * @example
  * ```ts
- * debugLog(req.techProgress === '待评估', '发现待评估需求', req);
+ * import { TECH_PROGRESS } from '@/constants/techProgress';
+ * debugLog(req.techProgress === TECH_PROGRESS.PENDING, '发现待评估需求', req);
  * ```
  */
 export function debugLog(

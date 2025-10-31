@@ -183,15 +183,28 @@ export default function ImportPreviewModal({
 
       elem.scrollTop = targetScroll;
 
-      requestAnimationFrame(() => {
+      let rafId: number | null = null;
+      let timeoutId: NodeJS.Timeout | null = null;
+
+      rafId = requestAnimationFrame(() => {
         if (elem && elem.scrollTop !== targetScroll) {
           elem.scrollTop = targetScroll;
         }
 
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           setIsRestoringImportModalScroll(false);
         }, 100);
       });
+
+      // 清理函数
+      return () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+        }
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      };
     }
   }, [importModalScrollTop]);
 
@@ -204,13 +217,22 @@ export default function ImportPreviewModal({
 
   // AI智能填充开始时，自动滚动到进度框（只滚动一次）
   React.useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+
     if (isAIFillingLoading && aiProgressBoxRef.current && !hasAutoScrolled.current) {
       hasAutoScrolled.current = true;
-      setTimeout(() => scrollToAIProgress(), 100);
+      timeoutId = setTimeout(() => scrollToAIProgress(), 100);
     }
     if (!isAIFillingLoading) {
       hasAutoScrolled.current = false;
     }
+
+    // 清理函数
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [isAIFillingLoading]);
 
   // 检查是否所有必填字段都已映射

@@ -166,6 +166,9 @@ export function useAIAnalysis() {
     setAnalysisProgress(0);
     setAnalysisStep('初始化分析...');
 
+    // 在外部声明timeout引用，以便在finally块中清理
+    let timeoutId: NodeJS.Timeout | null = null;
+
     try {
       // 阶段1：读取文档/需求描述
       setAnalysisProgress(20);
@@ -221,7 +224,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
       setAnalysisStep('AI模型分析中...');
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      timeoutId = setTimeout(() => controller.abort(), 30000);
 
       let response: Response | undefined;
       try {
@@ -343,6 +346,10 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
       setAnalysisProgress(0);
       setAnalysisStep('');
     } finally {
+      // 清理超时定时器
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       setIsAnalyzing(false);
     }
   }, [selectedAIModel, checkContentSufficiency]);

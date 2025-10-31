@@ -11,6 +11,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { Requirement, BusinessImpactScore, ComplexityScore, AffectedMetric, Document } from '../../../types';
 import { getStoreTypesByDomain, getRoleConfigsByDomain } from '../../../config/businessFields';
+import { isReadyForSchedule } from '../../../constants/techProgress';
 
 export function useRequirementForm(initialRequirement: Requirement | null) {
   // 辅助函数：验证日期格式是否为 YYYY-MM-DD
@@ -191,7 +192,7 @@ export function useRequirementForm(initialRequirement: Requirement | null) {
   /**
    * 是否可以编辑工作量
    */
-  const canEditEffort = form.techProgress === '已评估工作量' || form.techProgress === '已完成技术方案';
+  const canEditEffort = isReadyForSchedule(form.techProgress);
 
   return {
     form,

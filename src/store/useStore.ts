@@ -13,7 +13,7 @@ import { SCORING_STANDARDS } from '../config/scoringStandards';
 import { OKR_METRICS, PROCESS_METRICS } from '../config/metrics';
 import { migrateAllRequirements, needsMigration } from '../utils/migration';
 import { logger } from '../utils/logger';
-import { NOT_READY_STATUSES } from '../constants/techProgress';
+import { needsEvaluation } from '../constants/techProgress';
 
 /**
  * Excel导入数据行类型
@@ -377,7 +377,7 @@ export const useStore = create<StoreState>()(
 
           // 检查技术评估状态（同时处理 '待评估' 和 '未评估'）
           // 使用常量定义，避免硬编码和拼写错误
-          if (targetPoolId !== 'unscheduled' && (!requirement.techProgress || (NOT_READY_STATUSES as readonly string[]).includes(requirement.techProgress))) {
+          if (targetPoolId !== 'unscheduled' && needsEvaluation(requirement.techProgress)) {
             alert('此需求未完成技术评估，无法排期！');
             return;
           }

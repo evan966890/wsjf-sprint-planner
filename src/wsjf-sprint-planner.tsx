@@ -38,7 +38,7 @@ import { calculateScores } from './utils/scoring';
 import { useStore } from './store/useStore';
 
 // 导入常量
-import { NOT_READY_STATUSES } from './constants/techProgress';
+import { needsEvaluation } from './constants/techProgress';
 
 // 导入UI组件
 import HandbookModal from './components/HandbookModal';
@@ -321,7 +321,7 @@ export default function WSJFPlanner() {
   const hardDeadlineReqs = unscheduled.filter(r => r.hardDeadline);
   const totalResourceUsed = sprintPools.reduce((sum, p) => sum + p.requirements.reduce((s, r) => s + r.effortDays, 0), 0);
   const totalResourceAvailable = sprintPools.reduce((sum, p) => sum + p.totalDays * (1 - (p.bugReserve + p.refactorReserve + p.otherReserve) / 100), 0);
-  const notEvaluatedCount = unscheduled.filter(r => !r.techProgress || (NOT_READY_STATUSES as readonly string[]).includes(r.techProgress)).length;
+  const notEvaluatedCount = unscheduled.filter(r => needsEvaluation(r.techProgress)).length;
 
   /**
    * 处理AI分析终止
