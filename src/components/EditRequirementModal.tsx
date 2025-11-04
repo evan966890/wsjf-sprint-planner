@@ -9,7 +9,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { X, Save, Info, Link as LinkIcon, Users, Store, Target, Sparkles, Loader, AlertCircle, CheckCircle, Settings, Upload, FileText, Trash2, Eye } from 'lucide-react';
+import { X, Save, Info, Link as LinkIcon, Users, Store, Target, Sparkles, Loader, AlertCircle, CheckCircle, Settings, Upload, FileText, Trash2, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Requirement, BusinessImpactScore, ComplexityScore, AffectedMetric, Document, AIModelType, AIAnalysisResult, AIRequestBody } from '../types';
 import type { ProductProgressStatus, TechProgressStatus } from '../types/techProgress';
 import { isReadyForSchedule } from '../constants/techProgress';
@@ -1370,25 +1370,48 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                           'text-purple-900'
                         }`}>
                           AI建议: {aiAnalysisResult.suggestedScore}分
-                          {aiAdoptionStatus === 'adopted' && ' [✓ 已采纳]'}
-                          {aiAdoptionStatus === 'partial' && ' [⚡ 部分采纳]'}
-                          {aiAdoptionStatus === 'ignored' && ' [⊗ 已忽略]'}
-                          {aiAdoptionStatus === 'pending' && ' [待处理]'}
                         </h5>
 
+                        {/* 状态徽章 */}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          aiAdoptionStatus === 'adopted' ? 'bg-green-100 text-green-700' :
+                          aiAdoptionStatus === 'partial' ? 'bg-blue-100 text-blue-700' :
+                          aiAdoptionStatus === 'ignored' ? 'bg-gray-100 text-gray-600' :
+                          'bg-purple-100 text-purple-700'
+                        }`}>
+                          {aiAdoptionStatus === 'adopted' && '✓ 已采纳'}
+                          {aiAdoptionStatus === 'partial' && '⚡ 部分采纳'}
+                          {aiAdoptionStatus === 'ignored' && '⊗ 已忽略'}
+                          {aiAdoptionStatus === 'pending' && '待处理'}
+                        </span>
+
+                        {/* AI模型标识 */}
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          aiAdoptionStatus === 'adopted' ? 'text-green-700 bg-green-100' :
-                          aiAdoptionStatus === 'partial' ? 'text-blue-700 bg-blue-100' :
-                          aiAdoptionStatus === 'ignored' ? 'text-gray-600 bg-gray-100' :
-                          'text-purple-700 bg-purple-100'
+                          lastAnalyzedModel === 'openai' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
                         }`}>
                           {lastAnalyzedModel === 'openai' ? 'OpenAI' : 'DeepSeek'}
                         </span>
 
-                        <span className="text-xs text-gray-500">
-                          {isAIPanelCollapsed ? '展开 ▼' : '收起 ▲'}
-                        </span>
+                        {/* 折叠/展开图标 */}
+                        {isAIPanelCollapsed ? (
+                          <ChevronDown size={16} className="text-gray-500" />
+                        ) : (
+                          <ChevronUp size={16} className="text-gray-500" />
+                        )}
                       </div>
+
+                      {/* 采纳时间显示 */}
+                      {aiAdoptedAt && !isAIPanelCollapsed && (
+                        <div className="text-xs text-gray-500 mb-2 px-1">
+                          采纳时间: {new Date(aiAdoptedAt).toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      )}
 
                       {/* 采纳状态摘要（折叠时显示） */}
                       {isAIPanelCollapsed && aiAdoptedAt && (
@@ -1485,122 +1508,166 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                         {/* 采纳选项 */}
                         <div className="pt-2 border-t border-gray-200">
                           {aiAdoptionStatus === 'pending' && (
-                            <>
-                              <div className="text-xs text-gray-600 mb-2">选择采纳方式：</div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <button
-                                  type="button"
-                                  onClick={handleAdoptAll}
-                                  className="px-3 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded transition font-medium"
-                                >
-                                  ✨ 全部采纳
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleAdoptScoreOnly}
-                                  className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition"
-                                >
-                                  📊 仅采纳评分
-                                </button>
-                                {aiAnalysisResult.suggestedOKRMetrics && aiAnalysisResult.suggestedOKRMetrics.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={handleAdoptOKRMetrics}
-                                    className="px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded transition"
-                                  >
-                                    🎯 仅采纳OKR指标
-                                  </button>
-                                )}
-                                {aiAnalysisResult.suggestedProcessMetrics && aiAnalysisResult.suggestedProcessMetrics.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={handleAdoptProcessMetrics}
-                                    className="px-3 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded transition"
-                                  >
-                                    📈 仅采纳过程指标
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={handleIgnoreAI}
-                                  className="px-3 py-2 text-sm bg-gray-400 hover:bg-gray-500 text-white rounded transition"
-                                >
-                                  ❌ 忽略建议
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleReanalyze}
-                                  className="px-3 py-2 text-sm bg-purple-500 hover:bg-purple-600 text-white rounded transition"
-                                >
-                                  🔄 重新分析
-                                </button>
-                              </div>
-                            </>
-                          )}
+                            <div className="space-y-3">
+                              {/* 主要操作 */}
+                              <button
+                                type="button"
+                                onClick={handleAdoptAll}
+                                className="w-full px-4 py-3 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition font-medium shadow-sm"
+                              >
+                                ✨ 一键采纳全部建议
+                              </button>
 
-                          {aiAdoptionStatus === 'partial' && (
-                            <>
-                              <div className="text-xs text-gray-600 mb-2">
-                                已采纳: {aiAdoptedItems.score && '✓ 评分 '}{aiAdoptedItems.okrMetrics && '✓ OKR指标 '}{aiAdoptedItems.processMetrics && '✓ 过程指标'}
-                                · 继续采纳其他项：
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                {!aiAdoptedItems.score && (
+                              {/* 分项采纳 */}
+                              <div>
+                                <div className="text-xs text-gray-600 mb-1.5">分项采纳:</div>
+                                <div className="grid grid-cols-3 gap-2">
                                   <button
                                     type="button"
                                     onClick={handleAdoptScoreOnly}
-                                    className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition"
+                                    className="px-3 py-2 text-xs bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 rounded transition"
                                   >
-                                    📊 采纳评分
+                                    📊 仅评分
+                                    <div className="text-xs text-gray-500">{aiAnalysisResult.suggestedScore}分</div>
                                   </button>
-                                )}
-                                {!aiAdoptedItems.okrMetrics && aiAnalysisResult.suggestedOKRMetrics && aiAnalysisResult.suggestedOKRMetrics.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={handleAdoptOKRMetrics}
-                                    className="px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded transition"
-                                  >
-                                    🎯 采纳OKR指标
-                                  </button>
-                                )}
-                                {!aiAdoptedItems.processMetrics && aiAnalysisResult.suggestedProcessMetrics && aiAnalysisResult.suggestedProcessMetrics.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={handleAdoptProcessMetrics}
-                                    className="px-3 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded transition"
-                                  >
-                                    📈 采纳过程指标
-                                  </button>
-                                )}
+                                  {aiAnalysisResult.suggestedOKRMetrics && aiAnalysisResult.suggestedOKRMetrics.length > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={handleAdoptOKRMetrics}
+                                      className="px-3 py-2 text-xs bg-white hover:bg-purple-50 text-purple-600 border border-purple-200 rounded transition"
+                                    >
+                                      🎯 OKR指标
+                                      <div className="text-xs text-gray-500">{aiAnalysisResult.suggestedOKRMetrics.length}个</div>
+                                    </button>
+                                  )}
+                                  {aiAnalysisResult.suggestedProcessMetrics && aiAnalysisResult.suggestedProcessMetrics.length > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={handleAdoptProcessMetrics}
+                                      className="px-3 py-2 text-xs bg-white hover:bg-indigo-50 text-indigo-600 border border-indigo-200 rounded transition"
+                                    >
+                                      📈 过程指标
+                                      <div className="text-xs text-gray-500">{aiAnalysisResult.suggestedProcessMetrics.length}个</div>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* 次要操作 */}
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={handleIgnoreAI}
+                                  className="flex-1 px-3 py-2 text-sm bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 rounded transition"
+                                >
+                                  忽略建议
+                                </button>
                                 <button
                                   type="button"
                                   onClick={handleReanalyze}
-                                  className="px-3 py-2 text-sm bg-purple-500 hover:bg-purple-600 text-white rounded transition"
+                                  className="flex-1 px-3 py-2 text-sm bg-white hover:bg-purple-50 text-purple-600 border border-purple-200 rounded transition"
                                 >
                                   🔄 重新分析
                                 </button>
                               </div>
-                            </>
+                            </div>
                           )}
 
-                          {(aiAdoptionStatus === 'adopted' || aiAdoptionStatus === 'ignored') && (
-                            <div className="grid grid-cols-2 gap-2">
+                          {aiAdoptionStatus === 'partial' && (
+                            <div className="space-y-3">
+                              {/* 已采纳状态 */}
+                              <div className="bg-blue-50 p-2 rounded text-xs">
+                                <span className="font-medium text-blue-900">已采纳: </span>
+                                <span className="text-blue-700">
+                                  {aiAdoptedItems.score && '✓ 评分 '}
+                                  {aiAdoptedItems.okrMetrics && '✓ OKR指标 '}
+                                  {aiAdoptedItems.processMetrics && '✓ 过程指标'}
+                                </span>
+                              </div>
+
+                              {/* 继续采纳 */}
+                              {(!aiAdoptedItems.score || !aiAdoptedItems.okrMetrics || !aiAdoptedItems.processMetrics) && (
+                                <div>
+                                  <div className="text-xs text-gray-600 mb-1.5">继续采纳:</div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {!aiAdoptedItems.score && (
+                                      <button
+                                        type="button"
+                                        onClick={handleAdoptScoreOnly}
+                                        className="px-3 py-2 text-xs bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 rounded transition"
+                                      >
+                                        📊 评分
+                                        <div className="text-xs text-gray-500">{aiAnalysisResult.suggestedScore}分</div>
+                                      </button>
+                                    )}
+                                    {!aiAdoptedItems.okrMetrics && aiAnalysisResult.suggestedOKRMetrics && aiAnalysisResult.suggestedOKRMetrics.length > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={handleAdoptOKRMetrics}
+                                        className="px-3 py-2 text-xs bg-white hover:bg-purple-50 text-purple-600 border border-purple-200 rounded transition"
+                                      >
+                                        🎯 OKR指标
+                                        <div className="text-xs text-gray-500">{aiAnalysisResult.suggestedOKRMetrics.length}个</div>
+                                      </button>
+                                    )}
+                                    {!aiAdoptedItems.processMetrics && aiAnalysisResult.suggestedProcessMetrics && aiAnalysisResult.suggestedProcessMetrics.length > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={handleAdoptProcessMetrics}
+                                        className="px-3 py-2 text-xs bg-white hover:bg-indigo-50 text-indigo-600 border border-indigo-200 rounded transition"
+                                      >
+                                        📈 过程指标
+                                        <div className="text-xs text-gray-500">{aiAnalysisResult.suggestedProcessMetrics.length}个</div>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* 重新分析 */}
                               <button
                                 type="button"
                                 onClick={handleReanalyze}
-                                className="px-3 py-2 text-sm bg-purple-500 hover:bg-purple-600 text-white rounded transition"
+                                className="w-full px-3 py-2 text-sm bg-white hover:bg-purple-50 text-purple-600 border border-purple-200 rounded transition"
                               >
                                 🔄 重新分析
                               </button>
+                            </div>
+                          )}
+
+                          {(aiAdoptionStatus === 'adopted' || aiAdoptionStatus === 'ignored') && (
+                            <div className="space-y-2">
+                              {/* 状态提示 */}
+                              {aiAdoptionStatus === 'adopted' && (
+                                <div className="bg-green-50 p-2 rounded text-xs">
+                                  <span className="text-green-700">✓ 已全部采纳AI建议</span>
+                                </div>
+                              )}
                               {aiAdoptionStatus === 'ignored' && (
+                                <div className="bg-gray-50 p-2 rounded text-xs">
+                                  <span className="text-gray-700">已忽略AI建议，建议仍保留可随时查看</span>
+                                </div>
+                              )}
+
+                              {/* 操作按钮 */}
+                              <div className="flex gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => setIsAIPanelCollapsed(false)}
-                                  className="px-3 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded transition"
+                                  onClick={handleReanalyze}
+                                  className="flex-1 px-3 py-2 text-sm bg-white hover:bg-purple-50 text-purple-600 border border-purple-200 rounded transition"
                                 >
-                                  👁️ 查看建议
+                                  🔄 重新分析
                                 </button>
-                              )}
+                                {aiAdoptionStatus === 'ignored' && (
+                                  <button
+                                    type="button"
+                                    onClick={handleAdoptAll}
+                                    className="flex-1 px-3 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded transition"
+                                  >
+                                    ✨ 重新采纳
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>
