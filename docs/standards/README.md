@@ -47,11 +47,13 @@ docs/
 - 事件监听器清理
 - **关键**: 防止内存泄漏，避免"Cannot update component"警告
 
-### 3. [编码规范](./coding-standards.md)
+### 3. [编码规范](./coding-standards.md) ⭐ **强制执行**
 - 文件大小限制（500行硬性规定）
+- 代码组织原则（UI/逻辑分离）
 - 命名规范
-- 注释规范
-- TypeScript类型安全规范
+- 注释规范（JSDoc必须）
+- TypeScript类型安全规范（联合类型+常量）
+- 禁止的模式（any、忽略错误等）
 
 ### 4. [重构规范](./refactoring-standards.md) ⭐ **强制执行**
 - 重构前准备工作
@@ -59,11 +61,14 @@ docs/
 - 重构后验证流程
 - 样式和颜色保持规范
 
-### 5. [UI设计规范](./ui-design-standards.md)
-- 颜色系统
-- 组件样式规范
-- 交互状态规范
+### 5. [UI设计规范](./ui-design-standards.md) ⭐ **强制执行**
+- 颜色系统（主色、语义色、渐变）
+- 字体系统（大小、字重、行高）
+- 间距系统（8px网格）
+- 组件样式规范（按钮、输入框、卡片等）
+- 交互状态规范（hover、focus、active、disabled）
 - 响应式设计规范
+- 图标使用规范（Lucide React）
 
 ### 6. [Chrome DevTools 测试规范](./chrome-devtools-testing-standards.md) ⭐ **推荐（v1.7新增）**
 - Chrome DevTools MCP 使用指南

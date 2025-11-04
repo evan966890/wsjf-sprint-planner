@@ -9,10 +9,10 @@
 - 🔍 **多维度筛选**：支持按类型、热度、工作量、业务影响度等多维度筛选
 - 📈 **资源管理**：实时展示各迭代池的资源使用情况和容量预警
 - 📖 **完整说明书**：内置详细的 WSJF-Lite 评分方法说明
-- 🤖 **双OCR方案** (v1.6新增)：支持PDF和图片导入，智能识别文本
-  - OCR.space: 25,000次/月，中英文混合
-  - 百度OCR: 1,000-2,000次/月，中文准确率98%+
-  - 总免费额度: 27,000次/月
+- 🤖 **智能OCR识别** (v1.6新增)：用户上传PDF/图片时自动识别文本并提取需求信息
+  - 双OCR后端：OCR.space (25,000次/月) + 百度OCR (1,000-2,000次/月)
+  - 智能提取8个需求字段
+  - 自动填充表单，节省录入时间
 - 🔄 **飞书集成** (v1.6新增)：从飞书项目直接导入工作项
 
 ## 快速开始
@@ -62,9 +62,9 @@ npm run preview
 
 ### OCR 服务 (v1.6新增)
 - **Node.js + Express** - OCR API 服务器
-- **Python** - OCR 引擎
-- **OCR.space API** - 在线OCR（25,000次/月）
-- **百度OCR API** - 中文OCR（1,000-2,000次/月）
+- **OCR.space API** - 在线OCR引擎（25,000次/月免费额度）
+- **百度OCR API** - 中文OCR引擎（1,000-2,000次/月免费额度）
+- **智能路由** - 自动选择最佳OCR后端
 
 ## 项目结构
 
@@ -101,11 +101,14 @@ WSJF/
 - 工作量筛选：小/中/大规模
 - 价值筛选：局部/明显/撬动核心/战略平台
 
-### 导入PDF/图片（v1.6新增）🆕
+### 上传PDF/图片快速录入（v1.6新增）🆕
 1. 启动完整服务：`npm run dev:full`
-2. 在需求编辑界面上传PDF或图片
-3. 系统自动调用OCR识别文本
-4. 支持中英文混合识别
+2. 在需求编辑界面上传PDF或图片文件
+3. 系统自动：
+   - 调用OCR识别文本
+   - 智能提取需求字段（名称、描述、工作量等）
+   - 自动填充表单
+4. 查看并调整提取的信息，保存需求
 
 **详细文档**：[OCR集成指南](./docs/OCR_INTEGRATION_GUIDE.md)
 
@@ -238,24 +241,23 @@ displayScore = 10 + 90 × (rawScore - min) / (max - min)
 ### v1.6.0 (2025-10-27) - OCR集成与飞书集成 🚀
 
 #### 核心功能
-- ✅ **双OCR方案集成**：支持PDF和图片导入识别
-  - OCR.space: 25,000次/月免费额度
-  - 百度OCR: 1,000-2,000次/月，中文准确率98%+
-  - 智能后端选择：自动选择最佳OCR引擎
-- ✅ **OCR API服务器**：Node.js Express服务
-- ✅ **批量处理工具**：Python脚本支持批量PDF/图片转Markdown
+- ✅ **智能OCR识别**：用户上传PDF/图片时自动识别并提取需求信息
+  - 双OCR后端：OCR.space (25,000次/月) + 百度OCR (1,000-2,000次/月)
+  - 智能后端选择：根据文件名自动选择最佳引擎
+  - 需求字段提取：自动提取8个需求字段
+- ✅ **OCR API服务器**：Node.js + Express服务
 - ✅ **飞书集成**：直接从飞书项目导入工作项
 
 #### 技术更新
 - Node.js依赖：express, multer, cors, concurrently
-- Python依赖：requests, baidu-aip, PyPDF2
 - 新增启动命令：`npm run dev:full`（同时启动前端和OCR）
 - 新增启动命令：`npm run ocr:server`（仅启动OCR服务）
+- 新增验证命令：`npm run verify-ocr`（验证OCR集成）
 
 #### 文档
-- docs/OCR_INTEGRATION_GUIDE.md - OCR完整集成指南
-- scripts/ocr/*.md - 11个详细OCR文档
-- WSJF_OCR完整集成总结.md - 功能总结
+- docs/OCR_INTEGRATION_GUIDE.md - OCR集成指南
+- src/utils/requirementExtractor.ts - 智能需求提取工具
+- scripts/verify-ocr-integration.js - OCR验证脚本
 
 #### 部署
 - ✅ 已部署到腾讯云：https://xiaomi-4g92opdf60df693e-1314072882.tcloudbaseapp.com/

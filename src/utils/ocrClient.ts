@@ -4,6 +4,7 @@
  */
 
 import { OCRBackend } from './ocrParser';
+import { extractRequirementFromText, type ExtractedRequirement } from './requirementExtractor';
 
 const OCR_API_URL = 'http://localhost:3001/api/ocr';
 
@@ -14,6 +15,7 @@ export interface OCRResult {
   filename?: string;
   elapsed?: number;
   error?: string;
+  extractedRequirement?: ExtractedRequirement; // 新增：提取的需求信息
 }
 
 /**
@@ -21,11 +23,13 @@ export interface OCRResult {
  *
  * @param file - 文件对象（PDF 或图片）
  * @param backend - OCR 后端选择
+ * @param extractRequirement - 是否自动提取需求信息（默认true）
  * @returns OCR 识别结果
  */
 export async function recognizeFile(
   file: File,
-  backend: OCRBackend = 'auto'
+  backend: OCRBackend = 'auto',
+  extractRequirement: boolean = true
 ): Promise<OCRResult> {
   try {
     const formData = new FormData();
@@ -41,6 +45,12 @@ export async function recognizeFile(
 
     if (!result.success) {
       throw new Error(result.error || 'OCR 识别失败');
+    }
+
+    // 自动提取需求信息
+    if (extractRequirement && result.text) {
+      const extracted = extractRequirementFromText(result.text);
+      result.extractedRequirement = extracted;
     }
 
     return result;

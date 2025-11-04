@@ -10,6 +10,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "check-file-size": "node scripts/check-file-size.js",
+    "verify-ocr": "node scripts/verify-ocr-integration.js",
     "pre-commit": "npm run check-file-size",
     "pre-deploy-check": "bash scripts/pre-deploy-check.sh",
     "deploy:tencent": "npm run pre-deploy-check && npm run build && cloudbase framework deploy",

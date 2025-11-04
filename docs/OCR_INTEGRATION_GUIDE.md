@@ -86,12 +86,21 @@ import { recognizeFile } from '@/utils/ocrClient';
 
 async function handlePDFUpload(file: File) {
   try {
-    // 自动选择后端
-    const result = await recognizeFile(file, 'auto');
+    // 自动选择后端并提取需求信息
+    const result = await recognizeFile(file, 'auto', true);
     console.log('识别完成:', result.text);
 
-    // 使用识别结果
-    processRequirement(result.text);
+    // 使用自动提取的需求信息
+    if (result.extractedRequirement) {
+      const extracted = result.extractedRequirement;
+      console.log('提取置信度:', extracted.confidence);
+
+      // 自动填充表单字段
+      if (extracted.name) setRequirementName(extracted.name);
+      if (extracted.description) setDescription(extracted.description);
+      if (extracted.effortDays) setEffortDays(extracted.effortDays);
+      // ... 其他字段
+    }
 
   } catch (error) {
     console.error('OCR 失败:', error);
@@ -127,27 +136,21 @@ await recognizeFile(file, 'baidu');
 
 ---
 
-## 📊 功能对比
+## 📊 功能说明
 
-### 当前方案（已实现）
+### 用户上传工作流程
 
-| 场景 | 方案 | 说明 |
-|------|------|------|
-| **用户自助上传** | OCR API | WSJF 应用内自动调用 |
-| **批量导入** | Claude Code | 你告诉我，我批量处理 |
+用户在WSJF应用中上传PDF或图片文件：
 
-### 工作流程
-
-**场景 1: 用户在 WSJF 应用中上传**
 ```
-用户 → WSJF 网页 → 上传 PDF → OCR API → 识别 → 填充表单
+用户 → WSJF 网页 → 上传 PDF/图片 → OCR API → 自动识别 → 提取需求信息 → 自动填充表单
 ```
 
-**场景 2: 批量导入（通过 Claude Code）**
-```
-你: "帮我把 D:\需求\ 的 PDF 导入到 WSJF"
-我: Vision 识别 → 提取数据 → 批量创建需求
-```
+**特点**：
+- ✅ 完全在线，无需安装任何工具
+- ✅ 自动选择最佳OCR后端（中文→百度，英文→OCR.space）
+- ✅ 智能提取需求字段（名称、描述、工作量等）
+- ✅ 自动填充表单，用户可手动调整
 
 ---
 
@@ -228,14 +231,27 @@ function EditRequirementModal() {
         // 显示加载状态
         setLoading(true);
 
-        // 调用 OCR
-        const result = await recognizeFile(file, ocrBackend);
+        // 调用 OCR（自动提取需求信息）
+        const result = await recognizeFile(file, ocrBackend, true);
 
         // 使用识别结果
         console.log('识别完成:', result.text);
 
-        // TODO: 解析文本，提取需求信息
-        // 例如使用 AI 或正则表达式提取字段
+        // 使用提取的需求信息自动填充表单
+        if (result.extractedRequirement) {
+          const extracted = result.extractedRequirement;
+          console.log('提取置信度:', extracted.confidence);
+          console.log('提取的字段:', extracted.extractedFields);
+
+          // 自动填充表单字段
+          if (extracted.name) setRequirementName(extracted.name);
+          if (extracted.description) setDescription(extracted.description);
+          if (extracted.businessTeam) setBusinessTeam(extracted.businessTeam);
+          if (extracted.effortDays) setEffortDays(extracted.effortDays);
+          if (extracted.deadlineDate) setDeadlineDate(extracted.deadlineDate);
+          if (extracted.businessDomain) setBusinessDomain(extracted.businessDomain);
+          if (extracted.type) setRequirementType(extracted.type);
+        }
 
         setLoading(false);
 
@@ -379,10 +395,10 @@ taskkill /PID <PID> /F
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| **OCR 使用指南** | `scripts/ocr/START_HERE.md` | OCR 工具使用 |
-| **双 OCR 方案** | `scripts/ocr/DUAL_OCR_GUIDE.md` | 详细技术说明 |
-| **API 参考** | `api/ocr-server.js` | 后端 API 代码 |
-| **前端工具** | `src/utils/ocrClient.ts` | 前端调用工具 |
+| **OCR API 服务器** | `api/ocr-server.cjs` | 后端 API 代码 |
+| **前端OCR客户端** | `src/utils/ocrClient.ts` | 前端调用工具 |
+| **需求提取工具** | `src/utils/requirementExtractor.ts` | 智能需求信息提取 |
+| **验证脚本** | `scripts/verify-ocr-integration.js` | OCR集成验证 |
 
 ---
 
@@ -390,11 +406,13 @@ taskkill /PID <PID> /F
 
 ### 已完成功能
 
-- ✅ OCR API 服务器（Node.js）
-- ✅ 双 OCR 后端支持（OCR.space + 百度）
-- ✅ 智能后端选择
-- ✅ 前端调用工具
+- ✅ OCR API 服务器（Node.js + Express）
+- ✅ 双 OCR 后端支持（OCR.space + 百度OCR）
+- ✅ 智能后端选择（自动选择最佳引擎）
+- ✅ 前端调用工具（支持文件上传）
+- ✅ 智能需求提取（自动提取8个字段）
 - ✅ 错误处理和降级
+- ✅ 自动化验证脚本
 
 ### 启动命令
 
@@ -415,6 +433,28 @@ pm2 start api/ocr-server.js --name wsjf-ocr
 
 ---
 
-**现在 WSJF 应用已完全支持 PDF/图片 OCR 识别！** 🎉
+## 🎉 使用场景
 
-用户上传 → OCR 自动识别 → 智能选择后端 → 零配置使用
+WSJF应用已完全支持PDF/图片OCR识别！
+
+### 典型使用流程
+
+1. **用户在编辑需求时上传文件**
+   - 支持PDF和图片格式
+   - 自动调用OCR识别
+
+2. **系统自动处理**
+   - 智能选择OCR后端（中文→百度，英文→OCR.space）
+   - 识别文本内容
+   - 提取需求字段（名称、描述、工作量等）
+
+3. **自动填充表单**
+   - 将提取的信息自动填入表单
+   - 用户可以查看和调整
+   - 确认后保存需求
+
+**优势**：
+- 🚀 快速录入：上传即识别，无需手动输入
+- 🎯 智能提取：自动识别8个需求字段
+- 🌐 完全在线：无需安装任何工具
+- 💰 免费额度：27,000次/月

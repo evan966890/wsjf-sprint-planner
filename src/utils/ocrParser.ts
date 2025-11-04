@@ -77,31 +77,25 @@ export function detectOCRNeeds(
     if (charCount === 0) {
       suggestion = `此PDF文件 "${fileName}" 没有文字层，是扫描件或图片PDF，需要使用OCR识别。
 
-建议操作：
-1. 智能OCR（推荐）：python scripts/ocr/smart_ocr.py <文件路径> -o output.txt
-2. 交互式测试：python scripts/ocr/test_ocr.py
-3. 选择后端：
-   - OCR.space: 免费25,000次/月，中英文混合
-   - 百度OCR: 免费1,000-2,000次/月，中文准确率最高
-4. 详细说明：scripts/ocr/DUAL_OCR_GUIDE.md
+系统会自动调用OCR API进行识别：
+- 自动选择最佳OCR后端（中文→百度，英文→OCR.space）
+- 识别完成后自动填充表单字段
+- 支持智能提取需求信息
 
-转换后的文本可以重新使用。`;
+请确保OCR服务器已启动（npm run dev:full）`;
 
-      guideUrl = 'scripts/ocr/DUAL_OCR_GUIDE.md';
+      guideUrl = '';
     } else {
       suggestion = `此PDF文件 "${fileName}" 文本内容较少（共${charCount}字符，${pageCount}页，平均每页${Math.round(charsPerPage)}字符），可能是扫描质量较差或部分页面为图片。
 
-建议操作：
-1. 如果确认是扫描件，使用OCR工具获得更好的识别效果
-2. 智能OCR：python scripts/ocr/smart_ocr.py <文件路径> --backend auto
-3. 选择后端：
-   - 中文为主 → 百度OCR (--backend baidu)
-   - 英文/混合 → OCR.space (--backend ocrspace)
-4. 详细说明：scripts/ocr/DUAL_OCR_GUIDE.md
+建议使用OCR识别获得更好效果：
+- 系统会自动选择最佳OCR引擎
+- 智能提取需求字段
+- 自动填充表单
 
 或者，您可以继续使用当前提取的文本（可能不完整）。`;
 
-      guideUrl = 'scripts/ocr/DUAL_OCR_GUIDE.md';
+      guideUrl = '';
     }
   }
 
@@ -160,10 +154,9 @@ export async function callOCRAPI(
     if (error instanceof Error) {
       if (error.message.includes('Failed to fetch')) {
         throw new Error(
-          'OCR服务器无法连接。\n' +
-          '或使用命令行工具：\n' +
-          'python scripts/ocr/smart_ocr.py <文件路径> --backend auto\n' +
-          '详见：scripts/ocr/DUAL_OCR_GUIDE.md'
+          'OCR服务器未启动或无法连接。\n' +
+          '请运行: npm run dev:full 或 npm run ocr:server\n' +
+          '详见：docs/OCR_INTEGRATION_GUIDE.md'
         );
       }
       throw error;
@@ -175,13 +168,11 @@ export async function callOCRAPI(
 /**
  * OCR服务状态检查
  *
- * 注意：当前使用在线OCR方案，无需检查本地服务状态
- *
- * @returns 始终返回 false（建议使用命令行工具）
+ * @returns OCR服务是否可用
+ * @deprecated 请使用 ocrClient.ts 中的 checkOCRService()
  */
 export async function checkOCRServiceAvailable(): Promise<boolean> {
-  // 在线OCR方案不需要本地服务
-  // 建议用户使用命令行工具：python scripts/ocr/simple_ocr.py
+  // 已弃用：请使用 src/utils/ocrClient.ts 中的 checkOCRService()
   return false;
 }
 
