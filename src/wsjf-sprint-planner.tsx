@@ -52,6 +52,8 @@ import { Header } from './components/Header';
 import ToastContainer from './components/ToastContainer';
 import ImportPreviewModal from './components/import/ImportPreviewModal';
 import { FeishuImportModal } from './components/FeishuImportModal';
+import { ExportMenuModal } from './components/ExportMenuModal';
+import { ImportValidationModal } from './components/ImportValidationModal';
 
 // 导入Hooks
 import { useToast } from './hooks/useToast';
@@ -115,6 +117,7 @@ export default function WSJFPlanner() {
   const setIsAIMappingLoading = useStore((state) => state.setIsAIMappingLoading);
   const setClearBeforeImport = useStore((state) => state.setClearBeforeImport);
   const setSelectedAIModel = useStore((state) => state.setSelectedAIModel);
+  const deleteRequirement = useStore((state) => state.deleteRequirement);
 
   // 筛选和搜索状态
   const searchTerm = useStore((state) => state.searchTerm);
@@ -148,11 +151,29 @@ export default function WSJFPlanner() {
   // ========== 批量评估状态 ==========
   const [showBatchEvalModal, setShowBatchEvalModal] = useState(false);
 
+  // ========== 新导出/导入状态 ==========
+  const [showExportMenuModal, setShowExportMenuModal] = useState(false);
+  const [showImportValidationModal, setShowImportValidationModal] = useState(false);
+
   // ========== Toast 通知系统 (使用Hook) ==========
   const { toasts, showToast, dismissToast, terminationToastIdRef } = useToast();
 
-  // ========== 数据导出 (使用Hook) ==========
-  const { handleExportExcel, handleExportPNG, handleExportPDF } = useDataExport(sprintPools, unscheduled);
+  // ========== 数据导出/导入 (使用Hook) ==========
+  const {
+    handleExportExcel,
+    handleExportPNG,
+    handleExportPDF,
+    handleExportEnhanced,
+    handleValidateImport,
+    handleImport,
+    isImporting,
+  } = useDataExport(
+    sprintPools,
+    unscheduled,
+    setRequirements,
+    setSprintPools,
+    setUnscheduled  // 直接传入 setUnscheduled 函数
+  );
 
   // ========== 数据导入 (使用Hook) ==========
   const dataImport = useDataImport({ showToast });
@@ -344,10 +365,17 @@ export default function WSJFPlanner() {
         onToggleCompact={toggleCompact}
         onShowHandbook={() => setShowHandbook(true)}
         onImport={() => document.getElementById('file-import-input')?.click()}
-        onFeishuImport={() => setShowFeishuImportModal(true)}
+        onFeishuImport={() => {
+          console.log('[WSJFPlanner] onFeishuImport called');
+          console.log('[WSJFPlanner] Current showFeishuImportModal:', showFeishuImportModal);
+          setShowFeishuImportModal(true);
+          console.log('[WSJFPlanner] setShowFeishuImportModal(true) called');
+        }}
         onExportExcel={handleExportExcelWithMenu}
         onExportPDF={handleExportPDFWithMenu}
         onExportPNG={handleExportPNGWithMenu}
+        onExportNew={() => setShowExportMenuModal(true)}
+        onImportValidation={() => setShowImportValidationModal(true)}
         onLogout={handleLogout}
         showExportMenu={showExportMenu}
         onToggleExportMenu={() => setShowExportMenu(!showExportMenu)}
@@ -381,6 +409,7 @@ export default function WSJFPlanner() {
               setEditingReq(req);
               setIsNewReq(false);
             }}
+            onRequirementDelete={deleteRequirement}
             onDrop={() => handleDrop('unscheduled')}
             isDragOver={dragOverPool === 'unscheduled'}
             onAddNew={() => {
@@ -578,6 +607,27 @@ export default function WSJFPlanner() {
 
       {/* Toast通知容器 */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+      {/* 新导出菜单模态框 */}
+      <ExportMenuModal
+        isOpen={showExportMenuModal}
+        onClose={() => setShowExportMenuModal(false)}
+        onExport={(config) => {
+          handleExportEnhanced(config);
+          setShowExportMenuModal(false);
+        }}
+      />
+
+      {/* 导入验证模态框 */}
+      <ImportValidationModal
+        isOpen={showImportValidationModal}
+        onClose={() => setShowImportValidationModal(false)}
+        onValidate={handleValidateImport}
+        onImport={async (file, options) => {
+          await handleImport(file, options);
+        }}
+        isImporting={isImporting}
+      />
     </div>
   );
 }

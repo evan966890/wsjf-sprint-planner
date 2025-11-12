@@ -21,7 +21,8 @@ import {
   Image as ImageIcon,
   Upload,
   Star,
-  Cloud
+  Cloud,
+  FileDown
 } from 'lucide-react';
 import type { User } from '../storage';
 
@@ -35,6 +36,8 @@ interface HeaderProps {
   onExportExcel: () => void;
   onExportPDF: () => void;
   onExportPNG: () => void;
+  onExportNew: () => void;          // 新增：打开新导出菜单
+  onImportValidation: () => void;   // 新增：打开导入验证
   onLogout: () => void;
   showExportMenu: boolean;
   onToggleExportMenu: () => void;
@@ -50,6 +53,8 @@ export function Header({
   onExportExcel,
   onExportPDF,
   onExportPNG,
+  onExportNew,
+  onImportValidation,
   onLogout,
   showExportMenu,
   onToggleExportMenu,
@@ -124,12 +129,35 @@ export function Header({
 
           {/* 从飞书导入按钮 */}
           <button
-            onClick={onFeishuImport}
+            onClick={() => {
+              console.log('[Header] 飞书导入按钮被点击');
+              onFeishuImport();
+            }}
             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
             title="从飞书项目导入需求"
           >
             <Cloud size={16} />
             从飞书导入
+          </button>
+
+          {/* 导入数据按钮（验证式导入）*/}
+          <button
+            onClick={onImportValidation}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
+            title="导入数据备份文件（JSON/Excel）"
+          >
+            <Upload size={16} />
+            导入数据
+          </button>
+
+          {/* 新导出按钮 */}
+          <button
+            onClick={onExportNew}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
+            title="双模式导出：展示模式+数据备份"
+          >
+            <FileDown size={16} />
+            新导出
           </button>
 
           <div className="relative">

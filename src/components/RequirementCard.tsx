@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Star } from 'lucide-react';
+import { Star, Trash2 } from 'lucide-react';
 import type { Requirement } from '../types';
 import { roundNumber } from '../utils/scoring';
 import { isReadyForSchedule } from '../constants/techProgress';
@@ -33,12 +33,14 @@ const RequirementCard = ({
   requirement,
   onDragStart,
   onClick,
+  onDelete,
   compact = false,
   showTooltip = true
 }: {
   requirement: Requirement;
   onDragStart?: (e: React.DragEvent) => void;
   onClick?: () => void;
+  onDelete?: (reqId: string) => void;
   compact?: boolean;
   showTooltip?: boolean;
 }) => {
@@ -261,7 +263,7 @@ const RequirementCard = ({
   };
 
   return (
-    <div className="relative inline-block" ref={cardRef}>
+    <div className="relative inline-block group" ref={cardRef}>
       <div
         draggable={onDragStart ? true : false}
         onDragStart={onDragStart}
@@ -285,6 +287,22 @@ const RequirementCard = ({
           position: 'relative',
         }}
       >
+        {/* 删除按钮 - 右上角 */}
+        {onDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();  // 防止触发卡片点击事件
+              if (confirm(`确定要删除需求"${requirement.name}"吗？`)) {
+                onDelete(requirement.id);
+              }
+            }}
+            className="absolute top-1 right-1 p-1 rounded bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-auto"
+            title="删除需求"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        )}
+
         {/* 标题区域 - 顶部 */}
         <div className={`p-1.5 pb-0 pointer-events-none`}>
           <div className={`font-semibold ${textColor} leading-tight line-clamp-2 ${nameSize}`}>

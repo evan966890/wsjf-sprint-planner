@@ -27,6 +27,7 @@ import { getSubDomainsByDomain } from '../config/businessFields';
 interface UnscheduledAreaProps {
   unscheduled: Requirement[];
   onRequirementClick: (req: Requirement) => void;
+  onRequirementDelete?: (reqId: string) => void;
   onDrop: () => void;
   isDragOver: boolean;
   onAddNew: () => void;
@@ -55,6 +56,7 @@ interface UnscheduledAreaProps {
 const UnscheduledArea = ({
   unscheduled,
   onRequirementClick,
+  onRequirementDelete,
   onDrop,
   isDragOver,
   onAddNew,
@@ -267,6 +269,7 @@ const UnscheduledArea = ({
           viewMode={viewMode}
           compact={compact}
           onRequirementClick={onRequirementClick}
+          onRequirementDelete={onRequirementDelete}
         />
 
         {/* 未评估需求区 */}
@@ -275,6 +278,7 @@ const UnscheduledArea = ({
           viewMode={viewMode}
           compact={compact}
           onRequirementClick={onRequirementClick}
+          onRequirementDelete={onRequirementDelete}
         />
       </div>
 

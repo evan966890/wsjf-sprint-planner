@@ -38,6 +38,7 @@ import RequirementCard from './RequirementCard';
 const SprintPoolComponent = ({
   pool,
   onRequirementClick,
+  onRequirementDelete,
   onDrop,
   isDragOver,
   onEdit,
@@ -46,6 +47,7 @@ const SprintPoolComponent = ({
 }: {
   pool: SprintPool;
   onRequirementClick: (req: Requirement) => void;
+  onRequirementDelete?: (reqId: string) => void;
   onDrop: (poolId: string) => void;
   isDragOver: boolean;
   onEdit: () => void;
@@ -348,6 +350,7 @@ const SprintPoolComponent = ({
                     e.dataTransfer.setData('sourcePoolId', pool.id);
                   }}
                   onClick={() => onRequirementClick(req)}
+                  onDelete={onRequirementDelete}
                 />
               ))}
             </div>

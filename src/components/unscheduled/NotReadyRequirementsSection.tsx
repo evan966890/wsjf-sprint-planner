@@ -9,12 +9,14 @@
 
 import type { Requirement } from '../../types';
 import RequirementCard from '../RequirementCard';
+import { Trash2 } from 'lucide-react';
 
 interface NotReadyRequirementsSectionProps {
   requirements: Requirement[];
   viewMode: 'bubble' | 'list';
   compact: boolean;
   onRequirementClick: (req: Requirement) => void;
+  onRequirementDelete?: (reqId: string) => void;
 }
 
 export function NotReadyRequirementsSection({
@@ -22,6 +24,7 @@ export function NotReadyRequirementsSection({
   viewMode,
   compact,
   onRequirementClick,
+  onRequirementDelete,
 }: NotReadyRequirementsSectionProps) {
   if (requirements.length === 0) {
     return null;
@@ -48,6 +51,7 @@ export function NotReadyRequirementsSection({
                 requirement={req}
                 compact={compact}
                 onClick={() => onRequirementClick(req)}
+                onDelete={onRequirementDelete}
               />
             ))}
           </div>
@@ -87,6 +91,9 @@ export function NotReadyRequirementsSection({
                 <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">提交方</th>
                 <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">RMS</th>
                 <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold whitespace-nowrap">技术评估</th>
+                {onRequirementDelete && (
+                  <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold whitespace-nowrap">操作</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -121,6 +128,23 @@ export function NotReadyRequirementsSection({
                     {req.isRMS ? <span className="text-purple-600 font-semibold">✓</span> : '-'}
                   </td>
                   <td className="border border-gray-300 px-2 py-1.5 whitespace-nowrap">{req.techProgress}</td>
+                  {onRequirementDelete && (
+                    <td className="border border-gray-300 px-2 py-1.5 text-center">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`确定要删除需求"${req.name}"吗？`)) {
+                            onRequirementDelete(req.id);
+                          }
+                        }}
+                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition"
+                        title="删除需求"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

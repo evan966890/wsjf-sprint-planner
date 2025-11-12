@@ -220,7 +220,12 @@ export function FeishuImportModal({
     handleClose();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('[FeishuImportModal] Modal is closed (isOpen=false)');
+    return null;
+  }
+
+  console.log('[FeishuImportModal] Modal is rendering, step:', step, 'isAuthorized:', isAuthorized);
 
   const isLoading = authLoading || syncLoading;
 
