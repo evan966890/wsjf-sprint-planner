@@ -40,6 +40,11 @@ export default defineConfig({
             });
           });
         },
+      },
+      // 开发环境：代理到本地飞书代理服务器
+      '/api/feishu': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
       }
     }
   }

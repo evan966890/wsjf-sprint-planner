@@ -567,9 +567,30 @@ ${script}
               </div>
 
               {projects.length === 0 && !isLoading ? (
-                <div className="text-center py-12 text-gray-500">
-                  <p>暂无项目</p>
-                  <p className="text-sm mt-2">请点击"刷新列表"获取项目</p>
+                <div className="text-center py-12">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-4">
+                    <p className="text-gray-700 font-medium">⚠️ 生产环境限制</p>
+                    <p className="text-sm text-gray-600 mt-2">
+                      飞书API在生产环境因CORS策略限制暂时不可用
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      请在<span className="font-bold text-blue-600">本地开发环境</span>使用此功能
+                    </p>
+                  </div>
+                  <a
+                    href="https://github.com/evan966890/wsjf-sprint-planner#%E9%A3%9E%E4%B9%A6%E9%9B%86%E6%88%90%E6%9C%AC%E5%9C%B0%E5%BC%80%E5%8F%91"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  >
+                    📖 查看本地开发指南
+                  </a>
+                  <div className="mt-4 text-xs text-gray-500">
+                    <p>📖 本地开发步骤：</p>
+                    <p>1. npm run dev:full</p>
+                    <p>2. 打开 http://localhost:3000</p>
+                    <p>3. 飞书API将通过本地代理工作</p>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

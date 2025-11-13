@@ -151,26 +151,32 @@ export class FeishuAuthManager {
         // 项目管理平台：使用 /open_api/authen/plugin_token
         console.log('[FeishuAuth] Refreshing project platform plugin token');
 
-        // 在开发环境使用代理，避免CORS问题
+        // 使用代理服务器避免CORS问题
         const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
-        const baseUrl = isDev ? '/feishu-proxy' : this.config.baseUrl;
+        let apiUrl;
 
-        console.log('[FeishuAuth] Using baseUrl:', baseUrl, '(dev mode:', isDev, ')');
+        if (isDev) {
+          // 开发环境：使用Vite代理到本地服务器
+          apiUrl = '/api/feishu/plugin-token';
+        } else {
+          // 生产环境：使用CloudBase云函数或配置的代理URL
+          const proxyUrl = import.meta.env.VITE_FEISHU_PROXY_URL || '/api/feishu/plugin-token';
+          apiUrl = proxyUrl.endsWith('/') ? proxyUrl + 'plugin-token' : proxyUrl + '/plugin-token';
+        }
 
-        const response = await fetch(
-          `${baseUrl}/open_api/authen/plugin_token`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              plugin_id: this.config.pluginId,
-              plugin_secret: this.config.pluginSecret,
-              type: 0, // plugin_access_token类型
-            }),
-          }
-        );
+        console.log('[FeishuAuth] Using API URL:', apiUrl, '(dev mode:', isDev, ')');
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            plugin_id: this.config.pluginId,
+            plugin_secret: this.config.pluginSecret,
+            type: 0, // plugin_access_token类型
+          }),
+        });
 
         if (!response.ok) {
           throw new FeishuAPIErrorClass(

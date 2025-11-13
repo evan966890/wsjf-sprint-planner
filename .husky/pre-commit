@@ -24,3 +24,28 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "✅ 文件大小检查通过"
+
+echo ""
+echo "🧪 运行单元测试..."
+
+npm run test:run
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ 提交被拒绝：测试未通过"
+  echo ""
+  echo "📋 解决方案："
+  echo "   1. 运行 'npm run test' 查看失败的测试"
+  echo "   2. 修复失败的测试"
+  echo "   3. 确保所有测试通过后再提交"
+  echo ""
+  echo "💡 如需跳过测试（不推荐）："
+  echo "   git commit --no-verify -m \"message\""
+  echo ""
+  echo "📖 参考文档："
+  echo "   - docs/standards/test-driven-development.md"
+  echo ""
+  exit 1
+fi
+
+echo "✅ 测试检查通过"

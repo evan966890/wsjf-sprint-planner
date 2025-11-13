@@ -18,6 +18,25 @@
             ".gitignore"
           ]
         }
+      },
+      "feishu-proxy": {
+        "use": "@cloudbase/framework-plugin-function",
+        "inputs": {
+          "functionRootPath": "cloudbase-functions",
+          "functions": [
+            {
+              "name": "feishu-proxy",
+              "timeout": 60,
+              "envVariables": {},
+              "runtime": "Nodejs12.16",
+              "memory": 256,
+              "installDependency": true,
+              "handler": "index.main"
+            }
+          ],
+          "serviceName": "feishu-proxy",
+          "serviceDescription": "飞书API代理服务"
+        }
       }
     }
   }

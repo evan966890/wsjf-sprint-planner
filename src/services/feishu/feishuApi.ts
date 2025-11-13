@@ -25,12 +25,22 @@ export class FeishuAPI {
   constructor(config: FeishuConfig) {
     this.authManager = new FeishuAuthManager(config);
     // 使用代理路径避免CORS问题
-    // 在开发环境使用 /feishu-proxy，生产环境使用实际域名
     const isDev = import.meta.env.DEV;
+
     if (isDev) {
+      // 开发环境：使用Vite代理到本地服务器
       this.baseUrl = '/feishu-proxy';
     } else {
-      this.baseUrl = config.baseUrl || 'https://project.f.mioffice.cn';
+      // 生产环境：使用CloudBase云函数代理
+      const proxyUrl = import.meta.env.VITE_FEISHU_PROXY_URL;
+      if (proxyUrl) {
+        this.baseUrl = proxyUrl;
+        console.log('[FeishuAPI] Using proxy in production:', proxyUrl);
+      } else {
+        // 回退：直接调用（会有CORS问题）
+        this.baseUrl = config.baseUrl || 'https://project.f.mioffice.cn';
+        console.warn('[FeishuAPI] No proxy configured, may encounter CORS issues');
+      }
     }
   }
 
