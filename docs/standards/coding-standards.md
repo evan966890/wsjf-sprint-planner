@@ -410,6 +410,57 @@ const value = something;
 const value: string = something as string;
 ```
 
+### 3. ⭐ 禁止按钮缺少 type 属性（关键规范）
+
+**问题严重性**: ❌ **严重bug** - 会导致表单意外提交，触发页面刷新或下载文件
+
+```typescript
+// ❌ 错误：缺少 type 属性
+<button onClick={handleClick}>删除</button>
+<button onClick={handleSave}>保存</button>
+
+// ✅ 正确：明确指定 type="button"
+<button type="button" onClick={handleClick}>删除</button>
+<button type="button" onClick={handleSave}>保存</button>
+
+// ✅ 表单提交按钮使用 type="submit"
+<button type="submit">提交表单</button>
+```
+
+**为什么必须加 type 属性？**
+
+1. **HTML 默认行为**: `<button>` 在 `<form>` 中的默认 type 是 `"submit"`
+2. **React 中的坑**: 即使不在 form 中，有时也会触发表单提交
+3. **实际后果**:
+   - 页面意外刷新
+   - 自动下载 HTML 文件
+   - 数据丢失
+   - 用户体验极差
+
+**历史教训**:
+- ❌ v1.5.0: EditRequirementModal 所有按钮缺少 type，导致刷新自动下载
+- ❌ v1.6.0: 再次出现按钮缺少 type 的问题
+- ✅ v1.6.1: 批量修复 20+ 个按钮，加入强制规范
+
+**ESLint 规则（强烈推荐）**:
+```json
+{
+  "rules": {
+    "react/button-has-type": ["error", {
+      "button": true,
+      "submit": true,
+      "reset": true
+    }]
+  }
+}
+```
+
+**预防措施**:
+1. ✅ 所有 `<button>` 必须有 `type` 属性
+2. ✅ 使用 ESLint 自动检测
+3. ✅ Code Review 重点检查
+4. ✅ 模板代码片段默认包含 type
+
 ### 3. 禁止嵌套超过3层
 ```typescript
 // ❌ 错误

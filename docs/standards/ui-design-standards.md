@@ -229,14 +229,39 @@ mb-6 (24px)
 </button>
 ```
 
-**重要**：所有 `<button>` 必须添加 `type="button"` 属性（除非是表单提交按钮）：
+**❌ 强制规范：所有 `<button>` 必须添加 `type` 属性**
+
+⚠️ **这是一个反复出现的严重bug！必须100%遵守！**
+
 ```typescript
-// ✅ 正确
+// ✅ 正确：普通按钮使用 type="button"
 <button type="button" onClick={handleClick}>...</button>
 
-// ❌ 错误：会导致表单意外提交
+// ✅ 正确：表单提交按钮使用 type="submit"
+<button type="submit">提交</button>
+
+// ❌ 错误：缺少 type 属性
 <button onClick={handleClick}>...</button>
+// 后果：可能导致表单意外提交、页面刷新、自动下载文件等严重问题
 ```
+
+**历史bug记录**:
+- v1.5.0: EditRequirementModal 20+个按钮缺少 type → 刷新自动下载文件
+- v1.6.0: 再次发现按钮缺少 type
+- v1.6.1: 批量修复 + 加入强制规范
+
+**为什么会导致自动下载文件？**
+1. `<button>` 在 HTML 中默认 type 是 `"submit"`
+2. 点击按钮会触发表单提交事件
+3. 浏览器尝试提交到当前 URL
+4. React 阻止默认行为失败
+5. 页面刷新或下载当前 HTML
+
+**预防措施**:
+1. ✅ 开发时：使用 ESLint 规则 `react/button-has-type`
+2. ✅ Code Review：重点检查所有 `<button>` 标签
+3. ✅ 使用代码片段：自动包含 `type="button"`
+4. ✅ 搜索检查：`grep -n "<button(?!\s+type=)" src/**/*.tsx`
 
 ### 确认弹窗和提示 (Confirm Dialog & Toast)
 
