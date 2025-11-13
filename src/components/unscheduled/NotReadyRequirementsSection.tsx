@@ -11,7 +11,7 @@ import type { Requirement } from '../../types';
 import RequirementCard from '../RequirementCard';
 import { Trash2 } from 'lucide-react';
 
-interface NotReadyRequirementsSectionProps {
+interface NotReadyRequirementsSectionProps{
   requirements: Requirement[];
   viewMode: 'bubble' | 'list';
   compact: boolean;

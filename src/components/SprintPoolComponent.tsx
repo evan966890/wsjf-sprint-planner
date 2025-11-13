@@ -210,11 +210,11 @@ const SprintPoolComponent = ({
               </button>
             </div>
           </div>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-gray-300 flex-shrink min-w-0 truncate">
-              {pool.startDate} ~ {pool.endDate}
+          <div className="space-y-1.5">
+            <p className="text-sm text-gray-300">
+              📅 {pool.startDate} ~ {pool.endDate}
             </p>
-            <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <select
                 value={businessDomainFilter}
                 onChange={(e) => setBusinessDomainFilter(e.target.value)}

@@ -1,6 +1,31 @@
 import { useState } from 'react';
-import { X, Save } from 'lucide-react';
+import { X, Save, Calendar } from 'lucide-react';
 import type { SprintPool } from '../types';
+
+// 日期工具函数
+const formatDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getNextMonday = (fromDate: Date = new Date()): Date => {
+  const date = new Date(fromDate);
+  const day = date.getDay();
+  const daysUntilMonday = day === 0 ? 1 : day === 1 ? 7 : 8 - day;
+  date.setDate(date.getDate() + daysUntilMonday);
+  return date;
+};
+
+const getTwoWeekRange = (startDate: Date): { start: string; end: string } => {
+  const end = new Date(startDate);
+  end.setDate(end.getDate() + 13); // 14天 - 1
+  return {
+    start: formatDate(startDate),
+    end: formatDate(end)
+  };
+};
 
 // ============================================================================
 // UI组件 - 编辑迭代池弹窗 (Edit Sprint Modal Component)
@@ -33,6 +58,22 @@ const EditSprintModal = ({
   onClose: () => void;
 }) => {
   const [form, setForm] = useState(sprint);
+
+  // 快速选择双周的函数
+  const selectTwoWeeks = (weeksFromNow: number) => {
+    const today = new Date();
+    const nextMonday = getNextMonday(today);
+    // 计算目标双周的起始日期
+    const targetStartDate = new Date(nextMonday);
+    targetStartDate.setDate(nextMonday.getDate() + (weeksFromNow * 14));
+
+    const range = getTwoWeekRange(targetStartDate);
+    setForm({
+      ...form,
+      startDate: range.start,
+      endDate: range.end
+    });
+  };
 
   // 健壮性检查：确保所有预留百分比是有效数字
   const bugReserve = Math.max(0, Math.min(100, Number(form.bugReserve) || 0));
@@ -70,24 +111,56 @@ const EditSprintModal = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">开始日期</label>
-              <input
-                type="text"
-                value={form.startDate}
-                onChange={(e) => setForm({...form, startDate: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
-              />
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-gray-700">迭代时间范围</label>
+              <div className="flex items-center gap-1">
+                <Calendar size={14} className="text-gray-500" />
+                <span className="text-xs text-gray-500">快速选择双周：</span>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">结束日期</label>
-              <input
-                type="text"
-                value={form.endDate}
-                onChange={(e) => setForm({...form, endDate: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
-              />
+            <div className="flex gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => selectTwoWeeks(0)}
+                className="flex-1 px-2 py-1.5 bg-teal-50 text-teal-700 text-xs rounded-lg hover:bg-teal-100 transition border border-teal-200"
+              >
+                下个双周
+              </button>
+              <button
+                type="button"
+                onClick={() => selectTwoWeeks(1)}
+                className="flex-1 px-2 py-1.5 bg-gray-50 text-gray-700 text-xs rounded-lg hover:bg-gray-100 transition border border-gray-200"
+              >
+                再下个双周
+              </button>
+              <button
+                type="button"
+                onClick={() => selectTwoWeeks(2)}
+                className="flex-1 px-2 py-1.5 bg-gray-50 text-gray-700 text-xs rounded-lg hover:bg-gray-100 transition border border-gray-200"
+              >
+                第三个双周
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">开始日期</label>
+                <input
+                  type="date"
+                  value={form.startDate}
+                  onChange={(e) => setForm({...form, startDate: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">结束日期</label>
+                <input
+                  type="date"
+                  value={form.endDate}
+                  onChange={(e) => setForm({...form, endDate: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition text-sm"
+                />
+              </div>
             </div>
           </div>
 
