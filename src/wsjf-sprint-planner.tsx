@@ -99,7 +99,6 @@ export default function WSJFPlanner() {
   // UI控制状态
   const compact = useStore((state) => state.compact);
   const showHandbook = useStore((state) => state.showHandbook);
-  const showExportMenu = useStore((state) => state.showExportMenu);
   const showImportModal = useStore((state) => state.showImportModal);
   const showFeishuImportModal = useStore((state) => state.showFeishuImportModal);
   const importData = useStore((state) => state.importData);
@@ -109,7 +108,6 @@ export default function WSJFPlanner() {
   const selectedAIModel = useStore((state) => state.selectedAIModel);
   const toggleCompact = useStore((state) => state.toggleCompact);
   const setShowHandbook = useStore((state) => state.setShowHandbook);
-  const setShowExportMenu = useStore((state) => state.setShowExportMenu);
   const setShowImportModal = useStore((state) => state.setShowImportModal);
   const setShowFeishuImportModal = useStore((state) => state.setShowFeishuImportModal);
   const setImportData = useStore((state) => state.setImportData);
@@ -160,10 +158,7 @@ export default function WSJFPlanner() {
 
   // ========== 数据导出/导入 (使用Hook) ==========
   const {
-    handleExportExcel,
-    handleExportPNG,
-    handleExportPDF,
-    handleExportEnhanced,
+    handleExport,
     handleValidateImport,
     handleImport,
     isImporting,
@@ -172,7 +167,7 @@ export default function WSJFPlanner() {
     unscheduled,
     setRequirements,
     setSprintPools,
-    setUnscheduled  // 直接传入 setUnscheduled 函数
+    setUnscheduled
   );
 
   // ========== 数据导入 (使用Hook) ==========
@@ -323,20 +318,6 @@ export default function WSJFPlanner() {
   };
 
   // Wrap export functions to close menu after export
-  const handleExportExcelWithMenu = () => {
-    handleExportExcel();
-    setShowExportMenu(false);
-  };
-
-  const handleExportPNGWithMenu = async () => {
-    await handleExportPNG();
-    setShowExportMenu(false);
-  };
-
-  const handleExportPDFWithMenu = async () => {
-    await handleExportPDF();
-    setShowExportMenu(false);
-  };
 
   const totalScheduled = sprintPools.reduce((sum, pool) => sum + pool.requirements.length, 0);
   const hardDeadlineReqs = unscheduled.filter(r => r.hardDeadline);
@@ -371,14 +352,9 @@ export default function WSJFPlanner() {
           setShowFeishuImportModal(true);
           console.log('[WSJFPlanner] setShowFeishuImportModal(true) called');
         }}
-        onExportExcel={handleExportExcelWithMenu}
-        onExportPDF={handleExportPDFWithMenu}
-        onExportPNG={handleExportPNGWithMenu}
         onExportNew={() => setShowExportMenuModal(true)}
         onImportValidation={() => setShowImportValidationModal(true)}
         onLogout={handleLogout}
-        showExportMenu={showExportMenu}
-        onToggleExportMenu={() => setShowExportMenu(!showExportMenu)}
       />
 
       {/* Hidden file input for import */}
@@ -608,13 +584,14 @@ export default function WSJFPlanner() {
       {/* Toast通知容器 */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      {/* 新导出菜单模态框 */}
+      {/* 导出菜单模态框 */}
       <ExportMenuModal
         isOpen={showExportMenuModal}
         onClose={() => setShowExportMenuModal(false)}
         onExport={(config) => {
-          handleExportEnhanced(config);
+          handleExport(config);
           setShowExportMenuModal(false);
+          showToast('导出成功！', 'success');
         }}
       />
 

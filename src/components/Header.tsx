@@ -13,12 +13,8 @@
 
 import {
   HelpCircle,
-  Download,
   User as UserIcon,
   LogOut,
-  FileSpreadsheet,
-  FileText,
-  Image as ImageIcon,
   Upload,
   Star,
   Cloud,
@@ -33,14 +29,9 @@ interface HeaderProps {
   onShowHandbook: () => void;
   onImport: () => void;
   onFeishuImport: () => void;
-  onExportExcel: () => void;
-  onExportPDF: () => void;
-  onExportPNG: () => void;
-  onExportNew: () => void;          // 新增：打开新导出菜单
-  onImportValidation: () => void;   // 新增：打开导入验证
+  onExportNew: () => void;          // 新导出功能（双模式）
+  onImportValidation: () => void;   // 导入验证功能
   onLogout: () => void;
-  showExportMenu: boolean;
-  onToggleExportMenu: () => void;
 }
 
 export function Header({
@@ -50,14 +41,9 @@ export function Header({
   onShowHandbook,
   onImport,
   onFeishuImport,
-  onExportExcel,
-  onExportPDF,
-  onExportPNG,
   onExportNew,
   onImportValidation,
   onLogout,
-  showExportMenu,
-  onToggleExportMenu,
 }: HeaderProps) {
   return (
     <div className="bg-gray-900 border-b border-gray-800 px-6 py-3 shadow-sm flex-shrink-0">
@@ -150,51 +136,15 @@ export function Header({
             导入数据
           </button>
 
-          {/* 新导出按钮 */}
+          {/* 导出按钮（双模式导出） */}
           <button
             onClick={onExportNew}
             className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
-            title="双模式导出：展示模式+数据备份"
+            title="导出数据：展示模式（30+字段）或数据备份模式（完整还原）"
           >
             <FileDown size={16} />
-            新导出
+            导出
           </button>
-
-          <div className="relative">
-            <button
-              onClick={onToggleExportMenu}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
-            >
-              <Download size={16} />
-              导出
-            </button>
-
-            {showExportMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
-                <button
-                  onClick={onExportExcel}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700 transition"
-                >
-                  <FileSpreadsheet size={18} className="text-green-600" />
-                  导出为 Excel
-                </button>
-                <button
-                  onClick={onExportPDF}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700 transition"
-                >
-                  <FileText size={18} className="text-red-600" />
-                  导出为 PDF
-                </button>
-                <button
-                  onClick={onExportPNG}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700 transition"
-                >
-                  <ImageIcon size={18} className="text-blue-600" />
-                  导出为图片
-                </button>
-              </div>
-            )}
-          </div>
 
           {currentUser && (
             <button

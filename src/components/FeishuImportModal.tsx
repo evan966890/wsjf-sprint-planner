@@ -92,14 +92,17 @@ export function FeishuImportModal({
 
   // 保存配置
   const handleSaveConfig = () => {
-    console.log('[FeishuImportModal] handleSaveConfig called');
+    console.log('[FeishuImportModal] handleSaveConfig called - START');
+    console.log('[FeishuImportModal] Current state:', { pluginId, userKey: userKey.substring(0, 5) + '...', step, isAuthorized });
 
     if (!pluginId || !pluginSecret) {
+      console.log('[FeishuImportModal] Validation failed: missing plugin credentials');
       showToast('请填写Plugin ID和Secret', 'error');
       return;
     }
 
     if (!userKey.trim()) {
+      console.log('[FeishuImportModal] Validation failed: missing userKey');
       showToast('请填写User Key', 'error');
       return;
     }
@@ -111,7 +114,7 @@ export function FeishuImportModal({
       showToast('配置已保存，可以开始导入', 'success');
     }
 
-    console.log('[FeishuImportModal] Calling saveConfig with workItemTypeKey:', workItemTypeName);
+    console.log('[FeishuImportModal] Validation passed, calling saveConfig');
     saveConfig(pluginId, pluginSecret, manualToken || '', true, platformDomain, userKey, workItemTypeName);
 
     console.log('[FeishuImportModal] Setting isAuthorized = true');

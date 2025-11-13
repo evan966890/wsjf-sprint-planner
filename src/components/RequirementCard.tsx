@@ -3,6 +3,7 @@ import { Star, Trash2 } from 'lucide-react';
 import type { Requirement } from '../types';
 import { roundNumber } from '../utils/scoring';
 import { isReadyForSchedule } from '../constants/techProgress';
+import { useConfirmDialog } from './ConfirmDialog';
 
 // ============================================================================
 // UI组件 - 需求卡片 (Requirement Card Component)
@@ -48,6 +49,7 @@ const RequirementCard = ({
   const [showHover, setShowHover] = useState(false);                            // 是否显示悬停提示
   const [tooltipPosition, setTooltipPosition] = useState<'top' | 'bottom'>('top'); // 提示位置
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});   // 提示样式
+  const { confirm, dialogState, handleCancel } = useConfirmDialog();           // 确认弹窗
   const cardRef = React.useRef<HTMLDivElement>(null);                          // 卡片DOM引用
 
   // 使用默认值确保安全性
@@ -290,9 +292,15 @@ const RequirementCard = ({
         {/* 删除按钮 - 右上角 */}
         {onDelete && (
           <button
-            onClick={(e) => {
+            type="button"
+            onClick={async (e) => {
               e.stopPropagation();  // 防止触发卡片点击事件
-              if (confirm(`确定要删除需求"${requirement.name}"吗？`)) {
+              const confirmed = await confirm(
+                '删除需求',
+                `确定要删除需求"${requirement.name}"吗？`,
+                'danger'
+              );
+              if (confirmed) {
                 onDelete(requirement.id);
               }
             }}
