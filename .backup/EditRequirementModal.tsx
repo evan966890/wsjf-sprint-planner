@@ -899,7 +899,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                 </div>
               )}
             </div>
-            <button type="button"
+            <button
               onClick={onClose}
               className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-2 transition"
             >
@@ -1104,7 +1104,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                               {doc.url}
                             </a>
                           </div>
-                          <button type="button"
+                          <button
+                            type="button"
                             onClick={() => handleRemoveDocument(index)}
                             className="text-red-500 hover:text-red-700 flex-shrink-0"
                           >
@@ -1200,7 +1201,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 {/* 查看内容按钮 */}
                                 {hasContent && (
-                                  <button type="button"
+                                  <button
+                                    type="button"
                                     onClick={() => setPreviewFileId(file.id)}
                                     className="text-blue-500 hover:text-blue-700 transition p-1"
                                     title="查看解析内容"
@@ -1210,7 +1212,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                                 )}
                                 {/* 删除按钮 */}
                                 {file.parseStatus !== 'parsing' && (
-                                  <button type="button"
+                                  <button
+                                    type="button"
                                     onClick={() => handleRemoveFile(file.id)}
                                     className="text-gray-400 hover:text-red-600 transition p-1"
                                     title="删除文件"
@@ -1285,7 +1288,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                     })()}
 
                     <div className="flex gap-2">
-                      <button type="button"
+                      <button
+                        type="button"
                         onClick={handleAddDocument}
                         disabled={!newDocUrl.trim() || isAIAnalyzing}
                         className="flex-1 px-3 py-2 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed transition"
@@ -1293,7 +1297,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                         <LinkIcon size={14} className="inline mr-1" />
                         添加文档
                       </button>
-                      <button type="button"
+                      <button
+                        type="button"
                         onClick={handleAIAnalyze}
                         disabled={isAIAnalyzing || !checkContentSufficiency().canStartAI}
                         className="flex-1 px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
@@ -1505,7 +1510,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                           {aiAdoptionStatus === 'pending' && (
                             <div className="space-y-3">
                               {/* 主要操作 */}
-                              <button type="button"
+                              <button
+                                type="button"
                                 onClick={handleAdoptAll}
                                 className="w-full px-4 py-3 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition font-medium shadow-sm"
                               >
@@ -1516,7 +1522,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                               <div>
                                 <div className="text-xs text-gray-600 mb-1.5">分项采纳:</div>
                                 <div className="grid grid-cols-3 gap-2">
-                                  <button type="button"
+                                  <button
+                                    type="button"
                                     onClick={handleAdoptScoreOnly}
                                     className="px-3 py-2 text-xs bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 rounded transition"
                                   >
@@ -1524,7 +1531,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                                     <div className="text-xs text-gray-500">{aiAnalysisResult.suggestedScore}分</div>
                                   </button>
                                   {aiAnalysisResult.suggestedOKRMetrics && aiAnalysisResult.suggestedOKRMetrics.length > 0 && (
-                                    <button type="button"
+                                    <button
+                                      type="button"
                                       onClick={handleAdoptOKRMetrics}
                                       className="px-3 py-2 text-xs bg-white hover:bg-purple-50 text-purple-600 border border-purple-200 rounded transition"
                                     >
@@ -1533,7 +1541,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                                     </button>
                                   )}
                                   {aiAnalysisResult.suggestedProcessMetrics && aiAnalysisResult.suggestedProcessMetrics.length > 0 && (
-                                    <button type="button"
+                                    <button
+                                      type="button"
                                       onClick={handleAdoptProcessMetrics}
                                       className="px-3 py-2 text-xs bg-white hover:bg-indigo-50 text-indigo-600 border border-indigo-200 rounded transition"
                                     >
@@ -1546,13 +1555,15 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
 
                               {/* 次要操作 */}
                               <div className="flex gap-2">
-                                <button type="button"
+                                <button
+                                  type="button"
                                   onClick={handleIgnoreAI}
                                   className="flex-1 px-3 py-2 text-sm bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 rounded transition"
                                 >
                                   忽略建议
                                 </button>
-                                <button type="button"
+                                <button
+                                  type="button"
                                   onClick={handleReanalyze}
                                   className="flex-1 px-3 py-2 text-sm bg-white hover:bg-purple-50 text-purple-600 border border-purple-200 rounded transition"
                                 >
@@ -1580,7 +1591,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                                   <div className="text-xs text-gray-600 mb-1.5">继续采纳:</div>
                                   <div className="grid grid-cols-3 gap-2">
                                     {!aiAdoptedItems.score && (
-                                      <button type="button"
+                                      <button
+                                        type="button"
                                         onClick={handleAdoptScoreOnly}
                                         className="px-3 py-2 text-xs bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 rounded transition"
                                       >
@@ -1589,7 +1601,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                                       </button>
                                     )}
                                     {!aiAdoptedItems.okrMetrics && aiAnalysisResult.suggestedOKRMetrics && aiAnalysisResult.suggestedOKRMetrics.length > 0 && (
-                                      <button type="button"
+                                      <button
+                                        type="button"
                                         onClick={handleAdoptOKRMetrics}
                                         className="px-3 py-2 text-xs bg-white hover:bg-purple-50 text-purple-600 border border-purple-200 rounded transition"
                                       >
@@ -1598,7 +1611,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                                       </button>
                                     )}
                                     {!aiAdoptedItems.processMetrics && aiAnalysisResult.suggestedProcessMetrics && aiAnalysisResult.suggestedProcessMetrics.length > 0 && (
-                                      <button type="button"
+                                      <button
+                                        type="button"
                                         onClick={handleAdoptProcessMetrics}
                                         className="px-3 py-2 text-xs bg-white hover:bg-indigo-50 text-indigo-600 border border-indigo-200 rounded transition"
                                       >
@@ -1611,7 +1625,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                               )}
 
                               {/* 重新分析 */}
-                              <button type="button"
+                              <button
+                                type="button"
                                 onClick={handleReanalyze}
                                 className="w-full px-3 py-2 text-sm bg-white hover:bg-purple-50 text-purple-600 border border-purple-200 rounded transition"
                               >
@@ -1636,14 +1651,16 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
 
                               {/* 操作按钮 */}
                               <div className="flex gap-2">
-                                <button type="button"
+                                <button
+                                  type="button"
                                   onClick={handleReanalyze}
                                   className="flex-1 px-3 py-2 text-sm bg-white hover:bg-purple-50 text-purple-600 border border-purple-200 rounded transition"
                                 >
                                   🔄 重新分析
                                 </button>
                                 {aiAdoptionStatus === 'ignored' && (
-                                  <button type="button"
+                                  <button
+                                    type="button"
                                     onClick={handleAdoptAll}
                                     className="flex-1 px-3 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded transition"
                                   >
@@ -1731,7 +1748,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
 
             {/* 5. 需求相关性（可选） */}
             <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-              <button type="button"
+              <button
+                type="button"
                 onClick={() => setIsRelevanceExpanded(!isRelevanceExpanded)}
                 className="w-full flex items-center justify-between mb-3"
               >
@@ -1882,7 +1900,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                       })}
                     </div>
                     {form.impactScope?.storeCountRange && (
-                      <button type="button"
+                      <button
+                        type="button"
                         onClick={() => setForm({
                           ...form,
                           impactScope: {
@@ -1942,7 +1961,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                         <span className="text-xs text-gray-600">
                           已选择 {form.impactScope?.regions?.length} 个地区
                         </span>
-                        <button type="button"
+                        <button
+                          type="button"
                           onClick={() => setForm({
                             ...form,
                             impactScope: {
@@ -1979,7 +1999,8 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
 
             {/* 6. 影响的指标 */}
             <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
-              <button type="button"
+              <button
+                type="button"
                 onClick={() => setIsMetricsExpanded(!isMetricsExpanded)}
                 className="w-full flex items-center justify-between mb-3"
               >
@@ -2271,13 +2292,13 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
 
           {/* Footer */}
           <div className="sticky bottom-0 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-end gap-3 z-10">
-            <button type="button"
+            <button
               onClick={onClose}
               className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
             >
               取消
             </button>
-            <button type="button"
+            <button
               onClick={() => {
                 if (!form.name.trim()) {
                   alert('需求名称不能为空');
@@ -2321,7 +2342,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
                   <h3 className="text-lg font-semibold text-gray-900">文档内容预览</h3>
                   <p className="text-sm text-gray-600 mt-0.5">{previewFile.name}</p>
                 </div>
-                <button type="button"
+                <button
                   onClick={() => setPreviewFileId(null)}
                   className="text-gray-400 hover:text-gray-600 transition"
                 >
@@ -2357,7 +2378,7 @@ ${filesText ? `上传的文档内容：\n${filesText}` : ''}
 
               {/* Footer */}
               <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
-                <button type="button"
+                <button
                   onClick={() => setPreviewFileId(null)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >

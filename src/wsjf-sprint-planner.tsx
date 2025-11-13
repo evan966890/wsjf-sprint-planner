@@ -54,6 +54,7 @@ import ImportPreviewModal from './components/import/ImportPreviewModal';
 import { FeishuImportModal } from './components/FeishuImportModal';
 import { ExportMenuModal } from './components/ExportMenuModal';
 import { ImportValidationModal } from './components/ImportValidationModal';
+import { ConfirmDialog, Toast, useConfirmDialog } from './components/ConfirmDialog';
 
 // 导入Hooks
 import { useToast } from './hooks/useToast';
@@ -155,6 +156,9 @@ export default function WSJFPlanner() {
 
   // ========== Toast 通知系统 (使用Hook) ==========
   const { toasts, showToast, dismissToast, terminationToastIdRef } = useToast();
+
+  // ========== 确认对话框 (使用Hook) ==========
+  const { showConfirm } = useConfirmDialog();
 
   // ========== 数据导出/导入 (使用Hook) ==========
   const {
@@ -265,8 +269,16 @@ export default function WSJFPlanner() {
     }
   };
 
-  const handleLogout = () => {
-    if (confirm('确定要退出登录吗？数据已自动保存。')) {
+  const handleLogout = async () => {
+    const confirmed = await showConfirm({
+      title: '确认退出',
+      message: '确定要退出登录吗？数据已自动保存。',
+      type: 'warning',
+      confirmText: '退出',
+      cancelText: '取消',
+    });
+
+    if (confirmed) {
       storage.logout();
       const logout = useStore.getState().logout;
       logout();
@@ -605,6 +617,12 @@ export default function WSJFPlanner() {
         }}
         isImporting={isImporting}
       />
+
+      {/* 全局确认对话框 */}
+      <ConfirmDialog />
+
+      {/* 全局Toast组件（使用 useToastStore）*/}
+      <Toast />
     </div>
   );
 }

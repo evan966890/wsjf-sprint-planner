@@ -238,6 +238,106 @@ mb-6 (24px)
 <button onClick={handleClick}>...</button>
 ```
 
+### 确认弹窗和提示 (Confirm Dialog & Toast)
+
+**❌ 禁止使用系统默认弹出框**
+
+```typescript
+// ❌ 禁止：使用系统默认弹出框
+if (confirm('确定删除吗？')) { ... }
+alert('操作成功！');
+prompt('请输入名称：');
+
+// ✅ 正确：使用自定义弹窗组件
+import { useConfirmDialog, ConfirmDialog, useToast, Toast } from './ConfirmDialog';
+
+// 确认对话框
+const { confirm, dialogState, handleCancel } = useConfirmDialog();
+const confirmed = await confirm('删除需求', '确定要删除吗？', 'danger');
+
+// 提示消息
+const { showToast, toastState, hideToast } = useToast();
+showToast('操作成功！', 'success');
+```
+
+#### 确认弹窗样式
+
+```typescript
+// 危险操作（删除等）
+<ConfirmDialog
+  isOpen={isOpen}
+  title="删除需求"
+  message="确定要删除吗？此操作不可撤销。"
+  type="danger"  // 红色主题
+  confirmText="删除"
+  cancelText="取消"
+  onConfirm={handleConfirm}
+  onCancel={handleCancel}
+/>
+
+// 警告操作（覆盖数据等）
+<ConfirmDialog
+  type="warning"  // 黄色主题
+  // ...
+/>
+
+// 提示信息
+<ConfirmDialog
+  type="info"  // 蓝色主题
+  // ...
+/>
+```
+
+#### Toast 提示样式
+
+```typescript
+// 成功提示
+<Toast
+  isOpen={isOpen}
+  message="保存成功！"
+  type="success"  // 绿色
+  duration={3000}
+  onClose={hideToast}
+/>
+
+// 错误提示
+<Toast
+  message="保存失败，请重试"
+  type="danger"  // 红色
+/>
+
+// 警告提示
+<Toast
+  message="数据格式不正确"
+  type="warning"  // 黄色
+/>
+
+// 信息提示
+<Toast
+  message="文件上传中..."
+  type="info"  // 蓝色
+/>
+```
+
+#### 为什么禁止系统默认弹出框？
+
+1. **用户体验差**：系统弹窗样式不统一，无法定制
+2. **功能受限**：无法添加图标、颜色、动画等
+3. **测试困难**：E2E测试无法模拟系统弹窗
+4. **品牌一致性**：无法匹配应用整体设计风格
+5. **安全问题**：部分浏览器会拦截 alert/confirm
+
+#### ESLint 规则（自动检测）
+
+```json
+{
+  "rules": {
+    "no-alert": "error",
+    "no-restricted-globals": ["error", "confirm", "prompt"]
+  }
+}
+```
+
 ### 输入框 (Input)
 
 #### 文本输入
