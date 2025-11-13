@@ -27,10 +27,9 @@ interface HeaderProps {
   compact: boolean;
   onToggleCompact: () => void;
   onShowHandbook: () => void;
-  onImport: () => void;
   onFeishuImport: () => void;
-  onExportNew: () => void;          // 新导出功能（双模式）
-  onImportValidation: () => void;   // 导入验证功能
+  onImport: () => void;             // 导入功能（v1.6.0）
+  onExport: () => void;             // 导出功能（双模式）
   onLogout: () => void;
 }
 
@@ -39,10 +38,9 @@ export function Header({
   compact,
   onToggleCompact,
   onShowHandbook,
-  onImport,
   onFeishuImport,
-  onExportNew,
-  onImportValidation,
+  onImport,
+  onExport,
   onLogout,
 }: HeaderProps) {
   return (
@@ -104,15 +102,6 @@ export function Header({
             {compact ? '宽松视图' : '紧凑视图'}
           </button>
 
-          {/* 导入按钮 */}
-          <button
-            onClick={onImport}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
-          >
-            <Upload size={16} />
-            导入
-          </button>
-
           {/* 从飞书导入按钮 */}
           <button
             onClick={() => {
@@ -126,19 +115,19 @@ export function Header({
             从飞书导入
           </button>
 
-          {/* 导入数据按钮（验证式导入）*/}
+          {/* 导入按钮（v1.6.0） */}
           <button
-            onClick={onImportValidation}
+            onClick={onImport}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
-            title="导入数据备份文件（JSON/Excel）"
+            title="导入数据备份文件（支持验证、预览、脏数据兼容）"
           >
             <Upload size={16} />
-            导入数据
+            导入
           </button>
 
-          {/* 导出按钮（双模式导出） */}
+          {/* 导出按钮（双模式） */}
           <button
-            onClick={onExportNew}
+            onClick={onExport}
             className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition text-sm font-medium flex items-center gap-2"
             title="导出数据：展示模式（30+字段）或数据备份模式（完整还原）"
           >

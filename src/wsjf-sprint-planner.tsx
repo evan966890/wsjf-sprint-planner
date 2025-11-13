@@ -50,7 +50,6 @@ import UnscheduledArea from './components/UnscheduledArea';
 import BatchEvaluationModal from './components/BatchEvaluationModal';
 import { Header } from './components/Header';
 import ToastContainer from './components/ToastContainer';
-import ImportPreviewModal from './components/import/ImportPreviewModal';
 import { FeishuImportModal } from './components/FeishuImportModal';
 import { ExportMenuModal } from './components/ExportMenuModal';
 import { ImportValidationModal } from './components/ImportValidationModal';
@@ -59,10 +58,6 @@ import { ConfirmDialog, Toast, useConfirmDialog } from './components/ConfirmDial
 // 导入Hooks
 import { useToast } from './hooks/useToast';
 import { useDataExport } from './hooks/useDataExport';
-import { useDataImport } from './hooks/useDataImport';
-import { useAIMapping } from './hooks/useAIMapping';
-import { useAIImport } from './hooks/useAIImport';
-import { useImportConfirm } from './hooks/useImportConfirm';
 import { useSprintOperations } from './hooks/useSprintOperations';
 import { useDragDrop } from './hooks/useDragDrop';
 
@@ -100,22 +95,10 @@ export default function WSJFPlanner() {
   // UI控制状态
   const compact = useStore((state) => state.compact);
   const showHandbook = useStore((state) => state.showHandbook);
-  const showImportModal = useStore((state) => state.showImportModal);
   const showFeishuImportModal = useStore((state) => state.showFeishuImportModal);
-  const importData = useStore((state) => state.importData);
-  const importMapping = useStore((state) => state.importMapping);
-  const isAIMappingLoading = useStore((state) => state.isAIMappingLoading);
-  const clearBeforeImport = useStore((state) => state.clearBeforeImport);
-  const selectedAIModel = useStore((state) => state.selectedAIModel);
   const toggleCompact = useStore((state) => state.toggleCompact);
   const setShowHandbook = useStore((state) => state.setShowHandbook);
-  const setShowImportModal = useStore((state) => state.setShowImportModal);
   const setShowFeishuImportModal = useStore((state) => state.setShowFeishuImportModal);
-  const setImportData = useStore((state) => state.setImportData);
-  const setImportMapping = useStore((state) => state.setImportMapping);
-  const setIsAIMappingLoading = useStore((state) => state.setIsAIMappingLoading);
-  const setClearBeforeImport = useStore((state) => state.setClearBeforeImport);
-  const setSelectedAIModel = useStore((state) => state.setSelectedAIModel);
   const deleteRequirement = useStore((state) => state.deleteRequirement);
 
   // 筛选和搜索状态
@@ -155,7 +138,7 @@ export default function WSJFPlanner() {
   const [showImportValidationModal, setShowImportValidationModal] = useState(false);
 
   // ========== Toast 通知系统 (使用Hook) ==========
-  const { toasts, showToast, dismissToast, terminationToastIdRef } = useToast();
+  const { toasts, showToast, dismissToast } = useToast();
 
   // ========== 确认对话框 (使用Hook) ==========
   const { showConfirm } = useConfirmDialog();
@@ -174,21 +157,9 @@ export default function WSJFPlanner() {
     setUnscheduled
   );
 
-  // ========== 数据导入 (使用Hook) ==========
-  const dataImport = useDataImport({ showToast });
 
-  // ========== AI映射 (使用Hook) ==========
-  const aiMapping = useAIMapping({
-    showToast,
-    setIsAIMappingLoading,
-    setImportMapping,
-  });
 
-  // ========== AI导入 (使用Hook) ==========
-  const { handleAISmartFill } = useAIImport();
 
-  // ========== 导入确认 (使用Hook) ==========
-  const { handleConfirmImport } = useImportConfirm();
 
   // ========== 飞书导入处理 ==========
   const handleFeishuImport = (importedRequirements: Requirement[]) => {
@@ -310,24 +281,7 @@ export default function WSJFPlanner() {
     showToast(`成功应用 ${updates.size} 个需求的AI评分！`, 'success');
   };
 
-  /**
-   * 处理文件导入
-   * 支持CSV和Excel格式
-   */
-  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    await dataImport.handleFileImport(e, (data, mapping) => {
-      setImportData(data);
-      setImportMapping(mapping);
-      setShowImportModal(true);
-    });
-  };
 
-  /**
-   * 使用AI映射字段（支持OpenAI和DeepSeek）
-   */
-  const handleAIMapping = async () => {
-    await aiMapping.handleAIMapping(importData, selectedAIModel);
-  };
 
   // Wrap export functions to close menu after export
 
@@ -337,17 +291,6 @@ export default function WSJFPlanner() {
   const totalResourceAvailable = sprintPools.reduce((sum, p) => sum + p.totalDays * (1 - (p.bugReserve + p.refactorReserve + p.otherReserve) / 100), 0);
   const notEvaluatedCount = unscheduled.filter(r => needsEvaluation(r.techProgress)).length;
 
-  /**
-   * 处理AI分析终止
-   */
-  const handleTerminateAI = () => {
-    const { setAIFillingCancelled } = useStore.getState();
-    setAIFillingCancelled(true);
-
-    // 显示持久化的"正在终止"提示，存储toast ID以便后续手动移除
-    const toastId = showToast('⏹️ 正在终止AI分析，请稍候...', 'info', { persistent: true });
-    terminationToastIdRef.current = toastId;
-  };
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -357,25 +300,15 @@ export default function WSJFPlanner() {
         compact={compact}
         onToggleCompact={toggleCompact}
         onShowHandbook={() => setShowHandbook(true)}
-        onImport={() => document.getElementById('file-import-input')?.click()}
         onFeishuImport={() => {
           console.log('[WSJFPlanner] onFeishuImport called');
           console.log('[WSJFPlanner] Current showFeishuImportModal:', showFeishuImportModal);
           setShowFeishuImportModal(true);
           console.log('[WSJFPlanner] setShowFeishuImportModal(true) called');
         }}
-        onExportNew={() => setShowExportMenuModal(true)}
-        onImportValidation={() => setShowImportValidationModal(true)}
+        onImport={() => setShowImportValidationModal(true)}
+        onExport={() => setShowExportMenuModal(true)}
         onLogout={handleLogout}
-      />
-
-      {/* Hidden file input for import */}
-      <input
-        id="file-import-input"
-        type="file"
-        accept=".csv,.xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg,.webp,.bmp,.tiff,.txt"
-        onChange={handleFileImport}
-        className="hidden"
       />
 
       {hardDeadlineReqs.length > 0 && (
@@ -559,23 +492,6 @@ export default function WSJFPlanner() {
         <HandbookModal onClose={() => setShowHandbook(false)} />
       )}
 
-      {/* 导入预览Modal */}
-      <ImportPreviewModal
-        isOpen={showImportModal}
-        importData={importData}
-        importMapping={importMapping}
-        clearBeforeImport={clearBeforeImport}
-        selectedAIModel={selectedAIModel}
-        isAIMappingLoading={isAIMappingLoading}
-        onClose={() => setShowImportModal(false)}
-        onImportMappingChange={setImportMapping}
-        onClearBeforeImportChange={setClearBeforeImport}
-        onSelectedAIModelChange={setSelectedAIModel}
-        onAIMappingClick={handleAIMapping}
-        onAISmartFillClick={handleAISmartFill}
-        onConfirmImport={handleConfirmImport}
-        onTerminateAI={handleTerminateAI}
-      />
 
       {/* 飞书导入Modal */}
       <FeishuImportModal
