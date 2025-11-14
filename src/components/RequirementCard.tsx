@@ -56,6 +56,10 @@ const RequirementCard = ({
 
   // 业务域显示逻辑
   const getBusinessDomainDisplay = () => {
+    // 如果是自定义业务域，优先显示customBusinessDomain
+    if (requirement.businessDomain === '自定义' && requirement.customBusinessDomain) {
+      return requirement.customBusinessDomain;
+    }
     const domain = requirement.businessDomain || '国际零售通用';
     return domain;
   };

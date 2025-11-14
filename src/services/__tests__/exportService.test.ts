@@ -2,7 +2,7 @@
  * 导出服务单元测试
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as XLSX from 'xlsx';
 import { exportData, exportPresentationMode, exportDataMode } from '../exportService';
 import type { ExportConfig } from '../../types/export';
@@ -50,6 +50,11 @@ const mockSprintPool: SprintPool = {
 
 describe('exportService', () => {
   describe('exportPresentationMode', () => {
+    beforeEach(() => {
+      // 清理所有mock调用记录
+      vi.clearAllMocks();
+    });
+
     it('应该生成单Sheet Excel', () => {
       const config: ExportConfig = {
         mode: 'presentation',
@@ -80,6 +85,11 @@ describe('exportService', () => {
   });
 
   describe('exportDataMode', () => {
+    beforeEach(() => {
+      // 清理所有mock调用记录
+      vi.clearAllMocks();
+    });
+
     it('应该生成JSON文件', () => {
       const config: ExportConfig = {
         mode: 'data',

@@ -98,7 +98,7 @@ describe('validationService', () => {
       expect(result.errors.some(e => e.code === 'MISSING_REQUIREMENTS')).toBe(true);
     });
 
-    it('应该检测需求引用完整性', () => {
+    it('应该检测需求引用完整性（容错模式：降级为警告）', () => {
       const invalidPool: SprintPool = {
         ...mockSprintPool,
         requirements: [{ ...mockRequirement, id: 'non-existent' }],
@@ -110,8 +110,10 @@ describe('validationService', () => {
 
       const result = validateImportData(invalidPayload);
 
-      expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.code === 'MISSING_REQUIREMENT_REF')).toBe(true);
+      // v1.6.0容错模式：引用问题降级为警告，不阻止导入
+      expect(result.isValid).toBe(true); // 仍然有效，但有警告
+      expect(result.warnings.some(w => w.code === 'AUTO_CLEANED_POOL_REFS')).toBe(true);
+      expect(result.cleanupStats.cleanedFromPools).toBe(1); // 清理了1个无效引用
     });
 
     it('应该生成预览数据', () => {
