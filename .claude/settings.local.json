@@ -39,7 +39,12 @@
       "Bash(git commit --no-verify -m \"$(cat <<''EOF''\nfix: 修复两个UI逻辑bug\n\n## Bug修复\n\n1. **不可排期需求不应显示分数和星级** ✅\n   - 问题：未完成技术评估的需求（待评估/未评估）仍显示权重分和星级\n   - 影响：用户误以为这些需求可以排期\n   - 修复：RequirementCard.tsx 使用 NOT_READY_STATUSES 判断\n   - 修改：requirement.techProgress !== ''未评估'' → !(NOT_READY_STATUSES.includes(techProgress))\n   - 效果：不可排期的需求卡片底部不显示分数和星级\n\n2. **技术复杂度不应有默认值** ✅\n   - 问题：新建需求时complexityScore默认为5\n   - 影响：容易忘记评估，使用了未评估的默认值\n   - 修复：EditRequirementModal.tsx 移除默认值\n   - 修改：\n     - 初始值：complexityScore: 5 → complexityScore: undefined\n     - Select添加空选项：\"请选择...\"\n     - 提示文本：显示\"请先选择技术复杂度\"\n   - 效果：强制用户手动评估技术复杂度\n\n## 修改文件\n\n- src/components/RequirementCard.tsx (2处修改)\n- src/components/EditRequirementModal.tsx (3处修改)\n\n## 验证\n\n✅ TypeScript 编译通过\n✅ 生产构建成功  \n✅ 逻辑验证：不可排期需求不显示分数\n✅ 用户体验：技术复杂度强制评估\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(timeout 5 echo:*)",
       "Bash(cloudbase:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(/tmp/ImportPreviewModal_old.tsx)",
+      "Bash(/tmp/useDataImport_old.ts)",
+      "Bash(/tmp/useAIMapping_old.ts)",
+      "Bash(/tmp/useImportConfirm_old.ts)",
+      "Bash(/tmp/useAIImport_old.ts)"
     ],
     "deny": [],
     "ask": []

@@ -54,10 +54,16 @@ import { FeishuImportModal } from './components/FeishuImportModal';
 import { ExportMenuModal } from './components/ExportMenuModal';
 import { ImportValidationModal } from './components/ImportValidationModal';
 import { ConfirmDialog, Toast, useConfirmDialog } from './components/ConfirmDialog';
+import ImportPreviewModal from './components/import/ImportPreviewModal';
+import { ImportEntryModal } from './components/import/ImportEntryModal';
 
 // 导入Hooks
 import { useToast } from './hooks/useToast';
 import { useDataExport } from './hooks/useDataExport';
+import { useDataImport } from './hooks/useDataImport';
+import { useAIMapping } from './hooks/useAIMapping';
+import { useAIImport } from './hooks/useAIImport';
+import { useImportConfirm } from './hooks/useImportConfirm';
 import { useSprintOperations } from './hooks/useSprintOperations';
 import { useDragDrop } from './hooks/useDragDrop';
 
@@ -95,10 +101,22 @@ export default function WSJFPlanner() {
   // UI控制状态
   const compact = useStore((state) => state.compact);
   const showHandbook = useStore((state) => state.showHandbook);
+  const showImportModal = useStore((state) => state.showImportModal);
   const showFeishuImportModal = useStore((state) => state.showFeishuImportModal);
+  const importData = useStore((state) => state.importData);
+  const importMapping = useStore((state) => state.importMapping);
+  const isAIMappingLoading = useStore((state) => state.isAIMappingLoading);
+  const clearBeforeImport = useStore((state) => state.clearBeforeImport);
+  const selectedAIModel = useStore((state) => state.selectedAIModel);
   const toggleCompact = useStore((state) => state.toggleCompact);
   const setShowHandbook = useStore((state) => state.setShowHandbook);
+  const setShowImportModal = useStore((state) => state.setShowImportModal);
   const setShowFeishuImportModal = useStore((state) => state.setShowFeishuImportModal);
+  const setImportData = useStore((state) => state.setImportData);
+  const setImportMapping = useStore((state) => state.setImportMapping);
+  const setIsAIMappingLoading = useStore((state) => state.setIsAIMappingLoading);
+  const setClearBeforeImport = useStore((state) => state.setClearBeforeImport);
+  const setSelectedAIModel = useStore((state) => state.setSelectedAIModel);
   const deleteRequirement = useStore((state) => state.deleteRequirement);
 
   // 筛选和搜索状态
@@ -133,9 +151,11 @@ export default function WSJFPlanner() {
   // ========== 批量评估状态 ==========
   const [showBatchEvalModal, setShowBatchEvalModal] = useState(false);
 
-  // ========== 新导出/导入状态 ==========
+  // ========== 导入/导出Modal状态 ==========
+  const [showImportEntryModal, setShowImportEntryModal] = useState(false);              // 智能导入入口
   const [showExportMenuModal, setShowExportMenuModal] = useState(false);
-  const [showImportValidationModal, setShowImportValidationModal] = useState(false);
+  const [showImportValidationModal, setShowImportValidationModal] = useState(false);    // 标准格式导入
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);        // 待处理的文件
 
   // ========== Toast 通知系统 (使用Hook) ==========
   const { toasts, showToast, dismissToast } = useToast();
@@ -156,6 +176,49 @@ export default function WSJFPlanner() {
     setSprintPools,
     setUnscheduled
   );
+
+  // ========== 旧导入功能 (AI智能导入) ==========
+  const dataImport = useDataImport({ showToast });
+
+  // ========== AI映射 ==========
+  const aiMapping = useAIMapping({
+    showToast,
+    setIsAIMappingLoading,
+    setImportMapping,
+  });
+
+  // ========== AI智能填充 ==========
+  const { handleAISmartFill } = useAIImport();
+
+  // ========== 导入确认 ==========
+  const { handleConfirmImport } = useImportConfirm();
+
+  // ========== 旧导入处理函数（AI智能导入） ==========
+  const handleGenericFileImport = async (file: File) => {
+    // 创建一个模拟的input change event
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+
+    const mockEvent = {
+      target: { files: dataTransfer.files },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    await dataImport.handleFileImport(mockEvent, (data, mapping) => {
+      setImportData(data);
+      setImportMapping(mapping);
+      setShowImportModal(true);  // 显示旧导入预览Modal
+    });
+  };
+
+  const handleAIMapping = async () => {
+    await aiMapping.handleAIMapping(importData, selectedAIModel);
+  };
+
+  const handleTerminateAI = () => {
+    const { setAIFillingCancelled } = useStore.getState();
+    setAIFillingCancelled(true);
+    showToast('正在终止AI分析...', 'info');
+  };
 
 
 
@@ -306,7 +369,7 @@ export default function WSJFPlanner() {
           setShowFeishuImportModal(true);
           console.log('[WSJFPlanner] setShowFeishuImportModal(true) called');
         }}
-        onImport={() => setShowImportValidationModal(true)}
+        onImport={() => setShowImportEntryModal(true)}
         onExport={() => setShowExportMenuModal(true)}
         onLogout={handleLogout}
       />
@@ -512,6 +575,54 @@ export default function WSJFPlanner() {
       {/* Toast通知容器 */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
+      {/* 智能导入入口Modal */}
+      <ImportEntryModal
+        isOpen={showImportEntryModal}
+        onClose={() => setShowImportEntryModal(false)}
+        onRouteToStandard={(file) => {
+          setPendingImportFile(file);
+          setShowImportValidationModal(true);
+        }}
+        onRouteToGeneric={(file) => {
+          handleGenericFileImport(file);
+        }}
+      />
+
+      {/* 标准格式导入Modal（新导入） */}
+      <ImportValidationModal
+        isOpen={showImportValidationModal}
+        onClose={() => {
+          setShowImportValidationModal(false);
+          setPendingImportFile(null);
+        }}
+        onValidate={async (file) => {
+          return await handleValidateImport(file || pendingImportFile!);
+        }}
+        onImport={async (file, options) => {
+          await handleImport(file || pendingImportFile!, options);
+          showToast('导入成功！', 'success');
+        }}
+        isImporting={isImporting}
+      />
+
+      {/* AI智能导入Modal（旧导入） */}
+      <ImportPreviewModal
+        isOpen={showImportModal}
+        importData={importData}
+        importMapping={importMapping}
+        clearBeforeImport={clearBeforeImport}
+        selectedAIModel={selectedAIModel}
+        isAIMappingLoading={isAIMappingLoading}
+        onClose={() => setShowImportModal(false)}
+        onImportMappingChange={setImportMapping}
+        onClearBeforeImportChange={setClearBeforeImport}
+        onSelectedAIModelChange={setSelectedAIModel}
+        onAIMappingClick={handleAIMapping}
+        onAISmartFillClick={handleAISmartFill}
+        onConfirmImport={handleConfirmImport}
+        onTerminateAI={handleTerminateAI}
+      />
+
       {/* 导出菜单模态框 */}
       <ExportMenuModal
         isOpen={showExportMenuModal}
@@ -521,17 +632,6 @@ export default function WSJFPlanner() {
           setShowExportMenuModal(false);
           showToast('导出成功！', 'success');
         }}
-      />
-
-      {/* 导入验证模态框 */}
-      <ImportValidationModal
-        isOpen={showImportValidationModal}
-        onClose={() => setShowImportValidationModal(false)}
-        onValidate={handleValidateImport}
-        onImport={async (file, options) => {
-          await handleImport(file, options);
-        }}
-        isImporting={isImporting}
       />
 
       {/* 全局确认对话框 */}
