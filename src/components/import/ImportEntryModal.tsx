@@ -42,19 +42,14 @@ export function ImportEntryModal({
     setDetectionResult(null);
 
     try {
+      console.log('[ImportEntry] 开始检测文件:', file.name);
+
       // 检测文件格式
       const result = await detectFileFormat(file);
+      console.log('[ImportEntry] 检测结果:', result);
       setDetectionResult(result);
 
-      // 自动路由（延迟500ms让用户看到检测结果）
-      setTimeout(() => {
-        if (result.format === 'wsjf-standard') {
-          onRouteToStandard(file);
-        } else {
-          onRouteToGeneric(file);
-        }
-        handleClose();
-      }, 500);
+      // 不再自动路由，等待用户点击按钮确认
     } catch (error) {
       console.error('[ImportEntry] 格式检测失败:', error);
       // 默认使用通用导入
@@ -64,13 +59,25 @@ export function ImportEntryModal({
         reason: '格式检测失败，使用AI智能导入',
         fileType: file.name.split('.').pop() || 'unknown',
       });
-      setTimeout(() => {
-        onRouteToGeneric(file);
-        handleClose();
-      }, 500);
     } finally {
       setDetecting(false);
     }
+  };
+
+  // 确认使用标准格式导入
+  const handleUseStandardImport = () => {
+    if (!selectedFile) return;
+    console.log('[ImportEntry] 用户选择：标准格式导入');
+    onRouteToStandard(selectedFile);
+    handleClose();
+  };
+
+  // 确认使用AI智能导入
+  const handleUseGenericImport = () => {
+    if (!selectedFile) return;
+    console.log('[ImportEntry] 用户选择：AI智能导入');
+    onRouteToGeneric(selectedFile);
+    handleClose();
   };
 
   const handleClose = () => {
@@ -271,13 +278,36 @@ export function ImportEntryModal({
         </div>
 
         {/* 底部按钮 */}
-        <div className="sticky bottom-0 bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t">
+        <div className="sticky bottom-0 bg-gray-50 px-6 py-4 flex justify-between items-center border-t">
           <button
             onClick={handleClose}
             className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
           >
             取消
           </button>
+
+          {/* 根据检测结果显示推荐按钮 */}
+          {detectionResult && selectedFile && (
+            <div className="flex gap-3">
+              {detectionResult.format === 'wsjf-standard' ? (
+                <button
+                  onClick={handleUseStandardImport}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 font-medium"
+                >
+                  <Database className="w-4 h-4" />
+                  使用完整还原导入
+                </button>
+              ) : (
+                <button
+                  onClick={handleUseGenericImport}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 font-medium"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  使用AI智能导入
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

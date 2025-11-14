@@ -13,6 +13,7 @@ interface ImportValidationModalProps {
   onValidate: (file: File) => Promise<ImportValidationResult>;
   onImport: (file: File, options: ImportOptions) => Promise<void>;
   isImporting: boolean;
+  externalFile?: File;  // 外部传入的文件（从ImportEntryModal）
 }
 
 export function ImportValidationModal({
@@ -21,11 +22,31 @@ export function ImportValidationModal({
   onValidate,
   onImport,
   isImporting,
+  externalFile,
 }: ImportValidationModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ImportValidationResult | null>(null);
   const [mergeMode, setMergeMode] = useState<'replace' | 'append'>('replace');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 如果有外部传入的文件，自动使用它
+  React.useEffect(() => {
+    if (externalFile && isOpen) {
+      console.log('[ImportValidationModal] 使用外部传入的文件:', externalFile.name);
+      setSelectedFile(externalFile);
+      setValidationResult(null);
+
+      // 自动验证
+      (async () => {
+        try {
+          const result = await onValidate(externalFile);
+          setValidationResult(result);
+        } catch (error) {
+          console.error('[ImportValidationModal] 验证失败:', error);
+        }
+      })();
+    }
+  }, [externalFile, isOpen]);
 
   if (!isOpen) return null;
 
@@ -46,7 +67,18 @@ export function ImportValidationModal({
   };
 
   const handleImport = async () => {
-    if (!selectedFile || !validationResult?.isValid) return;
+    if (!selectedFile) return;
+
+    // 检查是否有阻塞错误
+    if (validationResult) {
+      const blockingErrors = validationResult.errors.filter(
+        e => e.severity === 'critical' || e.severity === 'error'
+      );
+      if (blockingErrors.length > 0) {
+        console.error('[ImportValidationModal] 有阻塞错误，无法导入');
+        return;
+      }
+    }
 
     const options: ImportOptions = {
       mergeMode,

@@ -28,24 +28,29 @@ export interface FormatDetectionResult {
  */
 export async function detectFileFormat(file: File): Promise<FormatDetectionResult> {
   const fileName = file.name.toLowerCase();
-  const fileExtension = fileName.split('.').pop();
+  const fileExtension = fileName.split('.').pop() || '';
+
+  console.log('[FileFormatDetector] 文件名:', fileName, '扩展名:', fileExtension);
 
   // JSON文件检测
   if (fileExtension === 'json') {
+    console.log('[FileFormatDetector] 检测为JSON格式');
     return await detectJSONFormat(file);
   }
 
   // Excel文件检测
-  if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+  if (fileExtension === 'xlsx' || fileExtension === 'xls' || fileExtension === 'csv') {
+    console.log('[FileFormatDetector] 检测为Excel格式');
     return await detectExcelFormat(file);
   }
 
-  // 其他格式（PDF/Word/图片/文本）→ 通用格式
+  // 其他格式（PDF/Word/图片/文本）→ 通用格式（AI智能导入）
+  console.log('[FileFormatDetector] 检测为通用格式:', fileExtension);
   return {
     format: 'generic',
     confidence: 1.0,
-    reason: `检测到${fileExtension}格式，使用AI智能导入`,
-    fileType: fileExtension || 'unknown',
+    reason: `${fileExtension.toUpperCase()}格式文件，使用AI智能导入`,
+    fileType: fileExtension,
   };
 }
 

@@ -591,16 +591,22 @@ export default function WSJFPlanner() {
       {/* 标准格式导入Modal（新导入） */}
       <ImportValidationModal
         isOpen={showImportValidationModal}
+        externalFile={pendingImportFile || undefined}
         onClose={() => {
           setShowImportValidationModal(false);
           setPendingImportFile(null);
         }}
-        onValidate={async (file) => {
-          return await handleValidateImport(file || pendingImportFile!);
-        }}
+        onValidate={handleValidateImport}
         onImport={async (file, options) => {
-          await handleImport(file || pendingImportFile!, options);
-          showToast('导入成功！', 'success');
+          try {
+            await handleImport(file, options);
+            showToast('导入成功！', 'success');
+            setShowImportValidationModal(false);
+            setPendingImportFile(null);
+          } catch (error) {
+            console.error('[Import] 导入失败:', error);
+            showToast('导入失败', 'error');
+          }
         }}
         isImporting={isImporting}
       />
