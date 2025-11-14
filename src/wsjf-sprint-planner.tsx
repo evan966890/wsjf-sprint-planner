@@ -195,19 +195,50 @@ export default function WSJFPlanner() {
 
   // ========== 旧导入处理函数（AI智能导入） ==========
   const handleGenericFileImport = async (file: File) => {
-    // 创建一个模拟的input change event
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(file);
+    console.log('[WSJFPlanner] handleGenericFileImport 调用，文件:', file.name);
 
-    const mockEvent = {
-      target: { files: dataTransfer.files },
-    } as unknown as React.ChangeEvent<HTMLInputElement>;
+    // 立即显示加载提示，给用户即时反馈
+    const fileType = file.name.split('.').pop()?.toLowerCase();
+    const loadingMessage =
+      fileType === 'pdf' ? '📄 正在解析PDF文件...' :
+      fileType === 'png' || fileType === 'jpg' || fileType === 'jpeg' ? '🖼️ 正在OCR识别图片...' :
+      fileType === 'docx' ? '📝 正在解析Word文档...' :
+      '📊 正在解析Excel文件...';
 
-    await dataImport.handleFileImport(mockEvent, (data, mapping) => {
-      setImportData(data);
-      setImportMapping(mapping);
-      setShowImportModal(true);  // 显示旧导入预览Modal
-    });
+    const loadingToastId = showToast(loadingMessage, 'info');
+
+    // 直接调用dataImport的内部方法，传入File对象
+    try {
+      // 创建模拟的input元素
+      const input = document.createElement('input');
+      input.type = 'file';
+
+      // 使用DataTransfer来设置files
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      Object.defineProperty(input, 'files', {
+        value: dataTransfer.files,
+        writable: false,
+      });
+
+      const mockEvent = {
+        target: input,
+        currentTarget: input,
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      await dataImport.handleFileImport(mockEvent, (data, mapping) => {
+        console.log('[WSJFPlanner] 文件解析成功，数据行数:', data.length);
+        dismissToast(loadingToastId);  // 关闭加载提示
+        setImportData(data);
+        setImportMapping(mapping);
+        setShowImportModal(true);
+        showToast(`✅ 文件解析成功，识别到 ${data.length} 条数据`, 'success');
+      });
+    } catch (error) {
+      console.error('[WSJFPlanner] AI智能导入失败:', error);
+      dismissToast(loadingToastId);  // 关闭加载提示
+      showToast('❌ 文件解析失败：' + (error as Error).message, 'error');
+    }
   };
 
   const handleAIMapping = async () => {

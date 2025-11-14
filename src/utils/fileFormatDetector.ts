@@ -111,62 +111,49 @@ async function detectExcelFormat(file: File): Promise<FormatDetectionResult> {
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
 
+        console.log('[FileFormatDetector] Excel Sheets:', workbook.SheetNames);
+
         // 检查是否有WSJF标准格式的Sheet结构
         const hasMetadataSheet = workbook.SheetNames.includes('元数据');
         const hasRequirementsSheet = workbook.SheetNames.includes('需求数据');
         const hasSprintPoolsSheet = workbook.SheetNames.includes('迭代池配置');
         const hasUnscheduledSheet = workbook.SheetNames.includes('待排期列表');
 
-        // 完整的标准格式（4个Sheet）
+        // 完整的标准格式（4个Sheet）- 这是数据模式导出
         if (hasMetadataSheet && hasRequirementsSheet && hasSprintPoolsSheet && hasUnscheduledSheet) {
+          console.log('[FileFormatDetector] 检测为完整备份格式');
           resolve({
             format: 'wsjf-standard',
             confidence: 1.0,
-            reason: '检测到WSJF完整备份格式（4个Sheet）',
+            reason: 'WSJF数据模式导出（4个Sheet，支持完整还原）',
             fileType: 'xlsx',
           });
           return;
         }
 
-        // 部分标准格式（有元数据Sheet）
+        // 有元数据Sheet但不完整 - 仍然是标准格式
         if (hasMetadataSheet) {
+          console.log('[FileFormatDetector] 检测为标准格式（有元数据）');
           resolve({
             format: 'wsjf-standard',
             confidence: 0.9,
-            reason: '检测到WSJF标准格式（有元数据）',
+            reason: 'WSJF标准格式（有元数据Sheet）',
             fileType: 'xlsx',
           });
           return;
         }
 
-        // 检查第一个Sheet是否包含WSJF导出的特征列名
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const firstRow = XLSX.utils.sheet_to_json(firstSheet, { header: 1 })[0] as string[];
-
-        if (firstRow && firstRow.length > 0) {
-          const wsjfColumns = ['迭代池', '需求名称', '权重分', '星级', '业务影响度'];
-          const matchCount = firstRow.filter(col => wsjfColumns.includes(col)).length;
-
-          // 如果匹配3个以上WSJF特征列名，可能是展示模式导出
-          if (matchCount >= 3) {
-            resolve({
-              format: 'wsjf-standard',
-              confidence: 0.7,
-              reason: '检测到WSJF展示模式格式',
-              fileType: 'xlsx',
-            });
-            return;
-          }
-        }
-
-        // 通用Excel格式
+        // 没有元数据Sheet → 通用Excel格式（包括展示模式导出）
+        // 展示模式导出只有1个Sheet，列名虽然是WSJF的，但没有元数据标识
+        console.log('[FileFormatDetector] 检测为通用Excel格式');
         resolve({
           format: 'generic',
           confidence: 1.0,
-          reason: 'Excel格式但非WSJF标准，使用AI智能导入',
+          reason: '普通Excel文件或展示模式导出，使用AI智能导入',
           fileType: 'xlsx',
         });
       } catch (error) {
+        console.error('[FileFormatDetector] Excel解析失败:', error);
         resolve({
           format: 'generic',
           confidence: 0.5,
@@ -177,6 +164,7 @@ async function detectExcelFormat(file: File): Promise<FormatDetectionResult> {
     };
 
     reader.onerror = () => {
+      console.error('[FileFormatDetector] 文件读取失败');
       resolve({
         format: 'generic',
         confidence: 0.3,
