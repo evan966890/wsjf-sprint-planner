@@ -73,9 +73,15 @@ export function FeishuImportModal({
         setPlatformDomain(config.baseUrl || 'https://project.f.mioffice.cn');
         setWorkItemTypeName(config.workItemTypeKey || '');
         setIsAuthorized(true);
-        // 注意：不在这里设置step，让用户通过按钮控制流程
+
+        // 自动跳过配置步骤，直接进入项目选择
+        setStep('project');
+
+        // 自动获取项目列表
+        fetchProjects();
+        console.log('[FeishuImportModal] Auto-login: skipping config step, fetching projects');
       } else {
-        // 首次使用，初始化为配置步骤
+        // 首次使用，显示配置步骤
         setStep('config');
         setIsAuthorized(false);
       }
