@@ -143,7 +143,7 @@ export function useDataExport(
       setIsImporting(false);
       setValidationResult(null);
     }
-  }, [setRequirements, setSprintPools, setUnscheduled]);
+  }, [setRequirements, setSprintPools, setUnscheduled, sprintPools, unscheduled]);
 
   return {
     // 导出功能
