@@ -111,7 +111,9 @@ exports.main = async (event, context) => {
       statusCode: 500,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-User-Key,X-Plugin-Token'
       },
       body: JSON.stringify({
         code: -1,
