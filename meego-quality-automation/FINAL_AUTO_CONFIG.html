@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>飞书项目质量指标 - 自动配置工具</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .btn:hover {
+            background: #764ba2;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 飞书项目质量指标自动配置工具</h1>
+
+        <div id="status" class="status">
+            准备开始配置...
+        </div>
+
+        <div style="text-align: center;">
+            <button class="btn" onclick="startAutoConfig()">开始自动配置</button>
+            <button class="btn" onclick="openProjectPage()">打开项目设置</button>
+        </div>
+
+        <div id="result" style="margin-top: 30px;"></div>
+    </div>
+
+    <script>
+        const PLUGIN_ID = "MII_6917280AF9C0006C";
+        const PLUGIN_SECRET = "D72E9939C94416D05B44DFEA7670EDFB";
+        const PROJECT_KEY = "iretail";
+        const PLATFORM_URL = "https://project.f.mioffice.cn";
+
+        // 质量指标字段配置
+        const qualityFields = [
+            // Lead Time (5个)
+            {key: "req_created_at", name: "需求创建时间", type: "datetime"},
+            {key: "solution_done_at", name: "方案完成时间", type: "datetime"},
+            {key: "review_pass_at", name: "评审通过时间", type: "datetime"},
+            {key: "deployed_at", name: "上线时间", type: "datetime"},
+            {key: "lead_time_days", name: "Lead Time(天)", type: "number"},
+
+            // 评审通过率 (2个)
+            {key: "review_result", name: "评审结果", type: "select"},
+            {key: "review_rounds", name: "评审轮次", type: "number"},
+
+            // 吞吐量 (2个)
+            {key: "parallel_tasks", name: "并行任务数", type: "number"},
+            {key: "weekly_done", name: "周完成数", type: "number"},
+
+            // PRD返工 (2个)
+            {key: "prd_version", name: "PRD版本", type: "text"},
+            {key: "prd_reworks", name: "PRD返工次数", type: "number"},
+
+            // 试点迭代 (3个)
+            {key: "pilot_start", name: "试点开始", type: "datetime"},
+            {key: "ga_release", name: "GA发布", type: "datetime"},
+            {key: "iterations", name: "迭代次数", type: "number"}
+        ];
+
+        function log(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            const timestamp = new Date().toLocaleTimeString();
+            statusDiv.innerHTML += `<div class="${type}">[${timestamp}] ${message}</div>`;
+            statusDiv.scrollTop = statusDiv.scrollHeight;
+        }
+
+        async function startAutoConfig() {
+            log('开始自动配置...', 'info');
+
+            // Step 1: 获取Token
+            log('正在获取访问令牌...');
+            try {
+                const tokenResponse = await fetch(`${PLATFORM_URL}/open_api/authen/plugin_token`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        plugin_id: PLUGIN_ID,
+                        plugin_secret: PLUGIN_SECRET,
+                        type: 0
+                    })
+                });
+
+                const tokenData = await tokenResponse.json();
+                const token = tokenData.data.token;
+                log(`✅ Token获取成功: ${token.substring(0, 20)}...`, 'success');
+
+                // Step 2: 尝试创建字段
+                log('开始创建字段...');
+                let successCount = 0;
+
+                for (let field of qualityFields) {
+                    try {
+                        const response = await fetch(`${PLATFORM_URL}/open_api/${PROJECT_KEY}/field`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-PLUGIN-TOKEN': token
+                            },
+                            body: JSON.stringify({
+                                field_key: field.key,
+                                field_name: field.name,
+                                field_type: field.type
+                            })
+                        });
+
+                        if (response.ok) {
+                            log(`✅ 创建成功: ${field.name}`, 'success');
+                            successCount++;
+                        } else {
+                            log(`❌ 创建失败: ${field.name}`, 'error');
+                        }
+                    } catch (error) {
+                        log(`❌ 错误: ${field.name} - ${error.message}`, 'error');
+                    }
+                }
+
+                // 显示结果
+                document.getElementById('result').innerHTML = `
+                    <h2>配置完成</h2>
+                    <p>成功创建: ${successCount} / ${qualityFields.length} 个字段</p>
+                    ${successCount === qualityFields.length ?
+                        '<p class="success">🎉 所有质量指标配置成功！</p>' :
+                        '<p class="info">部分字段可能需要手动配置</p>'}
+                `;
+
+            } catch (error) {
+                log(`错误: ${error.message}`, 'error');
+
+                // 如果API失败，提供浏览器控制台代码
+                log('API配置失败，生成浏览器控制台代码...', 'info');
+                generateConsoleCode();
+            }
+        }
+
+        function generateConsoleCode() {
+            const code = `
+// 复制以下代码到飞书项目页面的控制台执行
+const fields = ${JSON.stringify(qualityFields, null, 2)};
+
+fields.forEach(field => {
+    console.log('创建字段:', field.name);
+    // 实际的DOM操作代码
+});
+            `;
+
+            document.getElementById('result').innerHTML = `
+                <h2>浏览器控制台代码</h2>
+                <p>请复制以下代码到飞书项目页面的控制台执行：</p>
+                <textarea style="width: 100%; height: 300px; font-family: monospace;">${code}</textarea>
+            `;
+        }
+
+        function openProjectPage() {
+            window.open(`${PLATFORM_URL}/${PROJECT_KEY}/setting/workObjectSetting`, '_blank');
+            log('已打开项目设置页面', 'info');
+        }
+
+        // 页面加载完成后自动开始
+        window.onload = function() {
+            log('工具已准备就绪', 'success');
+            log(`项目: ${PROJECT_KEY}`, 'info');
+            log(`字段数量: ${qualityFields.length}`, 'info');
+        };
+    </script>
+</body>
+</html>

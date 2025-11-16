@@ -1,0 +1,38 @@
+{
+  "name": "feishu-project-quality-metrics",
+  "version": "2.0.0",
+  "description": "飞书项目质量指标自动配置工具 - 基于官方API和MCP最佳实践",
+  "main": "dist/configure-fields.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/configure-fields.js",
+    "dev": "ts-node src/configure-fields.ts",
+    "config": "ts-node src/configure-fields.ts",
+    "configure": "node api-client.js",
+    "create-fields": "node create-metrics-fields.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "feishu",
+    "lark",
+    "project-management",
+    "workflow",
+    "quality-metrics",
+    "mcp",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

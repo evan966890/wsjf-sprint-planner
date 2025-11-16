@@ -1,0 +1,91 @@
+{
+  "version": "1.0",
+  "plugin_id": "MII_6917280AF9C0006C",
+  "project": "iretail",
+  "fields": [
+    {
+      "key": "qt_req_created",
+      "name": "需求创建时间",
+      "type": "datetime",
+      "group": "Lead Time"
+    },
+    {
+      "key": "qt_solution_done",
+      "name": "方案完成时间",
+      "type": "datetime",
+      "group": "Lead Time"
+    },
+    {
+      "key": "qt_review_pass",
+      "name": "评审通过时间",
+      "type": "datetime",
+      "group": "Lead Time"
+    },
+    {
+      "key": "qt_deployed",
+      "name": "上线时间",
+      "type": "datetime",
+      "group": "Lead Time"
+    },
+    {
+      "key": "qt_lead_time",
+      "name": "Lead Time(天)",
+      "type": "number",
+      "group": "Lead Time"
+    },
+    {
+      "key": "qt_review_result",
+      "name": "评审结果",
+      "type": "text",
+      "group": "评审通过率"
+    },
+    {
+      "key": "qt_review_rounds",
+      "name": "评审轮次",
+      "type": "number",
+      "group": "评审通过率"
+    },
+    {
+      "key": "qt_parallel",
+      "name": "并行任务数",
+      "type": "number",
+      "group": "吞吐量"
+    },
+    {
+      "key": "qt_weekly",
+      "name": "周完成数",
+      "type": "number",
+      "group": "吞吐量"
+    },
+    {
+      "key": "qt_prd_ver",
+      "name": "PRD版本",
+      "type": "text",
+      "group": "PRD返工"
+    },
+    {
+      "key": "qt_prd_rework",
+      "name": "PRD返工次数",
+      "type": "number",
+      "group": "PRD返工"
+    },
+    {
+      "key": "qt_pilot",
+      "name": "试点开始",
+      "type": "datetime",
+      "group": "试点迭代"
+    },
+    {
+      "key": "qt_ga",
+      "name": "GA发布",
+      "type": "datetime",
+      "group": "试点迭代"
+    },
+    {
+      "key": "qt_iterations",
+      "name": "迭代次数",
+      "type": "number",
+      "group": "试点迭代"
+    }
+  ]
+}

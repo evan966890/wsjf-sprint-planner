@@ -8,6 +8,8 @@
     "dev:full": "concurrently \"npm run dev\" \"npm run ocr:server\" \"npm run feishu:proxy\"",
     "ocr:server": "node api/ocr-server.cjs",
     "feishu:proxy": "node api/feishu-proxy-server.cjs",
+    "server": "cd server && npm start",
+    "dev:mcp": "concurrently \"npm run dev\" \"npm run server\"",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",

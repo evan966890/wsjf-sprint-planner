@@ -1,0 +1,17 @@
+{
+  "name": "wsjf-feishu-mcp-proxy",
+  "version": "1.0.0",
+  "description": "飞书 MCP 代理服务器",
+  "main": "feishu-mcp-proxy.js",
+  "scripts": {
+    "start": "node feishu-mcp-proxy.js",
+    "dev": "nodemon feishu-mcp-proxy.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

@@ -1,0 +1,199 @@
+# 飞书项目(Meego)质量指标配置
+# 5个核心产品质量指标定义
+
+project:
+  key: "your_project_key"  # 替换为您的项目key
+  name: "产品质量监控"
+
+# 工作项类型配置
+work_item_type: "requirement"  # 需求类型
+
+# 5个质量指标配置
+quality_metrics:
+  # 指标1: 需求→方案→评审→上线的平均 Lead Time
+  - key: "requirement_lead_time"
+    name: "需求Lead Time"
+    description: "从需求创建到上线的平均时长"
+    type: "number"
+    unit: "天"
+    fields:
+      - key: "requirement_created_at"
+        name: "需求创建时间"
+        type: "datetime"
+        stage: "需求"
+      - key: "solution_started_at"
+        name: "方案开始时间"
+        type: "datetime"
+        stage: "方案"
+      - key: "solution_completed_at"
+        name: "方案完成时间"
+        type: "datetime"
+        stage: "方案"
+      - key: "review_started_at"
+        name: "评审开始时间"
+        type: "datetime"
+        stage: "评审"
+      - key: "review_completed_at"
+        name: "评审完成时间"
+        type: "datetime"
+        stage: "评审"
+      - key: "deployed_at"
+        name: "上线时间"
+        type: "datetime"
+        stage: "上线"
+    formula: "DATEDIFF(deployed_at, requirement_created_at, 'day')"
+    target: "≤30天"
+    threshold:
+      excellent: "< 20"
+      good: "20-30"
+      warning: "30-45"
+      critical: "> 45"
+
+  # 指标2: 评审一次通过率
+  - key: "review_first_pass_rate"
+    name: "评审一次通过率"
+    description: "第一次评审就通过的需求占比"
+    type: "percentage"
+    fields:
+      - key: "review_result"
+        name: "评审结果"
+        type: "select"
+        options:
+          - "一次通过"
+          - "修改后通过"
+          - "多次修改通过"
+          - "未通过"
+      - key: "review_attempts"
+        name: "评审轮次"
+        type: "number"
+        default: 1
+    formula: "COUNTIF(review_result, '一次通过') / COUNT(review_result) * 100"
+    target: "≥85%"
+    threshold:
+      excellent: "> 90"
+      good: "80-90"
+      warning: "70-80"
+      critical: "< 70"
+
+  # 指标3: 并行事项吞吐量
+  - key: "parallel_throughput"
+    name: "并行事项吞吐量"
+    description: "团队同时处理的需求数量"
+    type: "number"
+    unit: "个/周"
+    fields:
+      - key: "parallel_items_count"
+        name: "并行处理数"
+        type: "number"
+      - key: "team_size"
+        name: "团队规模"
+        type: "number"
+      - key: "items_completed_weekly"
+        name: "周完成数"
+        type: "number"
+    formula: "items_completed_weekly"
+    target: "≥20个/周"
+    threshold:
+      excellent: "> 25"
+      good: "20-25"
+      warning: "15-20"
+      critical: "< 15"
+
+  # 指标4: PRD返工率
+  - key: "prd_rework_rate"
+    name: "PRD返工率"
+    description: "产品需求文档被打回修改的比例"
+    type: "percentage"
+    fields:
+      - key: "prd_version"
+        name: "PRD版本"
+        type: "text"
+        default: "v1.0"
+      - key: "prd_rework_count"
+        name: "返工次数"
+        type: "number"
+        default: 0
+      - key: "prd_rework_reason"
+        name: "返工原因"
+        type: "multitext"
+    formula: "COUNT(prd_rework_count > 0) / COUNT(*) * 100"
+    target: "≤10%"
+    threshold:
+      excellent: "< 5"
+      good: "5-10"
+      warning: "10-20"
+      critical: "> 20"
+
+  # 指标5: 试点→全面推广的迭代次数
+  - key: "pilot_to_ga_iterations"
+    name: "试点到GA迭代次数"
+    description: "从试点到全面推广所需的迭代数"
+    type: "number"
+    unit: "次"
+    fields:
+      - key: "pilot_start_date"
+        name: "试点开始日期"
+        type: "datetime"
+      - key: "ga_release_date"
+        name: "GA发布日期"
+        type: "datetime"
+      - key: "iteration_count"
+        name: "迭代次数"
+        type: "number"
+      - key: "pilot_feedback_score"
+        name: "试点反馈分"
+        type: "number"
+        unit: "分(1-5)"
+    formula: "iteration_count"
+    target: "3-5次"
+    threshold:
+      excellent: "<= 3"
+      good: "4-5"
+      warning: "6-7"
+      critical: "> 7"
+
+# 流程节点配置
+workflow_nodes:
+  - key: "requirement"
+    name: "需求"
+    type: "start"
+    required_fields: ["requirement_created_at"]
+
+  - key: "solution"
+    name: "方案"
+    type: "process"
+    required_fields: ["solution_started_at", "solution_completed_at", "prd_version"]
+
+  - key: "review"
+    name: "评审"
+    type: "approval"
+    required_fields: ["review_started_at", "review_result", "review_attempts"]
+
+  - key: "development"
+    name: "开发"
+    type: "process"
+
+  - key: "pilot"
+    name: "试点"
+    type: "process"
+    required_fields: ["pilot_start_date", "pilot_feedback_score"]
+
+  - key: "ga"
+    name: "GA上线"
+    type: "end"
+    required_fields: ["ga_release_date", "deployed_at"]
+
+# 自动化规则
+automation_rules:
+  - name: "自动计算Lead Time"
+    trigger: "字段更新"
+    condition: "deployed_at != null"
+    action: "更新requirement_lead_time"
+
+  - name: "评审返工提醒"
+    trigger: "review_result = '未通过'"
+    action: "prd_rework_count += 1"
+
+  - name: "吞吐量周报"
+    trigger: "每周一 09:00"
+    action: "生成吞吐量报告"

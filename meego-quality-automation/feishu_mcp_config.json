@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "feishu-project": {
+      "command": "npx",
+      "args": ["@larksuite/lark-openapi-mcp@latest"],
+      "env": {
+        "FS_PROJ_PROJECT_KEY": "iretail",
+        "FS_PROJ_PLUGIN_ID": "MII_6917280AF9C0006C",
+        "FS_PROJ_PLUGIN_SECRET": "D72E9939C94416D05B44DFEA7670EDFB",
+        "FS_PROJ_USER_KEY": "7541721806923694188",
+        "FS_PROJ_BASE_URL": "https://project.f.mioffice.cn"
+      }
+    }
+  }
+}

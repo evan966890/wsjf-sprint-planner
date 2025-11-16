@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>飞书项目质量指标 - 自动配置工具</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1890ff;
+            border-bottom: 2px solid #1890ff;
+            padding-bottom: 10px;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f0f5ff;
+            border-radius: 8px;
+            border-left: 4px solid #1890ff;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #0050b3;
+        }
+        button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0050b3;
+        }
+        button:disabled {
+            background: #d9d9d9;
+            cursor: not-allowed;
+        }
+        .success {
+            background: #f6ffed;
+            border-color: #52c41a;
+            color: #135200;
+        }
+        .error {
+            background: #fff2e8;
+            border-color: #fa8c16;
+            color: #ad4e00;
+        }
+        .code-block {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            overflow-x: auto;
+            border: 1px solid #d9d9d9;
+        }
+        #userKeyDisplay {
+            background: #e6f7ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            display: none;
+        }
+        .progress {
+            display: none;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1890ff 0%, #52c41a 100%);
+            transition: width 0.3s;
+            width: 0%;
+        }
+        .field-list {
+            background: #fafafa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .field-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        .field-item:last-child {
+            border-bottom: none;
+        }
+        .metric-group {
+            margin: 15px 0;
+        }
+        .metric-title {
+            font-weight: bold;
+            color: #0050b3;
+            margin: 10px 0 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 飞书项目质量指标 - 自动配置工具</h1>
+
+        <div class="step">
+            <h3>步骤 1：登录飞书项目</h3>
+            <p>首先，请在新标签页中登录飞书项目管理平台。</p>
+            <button onclick="openFeishuProject()">打开飞书项目</button>
+            <p style="color: #666; font-size: 14px;">登录后请返回此页面继续</p>
+        </div>
+
+        <div class="step">
+            <h3>步骤 2：自动获取配置信息</h3>
+            <p>点击下方按钮，工具将自动获取您的User Key和Token。</p>
+            <button id="getConfigBtn" onclick="getConfiguration()">获取配置信息</button>
+            <div id="userKeyDisplay"></div>
+        </div>
+
+        <div class="step">
+            <h3>步骤 3：配置质量指标</h3>
+            <p>确认以下5个质量指标（共14个字段）：</p>
+
+            <div class="field-list">
+                <div class="metric-group">
+                    <div class="metric-title">📊 需求Lead Time（5个字段）</div>
+                    <div class="field-item">• 需求创建时间</div>
+                    <div class="field-item">• 方案完成时间</div>
+                    <div class="field-item">• 评审通过时间</div>
+                    <div class="field-item">• 上线时间</div>
+                    <div class="field-item">• Lead Time(天)</div>
+                </div>
+
+                <div class="metric-group">
+                    <div class="metric-title">✅ 评审一次通过率（2个字段）</div>
+                    <div class="field-item">• 评审结果</div>
+                    <div class="field-item">• 评审轮次</div>
+                </div>
+
+                <div class="metric-group">
+                    <div class="metric-title">🔄 并行事项吞吐量（2个字段）</div>
+                    <div class="field-item">• 并行任务数</div>
+                    <div class="field-item">• 周完成数</div>
+                </div>
+
+                <div class="metric-group">
+                    <div class="metric-title">📝 PRD返工率（2个字段）</div>
+                    <div class="field-item">• PRD版本</div>
+                    <div class="field-item">• PRD返工次数</div>
+                </div>
+
+                <div class="metric-group">
+                    <div class="metric-title">🚀 试点到GA迭代（3个字段）</div>
+                    <div class="field-item">• 试点开始日期</div>
+                    <div class="field-item">• GA发布日期</div>
+                    <div class="field-item">• 迭代次数</div>
+                </div>
+            </div>
+
+            <button id="configBtn" onclick="startConfiguration()" disabled>开始自动配置</button>
+        </div>
+
+        <div class="progress">
+            <h4>配置进度</h4>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p id="progressText">准备中...</p>
+        </div>
+
+        <div id="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        // 全局配置
+        const PLUGIN_ID = "MII_6917280AF9C0006C";
+        const PLUGIN_SECRET = "D72E9939C94416D05B44DFEA7670EDFB";
+        const PROJECT_KEY = "iretail";
+        const PLATFORM_URL = "https://project.f.mioffice.cn";
+
+        let userKey = null;
+        let pluginToken = null;
+
+        function openFeishuProject() {
+            window.open(PLATFORM_URL + '/' + PROJECT_KEY, '_blank');
+        }
+
+        async function getConfiguration() {
+            const btn = document.getElementById('getConfigBtn');
+            btn.disabled = true;
+            btn.textContent = '获取中...';
+
+            try {
+                // 步骤1：获取Plugin Token
+                const tokenResponse = await fetch('/open_api/authen/plugin_token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plugin_id: PLUGIN_ID,
+                        plugin_secret: PLUGIN_SECRET,
+                        type: 0
+                    })
+                });
+
+                if (!tokenResponse.ok) {
+                    throw new Error('无法获取Token，请确保已登录飞书项目');
+                }
+
+                const tokenData = await tokenResponse.json();
+                if (tokenData.data && tokenData.data.token) {
+                    pluginToken = tokenData.data.token;
+                    console.log('✅ Token获取成功');
+                }
+
+                // 步骤2：尝试从cookie中获取user_key
+                // 通过调用一个需要user_key的API来触发浏览器自动添加
+                const testResponse = await fetch('/open_api/' + PROJECT_KEY + '/work_item/all-types', {
+                    method: 'GET',
+                    headers: {
+                        'X-PLUGIN-TOKEN': pluginToken,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                // 即使失败也继续，因为我们主要是想让用户手动输入
+                const userKeyDiv = document.getElementById('userKeyDisplay');
+                userKeyDiv.style.display = 'block';
+                userKeyDiv.innerHTML = `
+                    <strong>请输入您的User Key：</strong><br>
+                    <input type="text" id="userKeyInput" placeholder="例如：7541721806923694188" style="width: 300px; padding: 8px; margin: 10px 0;">
+                    <br>
+                    <small>获取方法：在飞书项目页面按F12，切换到Network标签，查看任意请求的Headers中的X-User-Key</small>
+                    <br>
+                    <button onclick="confirmUserKey()" style="margin-top: 10px;">确认</button>
+                `;
+
+                btn.textContent = '重新获取';
+                btn.disabled = false;
+
+            } catch (error) {
+                alert('获取配置失败：' + error.message);
+                btn.textContent = '重新获取';
+                btn.disabled = false;
+            }
+        }
+
+        function confirmUserKey() {
+            const input = document.getElementById('userKeyInput');
+            userKey = input.value.trim();
+
+            if (!userKey) {
+                alert('请输入User Key');
+                return;
+            }
+
+            if (!/^\d+$/.test(userKey)) {
+                alert('User Key应该是纯数字，请检查');
+                return;
+            }
+
+            document.getElementById('userKeyDisplay').innerHTML =
+                `<div class="success">✅ User Key已确认: ${userKey}</div>`;
+
+            document.getElementById('configBtn').disabled = false;
+        }
+
+        async function startConfiguration() {
+            if (!userKey || !pluginToken) {
+                alert('请先获取配置信息');
+                return;
+            }
+
+            document.querySelector('.progress').style.display = 'block';
+            document.getElementById('configBtn').disabled = true;
+
+            const fields = [
+                // Lead Time
+                { key: "lead_time_created", name: "需求创建时间", type: "datetime" },
+                { key: "lead_time_solution", name: "方案完成时间", type: "datetime" },
+                { key: "lead_time_review", name: "评审通过时间", type: "datetime" },
+                { key: "lead_time_deployed", name: "上线时间", type: "datetime" },
+                { key: "lead_time_days", name: "Lead Time(天)", type: "number" },
+                // 评审通过率
+                { key: "review_result", name: "评审结果", type: "select" },
+                { key: "review_rounds", name: "评审轮次", type: "number" },
+                // 吞吐量
+                { key: "parallel_tasks", name: "并行任务数", type: "number" },
+                { key: "weekly_done", name: "周完成数", type: "number" },
+                // PRD返工
+                { key: "prd_version", name: "PRD版本", type: "text" },
+                { key: "prd_rework", name: "PRD返工次数", type: "number" },
+                // 试点到GA
+                { key: "pilot_start", name: "试点开始", type: "datetime" },
+                { key: "ga_release", name: "GA发布", type: "datetime" },
+                { key: "iterations", name: "迭代次数", type: "number" }
+            ];
+
+            let successCount = 0;
+
+            for (let i = 0; i < fields.length; i++) {
+                const field = fields[i];
+                updateProgress(i + 1, fields.length, `正在创建: ${field.name}`);
+
+                const success = await createField(field);
+                if (success) successCount++;
+
+                await delay(500);
+            }
+
+            showResult(successCount, fields.length);
+        }
+
+        async function createField(field) {
+            try {
+                const response = await fetch('/open_api/' + PROJECT_KEY + '/field/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-PLUGIN-TOKEN': pluginToken,
+                        'X-USER-KEY': userKey
+                    },
+                    body: JSON.stringify({
+                        field_key: field.key,
+                        field_name: field.name,
+                        field_type: field.type,
+                        work_item_type_key: 'requirement'
+                    })
+                });
+
+                const data = await response.json();
+                return data.err_code === 0 || data.code === 0;
+            } catch (error) {
+                console.error('创建字段失败:', field.name, error);
+                return false;
+            }
+        }
+
+        function updateProgress(current, total, text) {
+            const percent = (current / total) * 100;
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = text + ` (${current}/${total})`;
+        }
+
+        function showResult(success, total) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+
+            if (success === total) {
+                resultDiv.className = 'step success';
+                resultDiv.innerHTML = `
+                    <h3>🎉 配置成功！</h3>
+                    <p>所有${total}个字段已成功创建。</p>
+                    <p>您现在可以在飞书项目中使用这些质量指标了。</p>
+                    <button onclick="window.open('${PLATFORM_URL}/${PROJECT_KEY}/setting/workObjectSetting', '_blank')">
+                        查看配置的字段
+                    </button>
+                `;
+            } else if (success > 0) {
+                resultDiv.className = 'step error';
+                resultDiv.innerHTML = `
+                    <h3>⚠️ 部分成功</h3>
+                    <p>成功创建 ${success}/${total} 个字段。</p>
+                    <p>部分字段可能已存在或创建失败，请检查飞书项目设置。</p>
+                `;
+            } else {
+                resultDiv.className = 'step error';
+                resultDiv.innerHTML = `
+                    <h3>❌ 配置失败</h3>
+                    <p>无法创建字段，可能的原因：</p>
+                    <ul>
+                        <li>权限不足</li>
+                        <li>字段已存在</li>
+                        <li>网络问题</li>
+                    </ul>
+                    <p>请检查控制台错误信息或联系管理员。</p>
+                `;
+            }
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "pluginToken": "YOUR_PLUGIN_TOKEN_HERE",
+  "userKey": "YOUR_USER_KEY_HERE",
+  "projectKey": "YOUR_PROJECT_KEY_OR_DOMAIN_HERE",
+  "description": {
+    "pluginToken": "插件访问凭证，从飞书项目插件管理中获取",
+    "userKey": "用户标识，配合plugin_token使用",
+    "projectKey": "空间ID或空间域名，例如：'my-project' 或 '12345'"
+  }
+}

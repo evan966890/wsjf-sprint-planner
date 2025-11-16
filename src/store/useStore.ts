@@ -99,6 +99,7 @@ interface StoreState {
   setSprintPools: (pools: SprintPool[]) => void;
   setUnscheduled: (reqs: Requirement[]) => void;
   addRequirement: (req: Requirement) => void;
+  addRequirements: (reqs: Requirement[]) => void;  // 批量添加需求
   updateRequirement: (req: Requirement) => void;
   deleteRequirement: (reqId: string) => void;
   recalculateScores: (allReqs: Requirement[]) => void;
@@ -290,6 +291,27 @@ export const useStore = create<StoreState>()(
               unscheduled: newUnscheduled.sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0))
             });
           }
+        },
+
+        // 批量添加需求（用于导入）
+        addRequirements: (reqs) => {
+          const { requirements } = get();
+          const newReqs = [...requirements, ...reqs];
+          const updated = calculateScores(newReqs);
+
+          // 将新需求添加到待排期区
+          const addedReqIds = new Set(reqs.map(r => r.id));
+          const newAddedReqs = updated.filter(r => addedReqIds.has(r.id));
+
+          const unscheduled = get().unscheduled;
+          const newUnscheduled = [...unscheduled, ...newAddedReqs];
+
+          set({
+            requirements: updated,
+            unscheduled: newUnscheduled.sort((a, b) => (b.displayScore || 0) - (a.displayScore || 0))
+          });
+
+          console.log(`[Store] 批量添加 ${reqs.length} 条需求到待排期区`);
         },
 
         updateRequirement: (req) => {

@@ -41,9 +41,9 @@ export default defineConfig({
           });
         },
       },
-      // 开发环境：代理到本地飞书代理服务器
+      // 开发环境：代理到本地飞书 MCP 代理服务器
       '/api/feishu': {
-        target: 'http://localhost:3002',
+        target: 'http://localhost:9999',  // 指向 MCP 代理服务器
         changeOrigin: true,
       }
     }

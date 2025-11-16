@@ -1,0 +1,128 @@
+{
+  "project_key": "iretail",
+  "quality_metrics": {
+    "1. 需求Lead Time": {
+      "description": "从需求创建到上线的时间",
+      "nodes": [
+        {
+          "name": "需求创建",
+          "type": "start",
+          "record": "创建时间"
+        },
+        {
+          "name": "方案设计",
+          "type": "process",
+          "record": "方案完成时间"
+        },
+        {
+          "name": "评审",
+          "type": "approval",
+          "record": "评审通过时间"
+        },
+        {
+          "name": "开发",
+          "type": "process",
+          "record": "开发完成时间"
+        },
+        {
+          "name": "测试",
+          "type": "process",
+          "record": "测试通过时间"
+        },
+        {
+          "name": "上线部署",
+          "type": "end",
+          "record": "上线时间"
+        }
+      ],
+      "calculation": "上线时间 - 创建时间 = Lead Time(天)"
+    },
+    "2. 评审一次通过率": {
+      "description": "评审一次通过的比例",
+      "nodes": [
+        {
+          "name": "评审准备",
+          "type": "process"
+        },
+        {
+          "name": "评审中",
+          "type": "approval",
+          "record": "评审结果(一次通过/需修改/未通过)"
+        },
+        {
+          "name": "评审完成",
+          "type": "process",
+          "record": "评审轮次"
+        }
+      ],
+      "calculation": "一次通过数 / 总评审数 × 100%"
+    },
+    "3. 并行事项吞吐量": {
+      "description": "团队并行处理能力",
+      "nodes": [
+        {
+          "name": "并行进行中",
+          "type": "process",
+          "record": "并行任务数"
+        },
+        {
+          "name": "本周完成",
+          "type": "process",
+          "record": "周完成数"
+        }
+      ],
+      "calculation": "周完成数 / 并行任务数"
+    },
+    "4. PRD返工率": {
+      "description": "需求文档的返工频率",
+      "nodes": [
+        {
+          "name": "PRD初稿",
+          "type": "start",
+          "record": "版本号"
+        },
+        {
+          "name": "PRD评审",
+          "type": "approval"
+        },
+        {
+          "name": "PRD修改",
+          "type": "process",
+          "record": "返工次数"
+        },
+        {
+          "name": "PRD定稿",
+          "type": "end"
+        }
+      ],
+      "calculation": "返工次数 / PRD总数 × 100%"
+    },
+    "5. 试点到GA迭代": {
+      "description": "从试点到全面推广的迭代次数",
+      "nodes": [
+        {
+          "name": "试点启动",
+          "type": "start",
+          "record": "试点开始日期"
+        },
+        {
+          "name": "试点验证",
+          "type": "process"
+        },
+        {
+          "name": "迭代优化",
+          "type": "process",
+          "record": "迭代次数"
+        },
+        {
+          "name": "GA发布",
+          "type": "end",
+          "record": "GA发布日期"
+        }
+      ],
+      "calculation": "迭代次数"
+    }
+  },
+  "total_nodes": 19,
+  "created_at": "2025-11-16 02:27:39"
+}

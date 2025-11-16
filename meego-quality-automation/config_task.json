@@ -1,0 +1,56 @@
+{
+  "task_id": "07e2e92f-4b53-49f5-9ef4-bcf39832de1c",
+  "task_type": "auto_config_quality_metrics",
+  "plugin_id": "MII_6917280AF9C0006C",
+  "project_key": "iretail",
+  "config": {
+    "plugin_id": "MII_6917280AF9C0006C",
+    "project_key": "iretail",
+    "config_type": "quality_metrics",
+    "auto_execute": true,
+    "timestamp": 1763228800,
+    "configuration": {
+      "metrics": [
+        {
+          "id": "lead_time",
+          "name": "需求Lead Time",
+          "description": "从需求创建到上线的平均时间",
+          "fields_count": 5,
+          "auto_create": true
+        },
+        {
+          "id": "review_rate",
+          "name": "评审一次通过率",
+          "description": "评审一次通过的比例",
+          "fields_count": 2,
+          "auto_create": true
+        },
+        {
+          "id": "throughput",
+          "name": "并行事项吞吐量",
+          "description": "团队并行处理能力",
+          "fields_count": 2,
+          "auto_create": true
+        },
+        {
+          "id": "prd_rework",
+          "name": "PRD返工率",
+          "description": "需求文档返工频率",
+          "fields_count": 2,
+          "auto_create": true
+        },
+        {
+          "id": "pilot_ga",
+          "name": "试点到GA迭代",
+          "description": "从试点到全面推广的迭代次数",
+          "fields_count": 3,
+          "auto_create": true
+        }
+      ],
+      "total_fields": 14,
+      "apply_immediately": true
+    }
+  },
+  "status": "processing",
+  "created_at": 1763228800
+}

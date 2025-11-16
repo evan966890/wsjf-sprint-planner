@@ -1,0 +1,10 @@
+{
+  "request_id": "5ae4d307-7d4e-4672-9821-5ca7ef2ee5a4",
+  "plugin_id": "MII_6917280AF9C0006C",
+  "project_key": "iretail",
+  "request_type": "auto_config_quality_metrics",
+  "timestamp": 1763228704,
+  "fields_count": 14,
+  "metrics_count": 5,
+  "status": "pending_approval"
+}

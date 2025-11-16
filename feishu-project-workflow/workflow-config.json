@@ -1,0 +1,287 @@
+{
+  "workItemType": "requirement",
+  "workItemTypeKey": "requirement",
+  "workItemTypeName": "需求",
+  "processManagement": {
+    "name": "流程管理",
+    "description": "管理需求的全生命周期",
+    "nodes": [
+      {
+        "id": "requirement_created",
+        "name": "需求创建",
+        "type": "start",
+        "fields": [
+          {
+            "key": "requirement_name",
+            "name": "需求名称",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "requirement_description",
+            "name": "需求描述",
+            "type": "richtext",
+            "required": true
+          },
+          {
+            "key": "created_time",
+            "name": "创建时间",
+            "type": "datetime",
+            "auto": true
+          },
+          {
+            "key": "priority",
+            "name": "优先级",
+            "type": "select",
+            "options": ["高", "中", "低"],
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "solution_design",
+        "name": "方案设计",
+        "type": "process",
+        "fields": [
+          {
+            "key": "solution_document",
+            "name": "方案文档",
+            "type": "attachment"
+          },
+          {
+            "key": "technical_complexity",
+            "name": "技术复杂度",
+            "type": "select",
+            "options": ["高", "中", "低"]
+          },
+          {
+            "key": "solution_start_time",
+            "name": "方案开始时间",
+            "type": "datetime",
+            "auto": true
+          },
+          {
+            "key": "solution_end_time",
+            "name": "方案完成时间",
+            "type": "datetime"
+          },
+          {
+            "key": "prd_version",
+            "name": "PRD版本",
+            "type": "number",
+            "default": 1
+          },
+          {
+            "key": "prd_rework_count",
+            "name": "PRD返工次数",
+            "type": "number",
+            "default": 0,
+            "description": "记录PRD被打回修改的次数"
+          }
+        ]
+      },
+      {
+        "id": "review",
+        "name": "评审",
+        "type": "approval",
+        "fields": [
+          {
+            "key": "review_type",
+            "name": "评审类型",
+            "type": "select",
+            "options": ["需求评审", "技术评审", "设计评审"],
+            "required": true
+          },
+          {
+            "key": "review_result",
+            "name": "评审结果",
+            "type": "select",
+            "options": ["一次通过", "修改后通过", "未通过"],
+            "required": true
+          },
+          {
+            "key": "review_time",
+            "name": "评审时间",
+            "type": "datetime",
+            "auto": true
+          },
+          {
+            "key": "review_comments",
+            "name": "评审意见",
+            "type": "richtext"
+          },
+          {
+            "key": "review_attempt_count",
+            "name": "评审次数",
+            "type": "number",
+            "default": 1,
+            "description": "记录评审的轮次"
+          }
+        ]
+      },
+      {
+        "id": "development",
+        "name": "开发",
+        "type": "process",
+        "fields": [
+          {
+            "key": "dev_start_time",
+            "name": "开发开始时间",
+            "type": "datetime",
+            "auto": true
+          },
+          {
+            "key": "dev_end_time",
+            "name": "开发完成时间",
+            "type": "datetime"
+          },
+          {
+            "key": "parallel_tasks",
+            "name": "并行任务数",
+            "type": "number",
+            "description": "同时进行的开发任务数量"
+          },
+          {
+            "key": "pilot_start_time",
+            "name": "试点开始时间",
+            "type": "datetime",
+            "description": "功能试点推广开始时间"
+          }
+        ]
+      },
+      {
+        "id": "testing",
+        "name": "测试",
+        "type": "process",
+        "fields": [
+          {
+            "key": "test_start_time",
+            "name": "测试开始时间",
+            "type": "datetime",
+            "auto": true
+          },
+          {
+            "key": "test_end_time",
+            "name": "测试完成时间",
+            "type": "datetime"
+          },
+          {
+            "key": "bug_count",
+            "name": "缺陷数量",
+            "type": "number",
+            "default": 0
+          }
+        ]
+      },
+      {
+        "id": "deployment",
+        "name": "上线",
+        "type": "end",
+        "fields": [
+          {
+            "key": "deployment_time",
+            "name": "上线时间",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "key": "deployment_type",
+            "name": "发布类型",
+            "type": "select",
+            "options": ["灰度发布", "全量发布", "试点发布"],
+            "required": true
+          },
+          {
+            "key": "full_release_time",
+            "name": "全面推广时间",
+            "type": "datetime",
+            "description": "从试点到全面推广的时间"
+          },
+          {
+            "key": "iteration_count",
+            "name": "迭代次数",
+            "type": "number",
+            "description": "从试点到全面推广之间的迭代次数"
+          }
+        ]
+      }
+    ],
+    "transitions": [
+      {
+        "from": "requirement_created",
+        "to": "solution_design",
+        "name": "开始设计方案"
+      },
+      {
+        "from": "solution_design",
+        "to": "review",
+        "name": "提交评审"
+      },
+      {
+        "from": "review",
+        "to": "solution_design",
+        "name": "评审未通过，返回修改",
+        "condition": "review_result == '未通过'"
+      },
+      {
+        "from": "review",
+        "to": "development",
+        "name": "评审通过，开始开发",
+        "condition": "review_result IN ['一次通过', '修改后通过']"
+      },
+      {
+        "from": "development",
+        "to": "testing",
+        "name": "提交测试"
+      },
+      {
+        "from": "testing",
+        "to": "deployment",
+        "name": "测试通过，准备上线"
+      },
+      {
+        "from": "testing",
+        "to": "development",
+        "name": "测试未通过，返回开发",
+        "condition": "bug_count > 0"
+      }
+    ]
+  },
+  "qualityMetrics": {
+    "leadTime": {
+      "name": "需求→方案→评审→上线的平均Lead Time",
+      "formula": "deployment_time - created_time",
+      "unit": "天",
+      "target": 30,
+      "description": "从需求创建到最终上线的总时长"
+    },
+    "firstPassRate": {
+      "name": "评审一次通过率",
+      "formula": "COUNT(review_result == '一次通过') / COUNT(review_result) * 100",
+      "unit": "%",
+      "target": 80,
+      "description": "评审一次通过的比例"
+    },
+    "throughput": {
+      "name": "并行事项吞吐量",
+      "formula": "AVG(parallel_tasks)",
+      "unit": "个",
+      "target": 5,
+      "description": "团队同时处理的需求数量"
+    },
+    "prdReworkRate": {
+      "name": "PRD返工率",
+      "formula": "COUNT(prd_rework_count > 0) / COUNT(*) * 100",
+      "unit": "%",
+      "target": 10,
+      "description": "需要返工修改PRD的需求比例"
+    },
+    "pilotToGAIterations": {
+      "name": "试点→全面推广之间的迭代次数",
+      "formula": "AVG(iteration_count)",
+      "unit": "次",
+      "target": 3,
+      "description": "从试点到全面推广需要的平均迭代次数"
+    }
+  }
+}
